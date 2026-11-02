@@ -82,8 +82,18 @@ public class InCallActivity extends Activity {
             finish();
         });
         mute.setOnClickListener(v -> new Thread(() -> PhoneLink.toggleMute(getApplicationContext())).start());
-        findViewById(R.id.minimise).setOnClickListener(v -> moveTaskToBack(true));
+        findViewById(R.id.minimise).setOnClickListener(v -> minimise());
         current = this;
+    }
+
+    /**
+     * To the watch face; the call and this screen carry on. Not moveTaskToBack: that reveals
+     * MainActivity, whose onResume brings a running call straight back.
+     */
+    private void minimise() {
+        startActivity(new Intent(Intent.ACTION_MAIN)
+                .addCategory(Intent.CATEGORY_HOME)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
     }
 
     /** The ring breathes out and fades while the call is connecting. */
