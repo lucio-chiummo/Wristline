@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tile_label">Chiama con Wristline</string>
+    <string name="complication_label">Chiama un preferito</string>
+    <string name="channel_call_in_progress">Chiamata in corso</string>
+    <string name="call_in_progress">%1$s · %2$s</string>
+    <string name="tile_relay_on">Squilla · Pausa</string>
+    <string name="tile_relay_paused">In pausa · Riprendi</string>
+    <string name="tile_pause_desc">Le chiamate squillano sull\'orologio. Tocca per mettere in pausa.</string>
+    <string name="tile_resume_desc">In pausa: le chiamate non squillano sull\'orologio. Tocca per riprendere.</string>
+    <string name="relay_paused">In pausa: le chiamate non squilleranno sull\'orologio</string>
+    <string name="relay_resumed">Le chiamate squilleranno sull\'orologio</string>
+    <string name="complication_call">Chiama %1$s</string>
+    <string name="complication_empty">Chiama</string>
+    <string name="contacts">Contatti</string>
+    <string name="all">Tutti</string>
+    <string name="call_with">Chiama con</string>
+    <string name="calling_on_phone">Chiamo %1$s…</string>
+    <string name="no_contacts">Ancora nessun contatto. Sul telefono apri Wristline e attiva \"Chiama dall\'orologio\".</string>
+    <string name="no_phone">Il telefono non è collegato.</string>
+    <string name="loading">Caricamento…</string>
+    <string name="calling">Chiamata in corso…</string>
+    <string name="hang_up">Riaggancia</string>
+    <string name="ringing">Squilla…</string>
+    <string name="mute">Disattiva microfono</string>
+    <string name="unmute">Riattiva microfono</string>
+    <string name="minimise">Riduci</string>
+    <string name="search">Cerca</string>
+    <string name="favourites">Preferiti</string>
+    <string name="recent">Recenti</string>
+    <string name="all_contacts">Tutti i contatti</string>
+    <string name="starred">%1$s aggiunto ai preferiti</string>
+    <string name="unstarred">%1$s rimosso dai preferiti</string>
+    <string name="cant_call_back">Impossibile richiamare dall\'orologio: non è un contatto WhatsApp o Telegram.</string>
+    <string name="favourite_hint">Suggerimento: tieni premuto un nome per aggiungerlo ai preferiti.</string>
+    <string name="favourite">Preferito</string>
+    <string name="add_favourite">Aggiungi ai preferiti</string>
+    <string name="remove_favourite">Rimuovi dai preferiti</string>
+    <string name="recent_outgoing">Hai chiamato %1$s, %2$s, %3$s</string>
+    <string name="recent_incoming">Chiamata da %1$s, %2$s, %3$s</string>
+    <string name="recent_missed">Chiamata persa da %1$s, %2$s, %3$s</string>
+</resources>

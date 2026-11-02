@@ -1,0 +1,33 @@
+package app.wristline;
+
+import android.app.Notification;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+
+/** Forwards taps on Wristline's own notification buttons to the calling app's actions. */
+public class ActionReceiver extends BroadcastReceiver {
+    static final String ANSWER = "app.wristline.ANSWER";
+    static final String DECLINE = "app.wristline.DECLINE";
+    static final String ONGOING = "app.wristline.ONGOING";
+    static final String EXTRA_INDEX = "index";
+
+    @Override
+    public void onReceive(Context context, Intent intent) {
+        String action = intent.getAction();
+        if (ONGOING.equals(action)) {
+            CallActions call = RelayListener.ongoingCall;
+            int index = intent.getIntExtra(EXTRA_INDEX, -1);
+            if (call != null && index >= 0 && index < call.actions.length) {
+                Notification.Action pressed = call.actions[index];
+                RelayListener.send(context, pressed.actionIntent);
+            }
+            return;
+        }
+        StatusNotifications.cancel(context, StatusNotifications.ID_INCOMING_FALLBACK);
+        CallActions call = RelayListener.incomingCall;
+        if (call != null) {
+            RelayListener.send(context, ANSWER.equals(action) ? call.answer : call.decline);
+        }
+    }
+}

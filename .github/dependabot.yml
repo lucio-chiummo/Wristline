@@ -1,0 +1,8 @@
+# Proposes updates to the actions pinned in the workflows. Gradle dependencies are left out: their
+# updates also need gradle/verification-metadata.xml regenerated (see the README's Build section).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/ground">
+
+    <!-- The bottom padding lets the last rows scroll up to the middle of the round screen. -->
+    <androidx.wear.widget.WearableRecyclerView
+        android:id="@+id/contacts"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:descendantFocusability="beforeDescendants"
+        android:focusable="true"
+        android:focusableInTouchMode="true"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:paddingBottom="56dp"
+        android:scrollbars="vertical" />
+
+    <!-- A–Z fast scroll: drag along the right edge. Only shown for long lists. -->
+    <View
+        android:id="@+id/letter_strip"
+        android:layout_width="36dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="end"
+        android:layout_marginTop="60dp"
+        android:layout_marginBottom="60dp"
+        android:background="@drawable/letter_strip"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/letter_bubble"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_gravity="center"
+        android:background="@drawable/letter_bubble"
+        android:gravity="center"
+        android:textColor="@color/ground"
+        android:textSize="26sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/message"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:drawablePadding="10dp"
+        android:drawableTint="@color/muted"
+        android:gravity="center"
+        android:paddingStart="30dp"
+        android:paddingEnd="30dp"
+        android:textColor="@color/muted"
+        android:textSize="14sp" />
+</FrameLayout>

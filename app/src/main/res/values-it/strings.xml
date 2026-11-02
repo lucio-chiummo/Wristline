@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="no_supported_app">Nessuna delle app supportate da Wristline è installata. Funziona con WhatsApp, Telegram e Instagram.</string>
+
+    <string name="step_listener_title">Accesso alle notifiche</string>
+    <string name="step_listener_desc">Rileva le chiamate in arrivo dalle app che hai attivato.</string>
+    <string name="step_post_title">Notifiche</string>
+    <string name="step_post_desc">Mostra i controlli della chiamata e avvisa quando c\'è qualcosa da sistemare.</string>
+    <string name="step_overlay_title">Mostra sopra altre app</string>
+    <string name="step_overlay_desc">Apre la chiamata quando tocchi Rispondi sull\'orologio.</string>
+    <string name="step_battery_title">Batteria senza limitazioni</string>
+    <string name="step_battery_desc">Tiene Wristline attivo in background. Cerca Wristline nell\'elenco e scegli \"Non ottimizzare\" o \"Senza limitazioni\".</string>
+    <string name="step_watch_title">Lato orologio</string>
+    <string name="step_watch_desc">Nelle impostazioni Bluetooth apri il tuo orologio e lascia attivo \"Audio chiamate\" (o \"Telefonate\").</string>
+
+    <string name="adb_title">Configura con un computer</string>
+    <string name="adb_done">Fatto</string>
+    <string name="copy">Copia comando</string>
+    <string name="copied">Copiato</string>
+
+    <!-- Home -->
+    <string name="help">Aiuto</string>
+    <string name="status_ready_title">Pronto</string>
+    <string name="status_ready_sub">Le chiamate squilleranno sull\'orologio</string>
+    <string name="status_paused_title">In pausa</string>
+    <string name="status_paused_sub">Le chiamate restano sul telefono finché non lo riattivi</string>
+    <plurals name="status_steps_title">
+        <item quantity="one">Manca 1 passaggio</item>
+        <item quantity="other">Mancano %d passaggi</item>
+    </plurals>
+    <string name="status_try_title">Quasi pronto</string>
+    <string name="status_try_sub">Un ultimo controllo: fai squillare l\'orologio</string>
+    <string name="try_title">Fai squillare l\'orologio</string>
+    <string name="try_desc">Wristline fa squillare l\'orologio con una chiamata di prova. Rispondi o rifiuta sull\'orologio: è tutto.</string>
+    <string name="try_missed_title">La chiamata di prova non è arrivata all\'orologio</string>
+    <string name="try_missed_desc">Controlla che l\'orologio sia connesso al telefono e che nelle impostazioni Bluetooth del telefono l\'orologio abbia \"Audio chiamate\" (o \"Telefonate\") attivo. Poi riprova.</string>
+    <string name="status_steps_sub">Completa la configurazione perché le chiamate arrivino all\'orologio</string>
+    <string name="status_repair_title">La voce va riparata</string>
+    <string name="status_repair_sub">Le chiamate %1$s si sentono sul telefono finché non viene riparata</string>
+    <string name="repair">Ripara</string>
+    <string name="master_switch">Inoltra le chiamate all\'orologio</string>
+    <string name="section_apps">App</string>
+    <string name="apps_count">%1$d di %2$d attive</string>
+    <string name="app_sub_voice_watch">Squilla sull\'orologio · voce sull\'orologio</string>
+    <string name="app_sub_voice_phone">Squilla sull\'orologio · voce sul telefono</string>
+    <string name="app_sub_off">Disattivata</string>
+    <string name="beta">Beta</string>
+    <string name="section_settings">Impostazioni</string>
+    <string name="row_voice">Voce dall\'orologio</string>
+    <string name="voice_on_for">Attiva per %1$s</string>
+    <string name="voice_off">Facoltativo: parla dall\'orologio invece che dal telefono</string>
+    <string name="row_permissions">Autorizzazioni</string>
+    <string name="permissions_all_done">Tutte e %1$d concesse</string>
+    <string name="permissions_progress">%1$d di %2$d concesse</string>
+    <string name="row_watch_calling">Chiama dall\'orologio</string>
+    <string name="watch_calling_off">Disattivato · avvia chiamate WhatsApp e Telegram dal polso</string>
+    <string name="watch_calling_on">Attivo · %1$d contatti sull\'orologio</string>
+    <string name="watch_calling_none">Attivo · ancora nessun contatto con chiamate WhatsApp o Telegram. Per Telegram, attiva Impostazioni › Privacy e sicurezza › Sincronizza contatti in Telegram.</string>
+    <string name="watch_not_connected">L\'orologio non è connesso in questo momento.</string>
+    <string name="watch_app_missing">Installa Wristline sull\'orologio. Serve un computer: tocca Aiuto in alto nella schermata principale per i passaggi.</string>
+    <string name="watch_calling_needs_permission">Attivo · tocca per consentire a Wristline di avviare le chiamate</string>
+    <string name="watch_calling_title">Chiama dall\'orologio</string>
+    <string name="watch_calling_message">Il tuo orologio riceve l\'elenco dei contatti che puoi chiamare su WhatsApp o Telegram: solo i nomi, mai numeri o foto, e solo sul tuo orologio. Android ti chiederà anche di consentire a Wristline di \"effettuare e gestire telefonate\": WhatsApp e Telegram avviano una chiamata solo per le app che hanno questo permesso. Wristline non chiama mai numeri di telefono. Serve anche Wristline sull\'orologio: per installarlo occorre un computer. Tocca Aiuto in alto nella schermata principale per i passaggi.</string>
+    <string name="row_history">Cronologia chiamate</string>
+    <string name="history_empty">Ancora nessuna chiamata inoltrata</string>
+    <string name="history_summary">Ultime %1$d chiamate inoltrate · %2$d dall\'orologio</string>
+    <string name="history_outgoing">↗ %1$s · %2$s · %3$s</string>
+    <string name="history_incoming">↙ %1$s · %2$s · %3$s</string>
+    <string name="history_clear">Cancella</string>
+    <string name="row_test_call">Fai squillare l\'orologio</string>
+    <string name="qs_on">L\'orologio squilla</string>
+    <string name="qs_paused">In pausa</string>
+    <string name="row_dnd">Quando squilla l\'orologio</string>
+    <string name="in_use_rule">Non mentre uso il telefono</string>
+    <string name="in_use_on">Non mentre usi il telefono (sbloccato, schermo acceso)</string>
+    <string name="rules_explain">Come funziona</string>
+    <string name="dnd_on">Segue il telefono: le chiamate che silenzia non fanno squillare l\'orologio</string>
+    <string name="dnd_off">Ignorato: le chiamate fanno squillare l\'orologio anche in Non disturbare</string>
+    <string name="dnd_message">Quando il telefono è in Non disturbare (o Riposo), Wristline può seguirlo: una chiamata che il telefono silenzierebbe non fa squillare nemmeno l\'orologio, e una che lascia passare (contatti preferiti, chiamate ripetute) sì. Scegli chi può passare nelle impostazioni Non disturbare del telefono.\n\n\"Non mentre uso il telefono\": quando il telefono è sbloccato con lo schermo acceso, la chiamata squilla solo sul telefono, non sull\'orologio.</string>
+    <string name="dnd_follow">Segui Non disturbare</string>
+    <string name="channel_missed">Chiamate perse</string>
+    <string name="missed_title">Chiamata %1$s persa</string>
+    <string name="call_back">Richiama</string>
+    <string name="voice_on_watch_now">Voce sull\'orologio</string>
+    <string name="voice_on_phone_now">Voce sul telefono</string>
+    <string name="move_voice_to_phone">Sposta la voce sul telefono</string>
+    <string name="move_voice_to_watch">Sposta la voce sull\'orologio</string>
+    <string name="history_missed">✕ %1$s · %2$s · %3$s</string>
+    <string name="row_report">Condividi rapporto diagnostico</string>
+    <string name="row_licence">Licenza</string>
+    <string name="licence_open">Apri la pagina del progetto</string>
+    <string name="licence_notice">Wristline\nCopyright © 2026 Lucio Chiummo\n\nConcesso in licenza secondo la PolyForm Noncommercial License 1.0.0: puoi usarlo, modificarlo e condividerlo solo per scopi non commerciali. Ogni altro uso richiede il permesso dell\'autore. È fornito così com\'è, SENZA ALCUNA GARANZIA, nei limiti consentiti dalla legge.\n\nUna copia della licenza e delle sue note è nell\'app. Questi testi, le licenze di terze parti e il codice sorgente sono anche sulla pagina del progetto.</string>
+    <string name="report_sub">Configurazione ed eventi recenti, compreso quando sono avvenute le chiamate. Nomi e numeri di chi chiama sono esclusi. Inviato solo se lo condividi: controllalo prima di pubblicarlo.</string>
+    <string name="report_subject">Rapporto diagnostico di Wristline</string>
+    <string name="unreadable_title">Una chiamata %1$s non è arrivata all\'orologio</string>
+    <string name="unreadable_text">Wristline non ha trovato i pulsanti Rispondi e Rifiuta nella notifica di chiamata di %1$s; forse un aggiornamento di %1$s l\'ha cambiata. Apri Wristline → Condividi rapporto diagnostico per aiutare a risolvere.</string>
+    <string name="test_call_sub">Una chiamata di prova: controlla che le chiamate arrivino all\'orologio</string>
+    <string name="test_call_caller">Wristline · Prova</string>
+    <string name="test_call_started">L\'orologio dovrebbe squillare ora. Rispondi per sentire qualche bip sull\'orologio.</string>
+    <string name="test_call_busy">Non ora: c\'è una chiamata in corso.</string>
+    <string name="test_call_failed">Android non ha accettato la chiamata di prova. Riavvia il telefono e riprova.</string>
+    <string name="turn_on">Attiva</string>
+    <string name="turn_off">Disattiva</string>
+    <string name="footer_privacy">Wristline legge solo le notifiche di chiamata delle app qui sopra. Le chiamate recenti restano su questo telefono e sul tuo orologio, e puoi cancellarle in Cronologia chiamate.</string>
+
+    <!-- Permissions screen -->
+    <string name="back">Indietro</string>
+    <string name="permissions_intro">Ognuna serve una sola volta. Wristline le controlla ogni volta che lo apri.</string>
+    <string name="restricted_hint">Interruttore grigio? Android lo blocca per le app installate da file. Apri Informazioni app, tocca ⋮ (in alto a destra) › Consenti impostazioni con limitazioni, poi torna qui e riprova.</string>
+    <string name="open_app_info">Apri Informazioni app</string>
+    <string name="step_done">Fatto</string>
+    <string name="step_not_done">Non ancora</string>
+
+    <!-- Voice screen -->
+    <string name="voice_intro">Senza questa opzione rispondi sull\'orologio e parli dal telefono o dagli auricolari. Con questa, parli direttamente dall\'orologio.</string>
+    <string name="voice_no_apps">Prima attiva un\'app nella schermata Home.</string>
+    <string name="voice_state_on">Voce sull\'orologio</string>
+    <string name="voice_state_set_up">Voce sul telefono</string>
+    <string name="voice_state_repair">Ripristinata da un aggiornamento dell\'app. Voce sul telefono</string>
+    <string name="voice_state_not_verified">Voce sul telefono. Non ancora provata in una chiamata vera</string>
+    <string name="pill_on">Attiva</string>
+    <string name="pill_set_up">Configura</string>
+    <string name="pill_repair">Da riparare</string>
+    <string name="pill_not_verified">Non ancora</string>
+    <string name="section_set_up">Configura</string>
+    <string name="set_up_apps">Configura %1$s</string>
+    <string name="repair_apps">Ripara %1$s</string>
+    <string name="turn_off_voice">Disattiva la voce dall\'orologio</string>
+    <string name="voice_footer">Gli aggiornamenti delle app possono annullarla. Wristline se ne accorge e ti chiede di ripararla.</string>
+    <string name="adb_message_apps">Attiva il Debug USB sul telefono, collegalo a un computer con ADB ed esegui:\n\n%1$s\n\nPoi chiudi %2$s una volta. Eseguilo di nuovo se un\'app viene reinstallata o se cambia il suo permesso Telefono.</string>
+    <string name="reset_title">Ripristina l\'impostazione normale delle app</string>
+    <string name="reset_message">La voce dall\'orologio resta attiva finché le app non hanno di nuovo l\'impostazione normale. Con il debug USB attivo, esegui questo su un computer, chiudi ogni app una volta, poi tocca \"Fatto\":\n\n%1$s</string>
+
+    <!-- Built-in ADB setup -->
+
+    <!-- Voice setup guide -->
+    <string name="done">Fatto</string>
+
+    <string name="open_bluetooth">Apri impostazioni Bluetooth</string>
+    <string name="allow">Consenti</string>
+
+    <string name="channel_incoming">Chiamate in arrivo (riserva)</string>
+    <string name="channel_ongoing">Controlli chiamata sull\'orologio</string>
+    <string name="channel_status">Stato</string>
+    <string name="incoming_call">Chiamata %1$s in arrivo</string>
+    <string name="on_call">In chiamata %1$s</string>
+    <string name="answer">Rispondi</string>
+    <string name="decline">Rifiuta</string>
+    <string name="unknown_caller">Chiamata %1$s</string>
+    <string name="repair_title">La voce dall\'orologio ha smesso di funzionare</string>
+    <string name="repair_text">%1$s ha ripristinato un\'impostazione che serve a Wristline, quindi ora le sue chiamate si sentono sul telefono. Apri Wristline per ripararla.</string>
+    <string name="battery_hint_vivo">Su vivo anche: Impostazioni → Batteria → Consumo in background → Wristline → Consenti consumo elevato in background.</string>
+    <string name="battery_hint_xiaomi">Su Xiaomi anche: Impostazioni → App → Gestisci app → Wristline → attiva Avvio automatico e imposta il risparmio batteria su Nessuna limitazione.</string>
+    <string name="battery_hint_samsung">Su Samsung anche: Impostazioni → Batteria → Limiti di utilizzo in background → App mai in stop → aggiungi Wristline.</string>
+    <string name="battery_hint_oneplus">Su OnePlus, OPPO e realme anche: Impostazioni → Batteria → Wristline → consenti attività in background e avvio automatico.</string>
+    <string name="with_a_computer">Con un computer</string>
+    <string name="with_a_computer_desc">Esegui un comando per ogni app, una sola volta, da un computer con adb. Circa un minuto.</string>
+</resources>

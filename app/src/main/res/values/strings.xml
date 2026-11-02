@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">Wristline</string>
+    <string name="phone_account_label" translatable="false">Wristline</string>
+
+    <string name="no_supported_app">None of the apps Wristline supports is installed. It works with WhatsApp, Telegram and Instagram.</string>
+
+    <string name="step_listener_title">Notification access</string>
+    <string name="step_listener_desc">Notices incoming calls from the apps you turned on.</string>
+    <string name="step_post_title">Notifications</string>
+    <string name="step_post_desc">Shows call controls and alerts when something needs fixing.</string>
+    <string name="step_overlay_title">Display over other apps</string>
+    <string name="step_overlay_desc">Opens the call when you tap Answer on the watch.</string>
+    <string name="step_battery_title">Unrestricted battery</string>
+    <string name="step_battery_desc">Keeps Wristline running in the background. Find Wristline in the list and choose \"Don\'t optimise\" or \"Unrestricted\".</string>
+    <string name="step_watch_title">On the watch side</string>
+    <string name="step_watch_desc">In Bluetooth settings, open your watch and keep \"Call audio\" (or \"Phone calls\") on.</string>
+
+    <string name="adb_title">Set up with a computer</string>
+    <string name="adb_done">I\'ve run it</string>
+    <string name="copy">Copy command</string>
+    <string name="copied">Copied</string>
+
+    <!-- Home -->
+    <string name="help">Help</string>
+    <string name="help_url" translatable="false">https://github.com/lucio-chiummo/Wristline#readme</string>
+    <string name="how_to_url" translatable="false">https://github.com/lucio-chiummo/Wristline/blob/main/docs/HOW_TO.md</string>
+    <string name="status_ready_title">Ready</string>
+    <string name="status_ready_sub">Calls will ring on your watch</string>
+    <string name="status_paused_title">Paused</string>
+    <string name="status_paused_sub">Calls stay on the phone until you turn this back on</string>
+    <plurals name="status_steps_title">
+        <item quantity="one">1 step left</item>
+        <item quantity="other">%d steps left</item>
+    </plurals>
+    <string name="status_try_title">Almost ready</string>
+    <string name="status_try_sub">One last check: make your watch ring</string>
+    <string name="try_title">Ring your watch</string>
+    <string name="try_desc">Wristline rings your watch with a test call. Answer or decline it on the watch: that\'s all.</string>
+    <string name="try_missed_title">The test call didn\'t reach the watch</string>
+    <string name="try_missed_desc">Check that the watch is connected to the phone, and that in the phone\'s Bluetooth settings your watch has \"Call audio\" (or \"Phone calls\") on. Then try again.</string>
+    <string name="status_steps_sub">Finish setup so calls can reach your watch</string>
+    <string name="status_repair_title">Voice needs repair</string>
+    <string name="status_repair_sub">%1$s calls play on the phone until it\'s repaired</string>
+    <string name="repair">Repair</string>
+    <string name="master_switch">Relay calls to my watch</string>
+    <string name="section_apps">Apps</string>
+    <string name="apps_count">%1$d of %2$d on</string>
+    <string name="app_sub_voice_watch">Rings on watch · voice on watch</string>
+    <string name="app_sub_voice_phone">Rings on watch · voice on phone</string>
+    <string name="app_sub_off">Off</string>
+    <string name="beta">Beta</string>
+    <string name="section_settings">Settings</string>
+    <string name="row_voice">Voice through the watch</string>
+    <string name="voice_on_for">On for %1$s</string>
+    <string name="voice_off">Optional: talk through the watch instead of the phone</string>
+    <string name="row_permissions">Permissions</string>
+    <string name="permissions_all_done">All %1$d done</string>
+    <string name="permissions_progress">%1$d of %2$d done</string>
+    <string name="row_watch_calling">Call from the watch</string>
+    <string name="watch_calling_off">Off · start WhatsApp and Telegram calls from your wrist</string>
+    <string name="watch_calling_on">On · %1$d contacts on your watch</string>
+    <string name="watch_calling_none">On · no contacts with WhatsApp or Telegram calls yet. For Telegram, turn on Settings › Privacy › Sync contacts in Telegram.</string>
+    <string name="watch_not_connected">Your watch isn\'t connected right now.</string>
+    <string name="watch_app_missing">Install Wristline on your watch. It takes a computer: tap Help at the top of the home screen for the steps.</string>
+    <string name="watch_calling_needs_permission">On · tap to allow Wristline to start calls</string>
+    <string name="watch_calling_title">Call from the watch</string>
+    <string name="watch_calling_message">Your watch gets a list of your contacts who can be called on WhatsApp or Telegram: only their names, never numbers or photos, and only on your own watch. Android will also ask to let Wristline \"make and manage phone calls\": WhatsApp and Telegram only start a call for apps that have it. Wristline never calls phone numbers itself. You also need Wristline on the watch: installing it takes a computer. Tap Help at the top of the home screen for the steps.</string>
+    <string name="row_history">Call history</string>
+    <string name="history_empty">No relayed calls yet</string>
+    <string name="history_summary">Last %1$d relayed calls · %2$d from the watch</string>
+    <string name="history_outgoing">↗ %1$s · %2$s · %3$s</string>
+    <string name="history_incoming">↙ %1$s · %2$s · %3$s</string>
+    <string name="history_clear">Clear</string>
+    <string name="row_test_call">Ring my watch</string>
+    <string name="qs_on">Watch rings</string>
+    <string name="qs_paused">Paused</string>
+    <string name="row_dnd">When the watch rings</string>
+    <string name="in_use_rule">Not while I\'m using the phone</string>
+    <string name="in_use_on">Not while you\'re using the phone (unlocked, screen on)</string>
+    <string name="rules_explain">How it works</string>
+    <string name="dnd_on">Follows your phone: calls it silences don\'t ring the watch</string>
+    <string name="dnd_off">Ignored: calls ring the watch even in Do Not Disturb</string>
+    <string name="dnd_message">When your phone is in Do Not Disturb (or Bedtime), Wristline can follow it: a call your phone would silence doesn\'t ring the watch either, and one it lets through (favourite contacts, repeat callers) still does. Change who gets through in your phone\'s Do Not Disturb settings.\n\n\"Not while I\'m using the phone\": when the phone is unlocked with the screen on, a call rings only the phone, not the watch.</string>
+    <string name="dnd_follow">Follow Do Not Disturb</string>
+    <string name="channel_missed">Missed calls</string>
+    <string name="missed_title">Missed %1$s call</string>
+    <string name="call_back">Call back</string>
+    <string name="voice_on_watch_now">Voice on the watch</string>
+    <string name="voice_on_phone_now">Voice on the phone</string>
+    <string name="move_voice_to_phone">Move voice to phone</string>
+    <string name="move_voice_to_watch">Move voice to watch</string>
+    <string name="history_missed">✕ %1$s · %2$s · %3$s</string>
+    <string name="row_report">Share diagnostic report</string>
+    <string name="row_licence">Licence</string>
+    <string name="licence_sub" translatable="false">PolyForm Noncommercial 1.0.0</string>
+    <string name="licence_open">Open project page</string>
+    <string name="licence_notice">Wristline\nCopyright © 2026 Lucio Chiummo\n\nLicensed under the PolyForm Noncommercial License 1.0.0: you can use, change and share it for noncommercial purposes only. Any other use needs the author\'s permission. It comes as is, with NO WARRANTY, as far as the law allows.\n\nA copy of the licence and its notices is inside the app. They, the third-party licences and the source code are also on the project page.</string>
+    <string name="report_sub">Setup and recent events, including when calls happened. Caller names and numbers are left out. Only sent if you share it: check it before posting it publicly.</string>
+    <string name="report_subject">Wristline diagnostic report</string>
+    <string name="unreadable_title">A %1$s call didn\'t reach the watch</string>
+    <string name="unreadable_text">Wristline couldn\'t find the Answer and Decline buttons on %1$s\'s call notification; an update of %1$s may have changed it. Open Wristline → Share diagnostic report to help fix it.</string>
+    <string name="test_call_sub">A test call: check that calls reach the watch</string>
+    <string name="test_call_caller">Wristline · Test</string>
+    <string name="test_call_started">Your watch should ring now. Answer to hear a few beeps on the watch.</string>
+    <string name="test_call_busy">Not now: a call is in progress.</string>
+    <string name="test_call_failed">Android didn\'t accept the test call. Restart the phone and try again.</string>
+    <string name="turn_on">Turn on</string>
+    <string name="turn_off">Turn off</string>
+    <string name="footer_privacy">Wristline only reads call notifications from the apps above. Your recent calls stay on this phone and your own watch, and you can clear them under Call history.</string>
+    <string name="list_separator" translatable="false">, </string>
+
+    <!-- Permissions screen -->
+    <string name="back">Back</string>
+    <string name="permissions_intro">Each one is needed once. Wristline checks them every time you open it.</string>
+    <string name="restricted_hint">Switch greyed out? Android blocks it for apps installed from a file. Open App info, tap ⋮ (top right) › Allow restricted settings, then come back and try again.</string>
+    <string name="open_app_info">Open App info</string>
+    <string name="step_done">Done</string>
+    <string name="step_not_done">Not done yet</string>
+
+    <!-- Voice screen -->
+    <string name="voice_intro">Without this, you answer on the watch and talk on the phone or earbuds. With it, you talk through the watch itself.</string>
+    <string name="voice_no_apps">Turn on an app on the Home screen first.</string>
+    <string name="voice_state_on">Voice on watch</string>
+    <string name="voice_state_set_up">Voice on phone</string>
+    <string name="voice_state_repair">Reset by an app update. Voice on phone</string>
+    <string name="voice_state_not_verified">Voice on phone. Not tested on a real call yet</string>
+    <string name="pill_on">On</string>
+    <string name="pill_set_up">Set up</string>
+    <string name="pill_repair">Needs repair</string>
+    <string name="pill_not_verified">Not yet</string>
+    <string name="section_set_up">Set up</string>
+    <string name="set_up_apps">Set up %1$s</string>
+    <string name="repair_apps">Repair %1$s</string>
+    <string name="turn_off_voice">Turn off voice through the watch</string>
+    <string name="voice_footer">App updates can reset this. Wristline notices and asks you to repair it.</string>
+    <string name="adb_message_apps">Turn on USB debugging on the phone, connect it to a computer with ADB, and run:\n\n%1$s\n\nThen close %2$s once. Run it again if an app is reinstalled or its Phone permission is changed.</string>
+    <string name="reset_title">Give the apps their normal setting back</string>
+    <string name="reset_message">Voice through the watch stays on until the apps have their normal setting back. With USB debugging on, run this on a computer, close each app once, then tap \"I\'ve run it\":\n\n%1$s</string>
+
+    <!-- Built-in ADB setup -->
+
+    <!-- Voice setup guide -->
+    <string name="done">Done</string>
+
+    <string name="open_bluetooth">Open Bluetooth settings</string>
+    <string name="allow">Allow</string>
+
+    <string name="channel_incoming">Incoming calls (fallback)</string>
+    <string name="channel_ongoing">Call controls on the watch</string>
+    <string name="channel_status">Status</string>
+    <string name="incoming_call">Incoming %1$s call</string>
+    <string name="on_call">On a %1$s call</string>
+    <string name="answer">Answer</string>
+    <string name="decline">Decline</string>
+    <string name="unknown_caller">%1$s call</string>
+    <string name="caller_with_app" translatable="false">%1$s · %2$s</string>
+    <string name="repair_title">Voice through the watch stopped working</string>
+    <string name="repair_text">%1$s reset a setting Wristline needs, so its calls now play on the phone. Open Wristline to repair it.</string>
+    <string name="battery_hint_vivo">On vivo also: Settings → Battery → Background power consumption → Wristline → Allow high background power consumption.</string>
+    <string name="battery_hint_xiaomi">On Xiaomi also: Settings → Apps → Manage apps → Wristline → turn on Autostart, and set Battery saver to No restrictions.</string>
+    <string name="battery_hint_samsung">On Samsung also: Settings → Battery → Background usage limits → Never sleeping apps → add Wristline.</string>
+    <string name="battery_hint_oneplus">On OnePlus, OPPO and realme also: Settings → Battery → Wristline → allow background activity and auto-launch.</string>
+    <string name="with_a_computer">With a computer</string>
+    <string name="with_a_computer_desc">Run one command for each app, once, from a computer with adb. About a minute.</string>
+</resources>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ground">#0F1115</color>
+    <color name="card">#1A1D23</color>
+    <color name="divider">#2A2E36</color>
+    <color name="text">#E8EAED</color>
+    <color name="muted">#A8AEB8</color>
+    <color name="accent">#8AB4F8</color>
+    <color name="on_accent">#0B1A33</color>
+    <color name="green">#81C995</color>
+    <color name="ready_card">#16301F</color>
+    <color name="amber">#FDD663</color>
+    <color name="on_amber">#2A1F00</color>
+    <color name="amber_card">#3A2E12</color>
+    <color name="paused_card">#23272F</color>
+    <color name="status_inner">#38000000</color>
+    <color name="chip">#23324A</color>
+    <color name="chip_text">#AECBFA</color>
+    <color name="green_chip">#1E3A28</color>
+    <color name="neutral_chip">#23272F</color>
+    <color name="switch_off_track">#23272F</color>
+    <color name="switch_off_thumb">#9AA0A6</color>
+    <color name="highlight_row">#1F2633</color>
+</resources>
