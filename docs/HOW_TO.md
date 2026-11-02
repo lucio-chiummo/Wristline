@@ -2,9 +2,34 @@
 
 Wristline makes WhatsApp, Telegram and Instagram calls ring on your Wear OS watch, so you can answer, decline and hang up from your wrist.
 
+## What it can do
+
+**When someone calls you**
+
+- Your watch rings like a normal phone call, showing the app and who's calling.
+- Answer, decline or hang up from your wrist.
+- Talk through the watch's own speaker and microphone, without touching your phone. This needs a one-time setup with a computer.
+- Move the voice between the watch and the phone during a call.
+- See missed calls on the watch, with **Call back** for contacts.
+
+**When you want to call someone** (needs the watch app and a one-time install with a computer)
+
+- Search your contacts on the watch, or browse everyone you can reach on WhatsApp or Telegram, A to Z.
+- Tap a name to call them, and choose the app if they're on both.
+- Keep your favourite people at the top, and call back from your recent calls.
+- Call with one tap from a tile or a watch-face complication.
+- Use the call screen on the watch: mute when the app allows it, change the volume with the crown, hang up, or minimise it.
+
+**Your rules**
+
+- Choose which apps ring the watch: WhatsApp, Telegram and Instagram.
+- Pause it any time, from the app, Quick Settings or the watch tile.
+- Follow your phone's Do Not Disturb.
+- Stop the watch ringing while you're using the phone.
+
 **The basics take about 5 minutes and need only your phone.** Two extras are optional and need a computer: talking through the watch, and starting calls from the watch.
 
-**Jump to:** [Install](#1-install-the-app) · [Set up](#2-give-wristline-its-permissions) · [Test](#3-test-it) · [Everyday use](#everyday-use) · [Talk through the watch](#optional-talk-through-the-watch) · [Call from the watch](#optional-call-from-the-watch) · [Problems](#if-something-goes-wrong) · [Uninstall](#turning-things-off-and-uninstalling)
+**Jump to:** [What it can do](#what-it-can-do) · [Install](#1-install-the-app) · [Set up](#2-give-wristline-its-permissions) · [Test](#3-test-it) · [Everyday use](#everyday-use) · [Talk through the watch](#optional-talk-through-the-watch) · [Call from the watch](#optional-call-from-the-watch) · [Problems](#if-something-goes-wrong) · [Uninstall](#turning-things-off-and-uninstalling)
 
 ## What you need
 
