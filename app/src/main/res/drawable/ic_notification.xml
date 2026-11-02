@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Wristline icon for the status bar: the patch cable with solid plugs. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:scaleX="1.2"
+        android:scaleY="1.2">
+        <path
+            android:pathData="M31,74C31,28 77,80 77,34"
+            android:strokeWidth="7"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeLineCap="round" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M21,74a10,10 0 1,0 20,0a10,10 0 1,0 -20,0zM67,34a10,10 0 1,0 20,0a10,10 0 1,0 -20,0z" />
+    </group>
+</vector>

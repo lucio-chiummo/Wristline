@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Wear's swipe-right closes an activity: during a call that hid the screen without hanging
+         up. The call screen has its own "Minimise" instead. -->
+    <style name="InCall" parent="@android:style/Theme.DeviceDefault">
+        <item name="android:windowSwipeToDismiss">false</item>
+    </style>
+</resources>

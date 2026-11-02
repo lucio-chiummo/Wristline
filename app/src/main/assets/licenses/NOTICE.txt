@@ -1,0 +1,35 @@
+Wristline
+Required Notice: Copyright Lucio Chiummo (https://github.com/lucio-chiummo)
+
+Licensed under the PolyForm Noncommercial License 1.0.0, in the LICENSE file and at
+https://polyformproject.org/licenses/noncommercial/1.0.0
+
+You may use, change and share this software for noncommercial purposes only, as those
+terms define them. Using it for anything else needs separate permission from Lucio
+Chiummo. Anyone you give a copy to must also get those terms (or their URL) and the
+Required Notice line above.
+
+These terms grant no rights to the name "Wristline" or to the Wristline logo and app
+icon. A changed version must not use them or suggest that it comes from Lucio Chiummo.
+
+
+THIRD-PARTY COMPONENTS
+
+Each keeps its own license. Those included in the phone app, the watch app or
+this repository are:
+
+Phone app only:
+- Figtree font: SIL Open Font License 1.1 (assets/licenses/Figtree-OFL.txt)
+- Icons in the style of Lucide: ISC License
+
+Watch app only:
+- Material icons: Apache License 2.0
+- kotlinx.coroutines: Apache License 2.0
+- Protocol Buffers runtime, in androidx.wear.protolayout: BSD 3-Clause License
+
+Both apps:
+- AndroidX libraries and their dependencies, Kotlin standard library: Apache License 2.0
+- Google Play services client libraries: Android Software Development Kit License
+
+Repository:
+- Gradle wrapper (gradlew, gradlew.bat, gradle/wrapper): Apache License 2.0

@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Lets Wristline fire WhatsApp's own Answer action, which opens WhatsApp's call screen. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <!-- Self-managed Telecom call that the Pixel Watch app shows on the watch. -->
+    <uses-permission android:name="android.permission.MANAGE_OWN_CALLS" />
+    <!-- Calling from the watch: names of contacts with WhatsApp/Telegram "Voice call" entries. -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <!-- WhatsApp's and Telegram's "Voice call" contact entries only accept callers holding this. -->
+    <uses-permission android:name="android.permission.CALL_PHONE" />
+    <!-- CALL_PHONE would otherwise imply it: Wristline places no calls over the mobile network. -->
+    <uses-feature
+        android:name="android.hardware.telephony"
+        android:required="false" />
+
+    <queries>
+        <package android:name="com.whatsapp" />
+        <package android:name="org.telegram.messenger" />
+        <package android:name="com.instagram.android" />
+    </queries>
+
+    <application
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:theme="@style/Theme.Wristline">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".PermissionsActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".VoiceActivity"
+            android:exported="false" />
+
+        <service
+            android:name=".RelayListener"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".RelayConnectionService"
+            android:exported="true"
+            android:permission="android.permission.BIND_TELECOM_CONNECTION_SERVICE">
+            <intent-filter>
+                <action android:name="android.telecom.ConnectionService" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".RelayTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_watch"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.TOGGLEABLE_TILE"
+                android:value="true" />
+        </service>
+
+        <receiver
+            android:name=".ActionReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".MissedCalls$CallBackReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".VoiceControls$MoveReceiver"
+            android:exported="false" />
+
+        <service
+            android:name=".WatchCallService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
+                <data
+                    android:host="*"
+                    android:pathPrefix="/wristline/"
+                    android:scheme="wear" />
+            </intent-filter>
+        </service>
+    </application>
+</manifest>
