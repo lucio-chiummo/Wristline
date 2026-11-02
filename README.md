@@ -6,6 +6,33 @@ Wristline is a small Android app for the **phone**. It exists because these apps
 
 **New here? Follow the [step-by-step guide](docs/HOW_TO.md).** It covers installing, setup, everyday use and what to do if something goes wrong.
 
+## What it can do
+
+**When someone calls you**
+
+- Your watch rings like a normal phone call, showing the app and who's calling.
+- Answer, decline or hang up from your wrist.
+- Talk through the watch's own speaker and microphone, without touching your phone. This needs a one-time setup with a computer.
+- Move the voice between the watch and the phone during a call.
+- See missed calls on the watch, with **Call back** for contacts.
+
+**When you want to call someone** (needs the watch app and a one-time install with a computer)
+
+- Search your contacts on the watch, or browse everyone you can reach on WhatsApp or Telegram, A to Z.
+- Tap a name to call them, and choose the app if they're on both.
+- Keep your favourite people at the top, and call back from your recent calls.
+- Call with one tap from a tile or a watch-face complication.
+- Use the call screen on the watch: mute when the app allows it, change the volume with the crown, hang up, or minimise it.
+
+**Your rules**
+
+- Choose which apps ring the watch: WhatsApp, Telegram and Instagram.
+- Pause it any time, from the app, Quick Settings or the watch tile.
+- Follow your phone's Do Not Disturb.
+- Stop the watch ringing while you're using the phone.
+
+Instagram can't start calls from outside its own app, so calling from the watch works with WhatsApp and Telegram.
+
 ## What you get
 
 | | Voice on the phone | Voice through the watch |
@@ -27,7 +54,7 @@ Also:
 - **Missed calls on the watch**, with **Call back** for contacts (WhatsApp's own missed-call
   notifications never reach the watch).
 - **Follows Do Not Disturb**: a call your phone would silence doesn't ring the watch; favourites and
-  repeat callers your phone lets through still do (Home → Do Not Disturb to turn it off).
+  repeat callers your phone lets through still do (Home → **When the watch rings** to turn it off).
 - **Pause from anywhere**: Home's switch, a Quick Settings tile, or the chip on the watch tile.
 - **Not while I'm using the phone** (optional): calls ring only the phone while it's unlocked in your hand.
 - **Share diagnostic report** (Home): setup and recent events, without caller names or numbers,
