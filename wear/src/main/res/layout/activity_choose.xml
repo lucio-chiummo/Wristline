@@ -45,8 +45,10 @@
             android:textColor="@color/muted"
             android:textSize="13sp" />
 
-        <!-- One round button per app, side by side; the whole column is the touch target. -->
+        <!-- One round button per app, side by side; the whole column is the touch target. Three
+             don't fit across a round screen: ChooseAppActivity moves the third to a second row. -->
         <LinearLayout
+            android:id="@+id/apps_row"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
@@ -114,6 +116,46 @@
                     android:textColor="@color/text"
                     android:textSize="13sp" />
             </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/signal"
+                android:layout_width="76dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:contentDescription="Signal"
+                android:focusable="true"
+                android:gravity="center_horizontal"
+                android:orientation="vertical">
+
+                <ImageView
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:background="@drawable/bg_circle"
+                    android:backgroundTint="@color/signal"
+                    android:importantForAccessibility="no"
+                    android:scaleType="center"
+                    android:src="@drawable/ic_call"
+                    android:tint="@color/on_badge" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:importantForAccessibility="no"
+                    android:text="Signal"
+                    android:textColor="@color/text"
+                    android:textSize="13sp" />
+            </LinearLayout>
         </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/apps_row2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal"
+            android:visibility="gone" />
     </LinearLayout>
 </ScrollView>

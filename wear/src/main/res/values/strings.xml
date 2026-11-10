@@ -30,9 +30,15 @@
     <string name="favourites">Favourites</string>
     <string name="recent">Recent</string>
     <string name="all_contacts">All contacts</string>
+    <string name="all_recent">All recent</string>
+    <string name="recent_missed_short">Missed · %s</string>
+    <!-- "WhatsApp · 214": a list's title. -->
+    <string name="list_title">%1$s · %2$d</string>
+    <!-- Home screen app button, read by TalkBack: "Signal, 9 people". -->
+    <string name="app_button_description">%1$s, %2$d people</string>
     <string name="starred">%1$s added to favourites</string>
     <string name="unstarred">%1$s removed from favourites</string>
-    <string name="cant_call_back">Can\'t call back from the watch: not a WhatsApp or Telegram contact.</string>
+    <string name="cant_call_back">Can\'t call back from the watch: not a WhatsApp, Telegram or Signal contact.</string>
     <string name="favourite_hint">Tip: hold a name to add it to favourites.</string>
     <string name="favourite">Favourite</string>
     <string name="add_favourite">Add to favourites</string>

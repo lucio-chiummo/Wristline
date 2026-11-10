@@ -29,9 +29,13 @@
     <string name="favourites">Preferiti</string>
     <string name="recent">Recenti</string>
     <string name="all_contacts">Tutti i contatti</string>
+    <string name="all_recent">Tutte le recenti</string>
+    <string name="recent_missed_short">Persa · %s</string>
+    <string name="list_title">%1$s · %2$d</string>
+    <string name="app_button_description">%1$s, %2$d persone</string>
     <string name="starred">%1$s aggiunto ai preferiti</string>
     <string name="unstarred">%1$s rimosso dai preferiti</string>
-    <string name="cant_call_back">Impossibile richiamare dall\'orologio: non è un contatto WhatsApp o Telegram.</string>
+    <string name="cant_call_back">Impossibile richiamare dall\'orologio: non è un contatto WhatsApp, Telegram o Signal.</string>
     <string name="favourite_hint">Suggerimento: tieni premuto un nome per aggiungerlo ai preferiti.</string>
     <string name="favourite">Preferito</string>
     <string name="add_favourite">Aggiungi ai preferiti</string>

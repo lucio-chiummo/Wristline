@@ -2,18 +2,15 @@ package app.wristline.wear;
 
 import android.app.Activity;
 import android.content.res.ColorStateList;
-import android.graphics.Typeface;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.accessibility.AccessibilityNodeInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
-import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -21,23 +18,25 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.wear.widget.WearableLinearLayoutManager;
 import androidx.wear.widget.WearableRecyclerView;
 
-import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 /**
- * Search, favourites, recent calls and all contacts reachable on WhatsApp or Telegram. Tap to call
- * (or choose the app when both); hold a contact to star it.
+ * The hub: search everyone, the latest calls (tap to call back), then one button per app
+ * (Favourites, WhatsApp, Telegram, Signal) that opens just those people in {@link ContactListActivity}.
  */
 public class MainActivity extends Activity {
     /** From the tile or complication, with {@link LaunchToken#EXTRA}: call this contact straight away. */
     static final String EXTRA_CONTACT_ID = "contact_id";
-    private static final int RECENT_SHOWN = 10;
+    /** Latest calls shown on the home screen; the rest are behind "All recent". */
+    static final int RECENT_ON_HOME = 3;
     private static final int TYPE_SEARCH = 0;
     private static final int TYPE_SECTION = 1;
     private static final int TYPE_CONTACT = 2;
     private static final int TYPE_RECENT = 3;
-    private static final int TYPE_HINT = 4;
+    private static final int TYPE_MORE = 4;
+    private static final int TYPE_APPS = 5;
 
     /** One row of the list. */
     private static final class Item {
@@ -60,12 +59,8 @@ public class MainActivity extends Activity {
     private final List<Item> items = new ArrayList<>();
     private PhoneLink.Contacts loaded = new PhoneLink.Contacts(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
     private String query = "";
-    private static final int FAST_SCROLL_MIN = 20;
-    private View strip;
-    private TextView bubble;
-    private LetterIndex letters;
-    /** Adapter position of the first row of "All contacts". */
-    private int allStart;
+    /** The first load has landed; later ones (on return to the screen) are quiet. */
+    private boolean everLoaded;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,11 +71,8 @@ public class MainActivity extends Activity {
         list.setLayoutManager(new WearableLinearLayoutManager(this, new EdgeShrink()));
         list.setAdapter(adapter);
         list.requestFocus(); // rotary crown scrolls the list
-        strip = findViewById(R.id.letter_strip);
-        bubble = findViewById(R.id.letter_bubble);
-        strip.setOnTouchListener(this::onStripTouch);
         askForNotificationsOnce();
-        load();
+        load(false);
     }
 
     /** For the call indicator on the watch face; asked once, the app works without it. */
@@ -100,13 +92,34 @@ public class MainActivity extends Activity {
         super.onResume();
         // A call screen minimised during a call: opening Wristline brings it back.
         InCallActivity.resume(this);
+        // Back on the home screen after a call (or after a while away): show the latest calls.
+        if (everLoaded) {
+            load(true);
+        }
+        // The phone publishes a call a moment after it ends (missed calls a little later): reload
+        // then too, while this screen is showing.
+        CallStateService.onContactsChanged = this::onContactsChanged;
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (CallStateService.onContactsChanged != null) {
+            CallStateService.onContactsChanged = null;
+        }
+    }
+
+    private void onContactsChanged() {
+        if (everLoaded && !isDestroyed()) {
+            load(true);
+        }
     }
 
     /**
      * Rows shrink and fade as they near the top and bottom of the round screen, where the edges
      * would otherwise cut them off.
      */
-    private static final class EdgeShrink extends WearableLinearLayoutManager.LayoutCallback {
+    static final class EdgeShrink extends WearableLinearLayoutManager.LayoutCallback {
         @Override
         public void onLayoutFinished(View child, RecyclerView parent) {
             float centre = child.getY() + child.getHeight() / 2f;
@@ -121,28 +134,47 @@ public class MainActivity extends Activity {
         }
     }
 
-    private void load() {
-        showMessage(R.string.loading, 0);
+    /**
+     * Reads contacts and calls from the phone's synced data. {@code quiet}: a reload while the
+     * screen is already showing data, so no "Loading" and no focus grab (the search keyboard may be
+     * open); the rows below the search field are swapped when the data lands.
+     */
+    private void load(boolean quiet) {
+        if (!quiet) {
+            showMessage(R.string.loading, 0);
+        }
         new Thread(() -> {
             PhoneLink.Contacts contacts = PhoneLink.contacts(this);
-            Favourites.restoreIfEmpty(this, contacts.favourites);
+            // Only when the screen opens: on a reload, an empty list is the owner's own doing
+            // (they unstarred the last one), and the phone's backup isn't republished to say so.
+            if (!quiet) {
+                Favourites.restoreIfEmpty(this, contacts.favourites);
+            }
             runOnUiThread(() -> {
+                if (isDestroyed()) {
+                    return;
+                }
+                boolean wasShowing = list.getVisibility() == View.VISIBLE;
                 loaded = contacts;
+                everLoaded = true;
                 rebuild();
-                if (contacts.all.isEmpty()) {
+                if (contacts.all.isEmpty() && contacts.history.isEmpty()) {
                     showMessage(R.string.no_contacts, R.drawable.ic_phone_link);
-                } else {
+                } else if (!quiet || !wasShowing) {
                     message.setVisibility(View.GONE);
                     list.setVisibility(View.VISIBLE);
                     // Hidden while loading, it lost focus: take it back so the crown scrolls it.
                     list.requestFocus();
                 }
+                if (quiet) {
+                    return;
+                }
                 long fromTile = LaunchToken.matches(this, getIntent())
                         ? getIntent().getLongExtra(EXTRA_CONTACT_ID, -1) : -1;
                 getIntent().removeExtra(EXTRA_CONTACT_ID);
-                WatchContact contact = byId(fromTile);
+                WatchContact contact = byId(loaded.all, fromTile);
                 if (contact != null) {
-                    pick(contact);
+                    pick(this, contact);
                 }
             });
         }).start();
@@ -166,31 +198,19 @@ public class MainActivity extends Activity {
                 items.add(new Item(TYPE_CONTACT, null, contact, null));
             }
         } else {
-            List<WatchContact> favourites = ContactOrder.favourites(loaded.all, Favourites.ids(this));
-            if (!favourites.isEmpty()) {
-                items.add(new Item(TYPE_SECTION, getString(R.string.favourites), null, null));
-                for (WatchContact contact : favourites) {
-                    items.add(new Item(TYPE_CONTACT, null, contact, null));
-                }
-            }
             if (!loaded.history.isEmpty()) {
                 items.add(new Item(TYPE_SECTION, getString(R.string.recent), null, null));
-                for (HistoryEntry call : loaded.history.subList(0, Math.min(RECENT_SHOWN, loaded.history.size()))) {
+                for (HistoryEntry call : loaded.history.subList(0, Math.min(RECENT_ON_HOME, loaded.history.size()))) {
                     items.add(new Item(TYPE_RECENT, null, null, call));
                 }
+                if (loaded.history.size() > RECENT_ON_HOME) {
+                    items.add(new Item(TYPE_MORE, getString(R.string.all_recent), null, null));
+                }
             }
-            if (!loaded.all.isEmpty()) {
-                items.add(new Item(TYPE_SECTION, getString(R.string.all_contacts), null, null));
-                allStart = items.size();
-                for (WatchContact contact : loaded.all) {
-                    items.add(new Item(TYPE_CONTACT, null, contact, null));
-                }
-                if (favourites.isEmpty()) {
-                    items.add(new Item(TYPE_HINT, getString(R.string.favourite_hint), null, null));
-                }
+            if (!AppLists.buttons(loaded.all, Favourites.ids(this)).isEmpty()) {
+                items.add(new Item(TYPE_APPS, null, null, null));
             }
         }
-        updateStrip();
         // Replace only the rows below the search field: notifyDataSetChanged() re-binds the field's
         // row too, which takes its focus away and closes the watch keyboard after every letter.
         if (oldCount == 0) {
@@ -205,39 +225,8 @@ public class MainActivity extends Activity {
         }
     }
 
-    /** The A–Z strip is for the full list only: not while searching, not for short lists. */
-    private void updateStrip() {
-        boolean show = query.trim().isEmpty() && loaded.all.size() >= FAST_SCROLL_MIN;
-        if (show) {
-            List<String> names = new ArrayList<>();
-            for (WatchContact contact : loaded.all) {
-                names.add(contact.name);
-            }
-            letters = LetterIndex.of(names);
-        }
-        strip.setVisibility(show ? View.VISIBLE : View.GONE);
-    }
-
-    /** Dragging along the strip jumps the list to that letter and shows it in a bubble. */
-    private boolean onStripTouch(View view, android.view.MotionEvent event) {
-        if (letters == null) {
-            return false;
-        }
-        if (event.getActionMasked() == android.view.MotionEvent.ACTION_UP
-                || event.getActionMasked() == android.view.MotionEvent.ACTION_CANCEL) {
-            bubble.setVisibility(View.GONE);
-            return true;
-        }
-        String letter = letters.atFraction(event.getY() / view.getHeight());
-        bubble.setText(letter);
-        bubble.setVisibility(View.VISIBLE);
-        ((androidx.recyclerview.widget.LinearLayoutManager) list.getLayoutManager())
-                .scrollToPositionWithOffset(allStart + letters.position(letter), list.getHeight() / 3);
-        return true;
-    }
-
-    private WatchContact byId(long id) {
-        for (WatchContact contact : loaded.all) {
+    static WatchContact byId(List<WatchContact> all, long id) {
+        for (WatchContact contact : all) {
             if (contact.id == id) {
                 return contact;
             }
@@ -245,22 +234,24 @@ public class MainActivity extends Activity {
         return null;
     }
 
-    private void pick(WatchContact contact) {
+    /** Calls with the person's only app, or asks which app when they're on several. */
+    static void pick(Activity activity, WatchContact contact) {
         if (contact.apps.size() == 1) {
-            call(this, contact, contact.apps.get(0));
+            call(activity, contact, contact.apps.get(0));
         } else {
-            startActivity(ChooseAppActivity.intent(this, contact));
+            activity.startActivity(ChooseAppActivity.intent(activity, contact));
         }
     }
 
-    private void callBack(HistoryEntry call) {
-        WatchContact contact = byId(call.contactId);
+    /** Calls back with the same app as the call, when the caller is a callable contact. */
+    static void callBack(Activity activity, List<WatchContact> all, HistoryEntry call) {
+        WatchContact contact = byId(all, call.contactId);
         if (contact == null) {
-            Toast.makeText(this, R.string.cant_call_back, Toast.LENGTH_LONG).show();
+            Toast.makeText(activity, R.string.cant_call_back, Toast.LENGTH_LONG).show();
         } else if (contact.apps.contains(call.app)) {
-            call(this, contact, call.app);
+            call(activity, contact, call.app);
         } else {
-            pick(contact);
+            pick(activity, contact);
         }
     }
 
@@ -281,6 +272,61 @@ public class MainActivity extends Activity {
         }).start();
     }
 
+    /** Shows the buttons that have people behind them, in order, two per row with no holes. */
+    private void bindButtons(View view) {
+        Set<Long> favourites = Favourites.ids(this);
+        List<String> shown = AppLists.buttons(loaded.all, favourites);
+        LinearLayout row1 = view.findViewById(R.id.buttons_row1);
+        LinearLayout row2 = view.findViewById(R.id.buttons_row2);
+        String[] keys = {AppLists.FAVOURITES, Protocol.WHATSAPP, Protocol.TELEGRAM, Protocol.SIGNAL};
+        int[] ids = {R.id.btn_favourites, R.id.btn_whatsapp, R.id.btn_telegram, R.id.btn_signal};
+        int[] counts = {R.id.btn_favourites_count, R.id.btn_whatsapp_count, R.id.btn_telegram_count, R.id.btn_signal_count};
+        int[] labels = {R.id.btn_favourites_label, R.id.btn_whatsapp_label, R.id.btn_telegram_label, R.id.btn_signal_label};
+        List<View> buttons = new ArrayList<>();
+        for (int id : ids) {
+            View button = view.findViewById(id);
+            ((ViewGroup) button.getParent()).removeView(button);
+            buttons.add(button);
+        }
+        for (int i = 0; i < keys.length; i++) {
+            String key = keys[i];
+            View button = buttons.get(i);
+            boolean favouritesKey = AppLists.FAVOURITES.equals(key);
+            int n = AppLists.count(loaded.all, favourites, key);
+            String label = favouritesKey ? getString(R.string.favourites) : Protocol.label(key);
+            int fg = favouritesKey ? getColor(R.color.star) : Ui.appColor(this, key);
+            int bg = getColor(favouritesKey ? R.color.favourites_button
+                    : Protocol.WHATSAPP.equals(key) ? R.color.whatsapp_button
+                    : Protocol.TELEGRAM.equals(key) ? R.color.telegram_button : R.color.signal_button);
+            button.setBackgroundTintList(ColorStateList.valueOf(bg));
+            TextView labelView = button.findViewById(labels[i]);
+            labelView.setText(favouritesKey ? "★ " + label : label);
+            labelView.setTextColor(fg);
+            TextView countView = button.findViewById(counts[i]);
+            countView.setText(String.valueOf(n));
+            countView.setTextColor(fg);
+            button.setContentDescription(getString(R.string.app_button_description, label, n));
+            button.setOnClickListener(v -> startActivity(ContactListActivity.intent(this, key)));
+            int position = shown.indexOf(key);
+            button.setVisibility(position < 0 ? View.GONE : View.VISIBLE);
+            (position >= 0 && position < 2 ? row1 : row2).addView(button);
+        }
+        // Visible buttons first within each row, so a lone button sits on the left like the rest.
+        for (LinearLayout row : new LinearLayout[] {row1, row2}) {
+            List<View> hidden = new ArrayList<>();
+            for (int i = 0; i < row.getChildCount(); i++) {
+                if (row.getChildAt(i).getVisibility() != View.VISIBLE) {
+                    hidden.add(row.getChildAt(i));
+                }
+            }
+            for (View h : hidden) {
+                row.removeView(h);
+                row.addView(h);
+            }
+        }
+        row2.setVisibility(shown.size() > 2 ? View.VISIBLE : View.GONE);
+    }
+
     private final class Adapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         @Override
         public int getItemCount() {
@@ -296,7 +342,8 @@ public class MainActivity extends Activity {
         public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int type) {
             LayoutInflater inflater = LayoutInflater.from(parent.getContext());
             int layout = type == TYPE_SEARCH ? R.layout.item_search
-                    : type == TYPE_SECTION || type == TYPE_HINT ? R.layout.item_section
+                    : type == TYPE_SECTION || type == TYPE_MORE ? R.layout.item_section
+                    : type == TYPE_APPS ? R.layout.item_app_buttons
                     : R.layout.item_person;
             View view = inflater.inflate(layout, parent, false);
             if (type == TYPE_SEARCH) {
@@ -335,74 +382,31 @@ public class MainActivity extends Activity {
             View row = holder.itemView;
             switch (item.type) {
                 case TYPE_SECTION:
-                case TYPE_HINT:
-                    TextView title = (TextView) row;
-                    title.setText(item.text);
-                    title.setTextColor(getColor(item.type == TYPE_HINT ? R.color.muted : R.color.accent));
-                    title.setTypeface(null, item.type == TYPE_HINT ? Typeface.NORMAL : Typeface.BOLD);
-                    title.setTextSize(item.type == TYPE_HINT ? 12 : 13);
+                    ((TextView) row).setText(item.text);
+                    break;
+                case TYPE_MORE:
+                    TextView more = (TextView) row;
+                    more.setText(item.text);
+                    more.setTextColor(getColor(R.color.text));
+                    more.setBackgroundResource(R.drawable.bg_pill);
+                    more.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.card_high)));
+                    more.setClickable(true);
+                    more.setFocusable(true);
+                    more.setOnClickListener(v -> startActivity(ContactListActivity.intent(MainActivity.this, AppLists.RECENT)));
                     break;
                 case TYPE_RECENT:
-                    bindRecent(row, item.call);
+                    PersonRows.bindRecent(MainActivity.this, row, item.call, loaded.all);
                     break;
                 case TYPE_CONTACT:
-                    bindContact(row, item.contact);
+                    PersonRows.bindContact(MainActivity.this, row, item.contact, MainActivity.this::rebuild,
+                            v -> pick(MainActivity.this, item.contact));
+                    break;
+                case TYPE_APPS:
+                    bindButtons(row);
                     break;
                 default:
                     break;
             }
         }
-    }
-
-    private void bindContact(View row, WatchContact contact) {
-        boolean isFavourite = Favourites.ids(this).contains(contact.id);
-        Ui.avatar(row.findViewById(R.id.avatar), contact.name);
-        ImageView badge = row.findViewById(R.id.badge);
-        badge.setVisibility(isFavourite ? View.VISIBLE : View.GONE);
-        badge.setImageResource(R.drawable.ic_star);
-        badge.setImageTintList(ColorStateList.valueOf(getColor(R.color.star)));
-        ((TextView) row.findViewById(R.id.name)).setText(contact.name);
-        ((TextView) row.findViewById(R.id.detail)).setText(Ui.apps(this, contact.apps));
-        List<String> labels = new ArrayList<>();
-        for (String app : contact.apps) {
-            labels.add(Protocol.label(app));
-        }
-        row.setContentDescription(contact.name + ", " + String.join(", ", labels));
-        row.setStateDescription(isFavourite ? getString(R.string.favourite) : null);
-        // TalkBack reads the hold action as "Add to favourites" instead of "long press".
-        row.setAccessibilityDelegate(new View.AccessibilityDelegate() {
-            @Override
-            public void onInitializeAccessibilityNodeInfo(View host, AccessibilityNodeInfo info) {
-                super.onInitializeAccessibilityNodeInfo(host, info);
-                info.addAction(new AccessibilityNodeInfo.AccessibilityAction(AccessibilityNodeInfo.ACTION_LONG_CLICK,
-                        getString(isFavourite ? R.string.remove_favourite : R.string.add_favourite)));
-            }
-        });
-        row.setOnClickListener(v -> pick(contact));
-        row.setOnLongClickListener(v -> {
-            boolean now = Favourites.toggle(this, contact.id);
-            Toast.makeText(this, getString(now ? R.string.starred : R.string.unstarred, contact.name),
-                    Toast.LENGTH_SHORT).show();
-            rebuild();
-            return true;
-        });
-    }
-
-    private void bindRecent(View row, HistoryEntry call) {
-        Ui.avatar(row.findViewById(R.id.avatar), call.name);
-        ImageView direction = row.findViewById(R.id.badge);
-        direction.setVisibility(View.VISIBLE);
-        direction.setImageResource(call.outgoing ? R.drawable.ic_call_made
-                : call.missed ? R.drawable.ic_call_missed : R.drawable.ic_call_received);
-        direction.setImageTintList(ColorStateList.valueOf(getColor(call.outgoing ? R.color.accent
-                : call.missed ? R.color.hang_up : R.color.whatsapp)));
-        ((TextView) row.findViewById(R.id.name)).setText(call.name);
-        String when = DateUtils.formatSameDayTime(call.time, System.currentTimeMillis(),
-                DateFormat.SHORT, DateFormat.SHORT).toString();
-        ((TextView) row.findViewById(R.id.detail)).setText(Protocol.label(call.app) + " · " + when);
-        row.setContentDescription(getString(call.outgoing ? R.string.recent_outgoing
-                        : call.missed ? R.string.recent_missed : R.string.recent_incoming,
-                call.name, Protocol.label(call.app), when));
-        row.setOnClickListener(v -> callBack(call));
     }
 }

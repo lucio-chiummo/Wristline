@@ -57,4 +57,19 @@ public class CallShapeTest {
     public void ordinaryNotificationIsNone() {
         assertEquals(NONE, new CallShape(false, false, null, false, false, 2, false).classify(true));
     }
+
+    @Test
+    public void signalRinging() { // captured 2026-11-10: calls_v3, CallStyle callType=1, Decline/Answer
+        assertEquals(INCOMING, new CallShape(true, true, 1, true, true, 2, false).classify(false));
+    }
+
+    @Test
+    public void signalInCall() { // captured 2026-11-10: call_status, CallStyle callType=2, "Hang up"
+        assertEquals(ONGOING, new CallShape(true, true, 2, false, false, 1, true).classify(false));
+    }
+
+    @Test
+    public void signalConnectingStatusIsNotTheCall() { // "Connecting…": ongoing, no category, no actions
+        assertEquals(NONE, new CallShape(false, true, null, false, false, 0, false).classify(false));
+    }
 }

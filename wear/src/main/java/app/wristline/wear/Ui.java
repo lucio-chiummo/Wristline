@@ -32,9 +32,19 @@ final class Ui {
         }
     }
 
+    /** The call's app as a letter badge (W, T, S, I) in the app's colour; hidden for an unknown app. */
+    static void appBadge(TextView badge, String app) {
+        String letter = AppBadge.letter(app);
+        badge.setVisibility(letter == null ? android.view.View.GONE : android.view.View.VISIBLE);
+        badge.setText(letter);
+        badge.getBackground().mutate().setTint(appColor(badge.getContext(), app));
+    }
+
     static int appColor(Context context, String app) {
         return context.getColor(Protocol.WHATSAPP.equals(app) ? R.color.whatsapp
-                : Protocol.TELEGRAM.equals(app) ? R.color.telegram : R.color.muted);
+                : Protocol.TELEGRAM.equals(app) ? R.color.telegram
+                : Protocol.SIGNAL.equals(app) ? R.color.signal
+                : "com.instagram.android".equals(app) ? R.color.instagram : R.color.muted);
     }
 
     /** "● WhatsApp ● Telegram", each dot in the app's colour. */

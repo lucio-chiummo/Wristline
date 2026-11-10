@@ -20,8 +20,22 @@ public class CallStateService extends WearableListenerService {
             String path = event.getDataItem().getUri().getPath();
             if (Protocol.PATH_CONTACTS.equals(path) || Protocol.PATH_STATUS.equals(path)) {
                 refreshTile(this);
+                if (Protocol.PATH_CONTACTS.equals(path)) {
+                    contactsChanged();
+                }
                 return;
             }
+        }
+    }
+
+    /** Run (on the main thread) when the phone publishes new contacts or calls; set while home is showing. */
+    static volatile Runnable onContactsChanged;
+
+    /** New contacts or calls from the phone: tells an open home screen to reload. */
+    static void contactsChanged() {
+        Runnable listener = onContactsChanged;
+        if (listener != null) {
+            new android.os.Handler(android.os.Looper.getMainLooper()).post(listener);
         }
     }
 

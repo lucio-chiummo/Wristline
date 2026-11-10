@@ -9,8 +9,13 @@
     <color name="accent">#8AB4F8</color>
     <color name="whatsapp">#7FD9A0</color>
     <color name="telegram">#7CC4F0</color>
+    <!-- Signal's blue, lightened for the black ground. -->
+    <color name="signal">#A3B3FF</color>
+    <color name="instagram">#F0A0C8</color>
     <color name="whatsapp_button">#1E3A28</color>
     <color name="telegram_button">#1C2F3F</color>
+    <color name="signal_button">#23284A</color>
+    <color name="favourites_button">#3A3320</color>
     <color name="on_badge">#0F1115</color>
     <color name="hang_up">#E5484D</color>
     <color name="star">#FDD663</color>

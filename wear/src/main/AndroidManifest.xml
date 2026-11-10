@@ -43,6 +43,10 @@
             android:taskAffinity="" />
 
         <activity
+            android:name=".ContactListActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".InCallActivity"
             android:exported="false"
             android:launchMode="singleTop"

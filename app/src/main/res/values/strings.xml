@@ -3,7 +3,7 @@
     <string name="app_name" translatable="false">Wristline</string>
     <string name="phone_account_label" translatable="false">Wristline</string>
 
-    <string name="no_supported_app">None of the apps Wristline supports is installed. It works with WhatsApp, Telegram and Instagram.</string>
+    <string name="no_supported_app">None of the apps Wristline supports is installed. It works with WhatsApp, Telegram, Instagram and Signal.</string>
 
     <string name="step_listener_title">Notification access</string>
     <string name="step_listener_desc">Notices incoming calls from the apps you turned on.</string>
@@ -58,14 +58,14 @@
     <string name="permissions_all_done">All %1$d done</string>
     <string name="permissions_progress">%1$d of %2$d done</string>
     <string name="row_watch_calling">Call from the watch</string>
-    <string name="watch_calling_off">Off · start WhatsApp and Telegram calls from your wrist</string>
+    <string name="watch_calling_off">Off · start WhatsApp, Telegram and Signal calls from your wrist</string>
     <string name="watch_calling_on">On · %1$d contacts on your watch</string>
-    <string name="watch_calling_none">On · no contacts with WhatsApp or Telegram calls yet. For Telegram, turn on Settings › Privacy › Sync contacts in Telegram.</string>
+    <string name="watch_calling_none">On · no contacts with WhatsApp, Telegram or Signal calls yet. For Telegram, turn on Settings › Privacy › Sync contacts in Telegram.</string>
     <string name="watch_not_connected">Your watch isn\'t connected right now.</string>
     <string name="watch_app_missing">Install Wristline on your watch. It takes a computer: tap Help at the top of the home screen for the steps.</string>
     <string name="watch_calling_needs_permission">On · tap to allow Wristline to start calls</string>
     <string name="watch_calling_title">Call from the watch</string>
-    <string name="watch_calling_message">Your watch gets a list of your contacts who can be called on WhatsApp or Telegram: only their names, never numbers or photos, and only on your own watch. Android will also ask to let Wristline \"make and manage phone calls\": WhatsApp and Telegram only start a call for apps that have it. Wristline never calls phone numbers itself. You also need Wristline on the watch: installing it takes a computer. Tap Help at the top of the home screen for the steps.</string>
+    <string name="watch_calling_message">Your watch gets a list of your contacts who can be called on WhatsApp, Telegram or Signal: only their names, never numbers or photos, and only on your own watch. Android will also ask to let Wristline \"make and manage phone calls\": WhatsApp, Telegram and Signal only start a call for apps that have it. Wristline never calls phone numbers itself. You also need Wristline on the watch: installing it takes a computer. Tap Help at the top of the home screen for the steps.</string>
     <string name="row_history">Call history</string>
     <string name="history_empty">No relayed calls yet</string>
     <string name="history_summary">Last %1$d relayed calls · %2$d from the watch</string>

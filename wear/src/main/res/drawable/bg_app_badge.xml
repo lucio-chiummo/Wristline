@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- App badge: a filled circle (tinted per app in code) with a ring in the row's card colour. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <solid android:color="#FFFFFFFF" />
+    <stroke
+        android:width="2dp"
+        android:color="@color/card" />
+</shape>

@@ -13,7 +13,8 @@ import org.junit.Test;
 public class SupportedAppTest {
     @Test
     public void tableOrderAndPackages() {
-        assertEquals(List.of("com.whatsapp", "org.telegram.messenger", "com.instagram.android"),
+        assertEquals(List.of("com.whatsapp", "org.telegram.messenger", "com.instagram.android",
+                "org.thoughtcrime.securesms"),
                 SupportedApp.ALL.stream().map(a -> a.packageName).collect(Collectors.toList()));
     }
 
@@ -46,5 +47,20 @@ public class SupportedAppTest {
         assertFalse(SupportedApp.forPackage("com.whatsapp").separateInCallNotification);
         assertTrue(SupportedApp.forPackage("org.telegram.messenger").separateInCallNotification);
         assertTrue(SupportedApp.forPackage("com.instagram.android").separateInCallNotification);
+    }
+
+    @Test
+    public void signalFromTheCapture() {
+        // Captured 2026-11-10: ringing (id 71, calls_v3) and in-call (id 70, call_status) are separate
+        // call-category CallStyle notifications; Signal writes "Signal voice call" contact rows.
+        SupportedApp signal = SupportedApp.forPackage("org.thoughtcrime.securesms");
+        assertEquals("Signal", signal.label);
+        assertFalse(signal.defaultOn);
+        assertFalse(signal.beta);
+        assertTrue(signal.fullModeVerified);
+        assertTrue(signal.ongoingLacksCallCategory);
+        assertTrue(signal.separateInCallNotification);
+        assertFalse(signal.ownCallBack);
+        assertEquals(signal, SupportedApp.forCallMimeType("vnd.android.cursor.item/vnd.org.thoughtcrime.securesms.call"));
     }
 }

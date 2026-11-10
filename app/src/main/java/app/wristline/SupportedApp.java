@@ -15,7 +15,16 @@ final class SupportedApp {
     // our call go active) and, answered, makes no Telecom call of its own (Telecom history, 2026-11-01).
     static final SupportedApp INSTAGRAM = new SupportedApp("com.instagram.android", "Instagram", false, true, false, false, true, null, true);
 
-    static final List<SupportedApp> ALL = List.of(WHATSAPP, TELEGRAM, INSTAGRAM);
+    // Captured 2026-11-10: ringing and in-call are separate call-category CallStyle notifications
+    // (Decline/Answer, then "Hang up"); no missed-call notification of its own. A call started from
+    // the watch shows "Establishing…" with only "Cancel call" and no call category, hence
+    // ongoingLacksCallCategory (as Telegram) so hanging up from the watch presses it. Signal registers a
+    // self-managed Telecom account, yet voice through the watch works with the same READ_PHONE_STATE
+    // appop as WhatsApp: tested 2026-11-10 (answer, call from the watch, hang up from the watch).
+    static final SupportedApp SIGNAL = new SupportedApp("org.thoughtcrime.securesms", "Signal", false, true, true, false, true,
+            "vnd.android.cursor.item/vnd.org.thoughtcrime.securesms.call", false);
+
+    static final List<SupportedApp> ALL = List.of(WHATSAPP, TELEGRAM, INSTAGRAM, SIGNAL);
 
     final String packageName;
     final String label;
