@@ -20,6 +20,7 @@ final class EventLog {
     static final String LISTENER_CONNECTED = "listener_connected";
     static final String LISTENER_DISCONNECTED = "listener_disconnected";
     static final String LISTENER_REBIND = "listener_rebind";
+    static final String LISTENER_TOGGLED = "listener_toggled";
     static final String INCOMING = "incoming";
     static final String SWITCHED_OFF = "switched_off";
     static final String RELAY_PAUSED = "relay_paused";

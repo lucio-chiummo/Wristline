@@ -105,7 +105,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        Diagnostics.rebindListenerIfNeeded(this);
+        ListenerRebind.ifNeeded(this, ListenerRebind.HOME, null);
         TestCall.onResult = this::refresh;
         Relaying.onChange = this::refresh;
         refresh();
