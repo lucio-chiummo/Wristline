@@ -68,6 +68,8 @@ public class ListenerRebindTest {
     @Test
     public void unboundListenerIsToggledAfterFiveSeconds() {
         grantAccess();
+        context.getPackageManager().setComponentEnabledSetting(new ComponentName(context, RelayListener.class),
+                PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
         ListenerRebind.ifNeeded(context, ListenerRebind.HOME, null);
         assertEquals(Arrays.asList(EventLog.LISTENER_REBIND), codes());
 
@@ -138,6 +140,23 @@ public class ListenerRebindTest {
         assertEquals(1, done.get());
         wait5s();
         assertEquals(2, done.get());
+    }
+
+    @Test
+    public void callsFromABackgroundThreadStillCheckOnce() throws InterruptedException {
+        grantAccess();
+        Thread[] threads = new Thread[2];
+        for (int i = 0; i < threads.length; i++) {
+            threads[i] = new Thread(() -> ListenerRebind.ifNeeded(context, ListenerRebind.WATCH, null));
+        }
+        for (Thread t : threads) {
+            t.start();
+            t.join();
+        }
+
+        wait5s();
+
+        assertEquals(Arrays.asList(EventLog.LISTENER_TOGGLED, EventLog.LISTENER_REBIND), codes());
     }
 
     @Test
