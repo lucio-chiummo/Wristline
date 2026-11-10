@@ -45,6 +45,7 @@ final class Protocol {
 
     static final String WHATSAPP = "com.whatsapp";
     static final String TELEGRAM = "org.telegram.messenger";
+    static final String SIGNAL = "org.thoughtcrime.securesms";
 
     static final String MUTE_OFF = "off";
     static final String MUTE_ON = "on";
@@ -92,6 +93,6 @@ final class Protocol {
 
     static String label(String app) {
         return WHATSAPP.equals(app) ? "WhatsApp" : TELEGRAM.equals(app) ? "Telegram"
-                : "com.instagram.android".equals(app) ? "Instagram" : app;
+                : "com.instagram.android".equals(app) ? "Instagram" : SIGNAL.equals(app) ? "Signal" : app;
     }
 }

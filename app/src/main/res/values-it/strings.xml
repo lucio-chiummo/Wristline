@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="no_supported_app">Nessuna delle app supportate da Wristline è installata. Funziona con WhatsApp, Telegram e Instagram.</string>
+    <string name="no_supported_app">Nessuna delle app supportate da Wristline è installata. Funziona con WhatsApp, Telegram, Instagram e Signal.</string>
 
     <string name="step_listener_title">Accesso alle notifiche</string>
     <string name="step_listener_desc">Rileva le chiamate in arrivo dalle app che hai attivato.</string>
@@ -53,14 +53,14 @@
     <string name="permissions_all_done">Tutte e %1$d concesse</string>
     <string name="permissions_progress">%1$d di %2$d concesse</string>
     <string name="row_watch_calling">Chiama dall\'orologio</string>
-    <string name="watch_calling_off">Disattivato · avvia chiamate WhatsApp e Telegram dal polso</string>
+    <string name="watch_calling_off">Disattivato · avvia chiamate WhatsApp, Telegram e Signal dal polso</string>
     <string name="watch_calling_on">Attivo · %1$d contatti sull\'orologio</string>
-    <string name="watch_calling_none">Attivo · ancora nessun contatto con chiamate WhatsApp o Telegram. Per Telegram, attiva Impostazioni › Privacy e sicurezza › Sincronizza contatti in Telegram.</string>
+    <string name="watch_calling_none">Attivo · ancora nessun contatto con chiamate WhatsApp, Telegram o Signal. Per Telegram, attiva Impostazioni › Privacy e sicurezza › Sincronizza contatti in Telegram.</string>
     <string name="watch_not_connected">L\'orologio non è connesso in questo momento.</string>
     <string name="watch_app_missing">Installa Wristline sull\'orologio. Serve un computer: tocca Aiuto in alto nella schermata principale per i passaggi.</string>
     <string name="watch_calling_needs_permission">Attivo · tocca per consentire a Wristline di avviare le chiamate</string>
     <string name="watch_calling_title">Chiama dall\'orologio</string>
-    <string name="watch_calling_message">Il tuo orologio riceve l\'elenco dei contatti che puoi chiamare su WhatsApp o Telegram: solo i nomi, mai numeri o foto, e solo sul tuo orologio. Android ti chiederà anche di consentire a Wristline di \"effettuare e gestire telefonate\": WhatsApp e Telegram avviano una chiamata solo per le app che hanno questo permesso. Wristline non chiama mai numeri di telefono. Serve anche Wristline sull\'orologio: per installarlo occorre un computer. Tocca Aiuto in alto nella schermata principale per i passaggi.</string>
+    <string name="watch_calling_message">Il tuo orologio riceve l\'elenco dei contatti che puoi chiamare su WhatsApp, Telegram o Signal: solo i nomi, mai numeri o foto, e solo sul tuo orologio. Android ti chiederà anche di consentire a Wristline di \"effettuare e gestire telefonate\": WhatsApp, Telegram e Signal avviano una chiamata solo per le app che hanno questo permesso. Wristline non chiama mai numeri di telefono. Serve anche Wristline sull\'orologio: per installarlo occorre un computer. Tocca Aiuto in alto nella schermata principale per i passaggi.</string>
     <string name="row_history">Cronologia chiamate</string>
     <string name="history_empty">Ancora nessuna chiamata inoltrata</string>
     <string name="history_summary">Ultime %1$d chiamate inoltrate · %2$d dall\'orologio</string>

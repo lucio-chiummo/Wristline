@@ -7,9 +7,9 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <!-- Self-managed Telecom call that the Pixel Watch app shows on the watch. -->
     <uses-permission android:name="android.permission.MANAGE_OWN_CALLS" />
-    <!-- Calling from the watch: names of contacts with WhatsApp/Telegram "Voice call" entries. -->
+    <!-- Calling from the watch: names of contacts with WhatsApp/Telegram/Signal "Voice call" entries. -->
     <uses-permission android:name="android.permission.READ_CONTACTS" />
-    <!-- WhatsApp's and Telegram's "Voice call" contact entries only accept callers holding this. -->
+    <!-- WhatsApp's, Telegram's and Signal's "Voice call" contact entries only accept callers holding this. -->
     <uses-permission android:name="android.permission.CALL_PHONE" />
     <!-- CALL_PHONE would otherwise imply it: Wristline places no calls over the mobile network. -->
     <uses-feature
@@ -20,6 +20,7 @@
         <package android:name="com.whatsapp" />
         <package android:name="org.telegram.messenger" />
         <package android:name="com.instagram.android" />
+        <package android:name="org.thoughtcrime.securesms" />
     </queries>
 
     <application

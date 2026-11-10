@@ -1,6 +1,6 @@
 # Wristline
 
-Take WhatsApp, Telegram and Instagram calls on your Wear OS watch: ring, answer, decline, hang up, and optionally talk through the watch.
+Take WhatsApp, Telegram, Instagram and Signal calls on your Wear OS watch: ring, answer, decline, hang up, and optionally talk through the watch.
 
 Wristline is a small Android app for the **phone**. It exists because these apps don't ring on the watch on their own. WhatsApp's watch app even stops the phone from forwarding call notifications while its servers never send the calls to the watch, and the Pixel Watch app drops Instagram's call notifications. So calls ring nowhere on the watch.
 
@@ -18,20 +18,20 @@ Wristline is a small Android app for the **phone**. It exists because these apps
 
 **When you want to call someone** (needs the watch app and a one-time install with a computer)
 
-- Search your contacts on the watch, or browse everyone you can reach on WhatsApp or Telegram, A to Z.
+- Search your contacts on the watch, or tap **WhatsApp**, **Telegram** or **Signal** on its home screen to see just the people you can reach there, A to Z.
 - Tap a name to call them, and choose the app if they're on both.
-- Keep your favourite people at the top, and call back from your recent calls.
+- Keep your favourite people one tap away, and call back from your latest calls, each marked with the app it came from (W, T, S).
 - Call with one tap from a tile or a watch-face complication.
 - Use the call screen on the watch: mute when the app allows it, change the volume with the crown, hang up, or minimise it.
 
 **Your rules**
 
-- Choose which apps ring the watch: WhatsApp, Telegram and Instagram.
+- Choose which apps ring the watch: WhatsApp, Telegram, Instagram and Signal.
 - Pause it any time, from the app, Quick Settings or the watch tile.
 - Follow your phone's Do Not Disturb.
 - Stop the watch ringing while you're using the phone.
 
-Instagram can't start calls from outside its own app, so calling from the watch works with WhatsApp and Telegram.
+Instagram can't start calls from outside its own app, so calling from the watch works with WhatsApp, Telegram and Signal.
 
 ## What you get
 
@@ -48,6 +48,7 @@ Instagram can't start calls from outside its own app, so calling from the watch 
 | WhatsApp | ✅ tested | ✅ tested |
 | Instagram | ✅ tested | ✅ tested, no setup needed (Instagram can't see the call state) |
 | Telegram | ✅ tested | ✅ tested, same one-time setup as WhatsApp |
+| Signal | ✅ tested | ✅ tested, same one-time setup as WhatsApp |
 
 Also:
 - **Ring my watch** (Home): a test call that checks calls reach the watch, no one needs to call you.
@@ -65,7 +66,7 @@ Also:
 
 Wristline also has a **watch app**. Turn on **Call from the watch** on the phone (asks for Contacts and Phone), then open Wristline on the watch:
 
-- Search, **Favourites** (hold a name to star it), **Recent** calls with call back, and everyone you can reach with WhatsApp or Telegram, A–Z.
+- Home: search everyone, your 3 latest calls (tap to call back; **All recent** for the rest), and buttons for **Favourites**, **WhatsApp**, **Telegram** and **Signal**. Each button opens just those people, A–Z; tapping a name there calls on that app. Hold a name to star it.
 - Tap a name to call; the call starts in that app on the phone and the voice goes through the watch.
 - Wristline's own call screen on the watch: *Calling… → Ringing… → call timer*, one-tap red hang-up, **Mute** when the app's call notification offers it, **Minimise** (open Wristline again to come back), the crown changes the call volume.
 - A tile with your favourites first, then recent people.
@@ -74,7 +75,7 @@ Telegram contacts appear only if Telegram's **Sync contacts** is on. Instagram c
 
 ## Requirements
 
-- Android 12 or newer, with WhatsApp, Telegram or Instagram installed.
+- Android 12 or newer, with WhatsApp, Telegram, Instagram or Signal installed.
 - A Wear OS watch connected through its companion app. Tested with the **Pixel Watch app**. Other companion apps are untested.
 - The watch's **Call audio** Bluetooth profile switched on (phone Settings → Bluetooth → your watch).
 
@@ -121,7 +122,7 @@ Open Wristline. The status card at the top says what's left to do, with one butt
 3. **Display over other apps**: opens the call when you tap Answer on the watch.
 4. **Unrestricted battery**: stops the phone from closing Wristline in the background.
 
-When the card turns green ("Ready"), calls ring on the watch. Use the switches to choose which apps are relayed, or pause relaying altogether with **Relay calls to my watch**. WhatsApp is on by default, Telegram and Instagram are off.
+When the card turns green ("Ready"), calls ring on the watch. Use the switches to choose which apps are relayed, or pause relaying altogether with **Relay calls to my watch**. WhatsApp is on by default, Telegram, Instagram and Signal are off.
 
 ### Voice through the watch
 
@@ -146,7 +147,7 @@ Wristline has no shell access of its own, and it doesn't ask for the internet pe
 
 When an app rings, Wristline registers a matching call with Android's own calling system, and the watch's companion app shows that call on the watch as a real call. Tapping **Answer** on the watch presses the app's own Answer button. For voice through the watch, Wristline first activates its call, so Android connects the watch as the Bluetooth call headset, and only then answers the app. The app's audio then goes through the watch.
 
-Voice through the watch needs one setting changed for each app that can see the phone's call state (WhatsApp, Telegram), because otherwise the app sees "another call" and hangs up. Wristline sets that app's `READ_PHONE_STATE` app-op to `ignore`. The app keeps its Phone permission and works normally otherwise.
+Voice through the watch needs one setting changed for each app that can see the phone's call state (WhatsApp, Telegram, Signal), because otherwise the app sees "another call" and hangs up. Wristline sets that app's `READ_PHONE_STATE` app-op to `ignore`. The app keeps its Phone permission and works normally otherwise.
 
 
 ## Side effects of voice through the watch

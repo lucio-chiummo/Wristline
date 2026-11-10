@@ -22,7 +22,7 @@ final class CallActions {
             "refuser", "weigeren", "afwijzen", "odrzuć", "odrzuc", "отклонить", "reddet",
             "رفض", "अस्वीकार", "拒绝", "拒絕", "拒否", "거절"};
     private static final String[] HANG_UP_WORDS = {
-            "hang up", "end call", "end", "termina", "riaggancia", "chiudi", "colgar", "finalizar",
+            "hang up", "end call", "end", "cancel call", "annulla chiamata", "termina", "riaggancia", "chiudi", "colgar", "finalizar",
             "encerrar", "desligar", "auflegen", "beenden", "raccrocher", "terminer", "ophangen",
             "beëindigen", "rozłącz", "rozlacz", "завершить", "kapat", "إنهاء", "समाप्त", "挂断",
             "掛斷", "終了", "종료"};

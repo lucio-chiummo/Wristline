@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- A contact or a recent call: avatar (with a favourite star or the call's direction on its
-     corner), the name, and a detail line (the apps, or the app and when). -->
+<!-- A contact or a recent call: avatar (a favourite star on its top corner; for a call, the app's
+     letter badge on its bottom corner), the name, and a detail line (the apps, or the call's
+     direction and when). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -37,9 +38,23 @@
             android:id="@+id/badge"
             android:layout_width="16dp"
             android:layout_height="16dp"
-            android:layout_gravity="bottom|end"
+            android:layout_gravity="top|end"
             android:background="@drawable/bg_badge"
             android:padding="2dp"
+            android:visibility="gone" />
+
+        <!-- W / T / S / I in the app's colour, ringed in the card colour to stand off the avatar. -->
+        <TextView
+            android:id="@+id/app_badge"
+            android:layout_width="17dp"
+            android:layout_height="17dp"
+            android:layout_gravity="bottom|end"
+            android:background="@drawable/bg_app_badge"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:textColor="@color/on_badge"
+            android:textSize="9sp"
+            android:textStyle="bold"
             android:visibility="gone" />
     </FrameLayout>
 

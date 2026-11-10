@@ -54,17 +54,20 @@ public class WatchScreensTest {
 
     private static PhoneLink.Contacts sample() {
         List<WatchContact> all = new ArrayList<>();
-        all.add(new WatchContact(1, "Annaly Biavon", apps(Protocol.WHATSAPP, Protocol.TELEGRAM)));
+        all.add(new WatchContact(1, "Annaly Biavon", apps(Protocol.WHATSAPP, Protocol.TELEGRAM, Protocol.SIGNAL)));
         all.add(new WatchContact(2, "Corvan", apps(Protocol.WHATSAPP)));
         all.add(new WatchContact(3, "Galvane Vantor", apps(Protocol.WHATSAPP)));
         all.add(new WatchContact(4, "Lumen Roskin", apps(Protocol.TELEGRAM)));
         all.add(new WatchContact(5, "Mirelle", apps(Protocol.WHATSAPP)));
         all.add(new WatchContact(6, "Pellam Noxley", apps(Protocol.WHATSAPP)));
+        all.add(new WatchContact(7, "Dessa Thorn", apps(Protocol.SIGNAL)));
         long now = System.currentTimeMillis();
         List<HistoryEntry> history = new ArrayList<>();
+        history.add(new HistoryEntry(now - 2 * 60_000, false, Protocol.SIGNAL, -1, "Unknown", true));
         history.add(new HistoryEntry(now - 20 * 60_000, true, Protocol.WHATSAPP, 2, "Corvan"));
         history.add(new HistoryEntry(now - 3 * 3_600_000, false, Protocol.WHATSAPP, 5, "Mirelle"));
         history.add(new HistoryEntry(now - 26 * 3_600_000, false, Protocol.TELEGRAM, 4, "Lumen Roskin"));
+        history.add(new HistoryEntry(now - 30 * 3_600_000, true, Protocol.SIGNAL, 7, "Dessa Thorn"));
         return new PhoneLink.Contacts(all, new ArrayList<>(), history);
     }
 
@@ -103,18 +106,51 @@ public class WatchScreensTest {
         Favourites.toggle(RuntimeEnvironment.getApplication(), 1);
         MainActivity activity = Robolectric.buildActivity(MainActivity.class).setup().get();
         settle();
-        save(activity, "1-list-top");
+        save(activity, "1-hub-top");
 
         RecyclerView list = activity.findViewById(R.id.contacts);
         // The crown scrolls whatever has focus: the list must have it once loaded.
         assertTrue(list.hasFocus());
         list.scrollBy(0, 330);
         settle();
-        save(activity, "2-list-recent");
+        save(activity, "2-hub-buttons");
 
-        list.scrollBy(0, 420);
+        list.scrollBy(0, 400);
         settle();
-        save(activity, "3-list-all");
+        save(activity, "3-hub-grid");
+    }
+
+    @Test
+    public void hubTwoButtons() throws Exception {
+        List<WatchContact> all = new ArrayList<>();
+        all.add(new WatchContact(2, "Corvan", apps(Protocol.WHATSAPP)));
+        all.add(new WatchContact(4, "Lumen Roskin", apps(Protocol.TELEGRAM)));
+        PhoneLink.preview = new PhoneLink.Contacts(all, new ArrayList<>(), new ArrayList<>());
+        MainActivity activity = Robolectric.buildActivity(MainActivity.class).setup().get();
+        settle();
+        save(activity, "8-hub-two-buttons");
+    }
+
+    private void saveList(String key, PhoneLink.Contacts contacts, String name) throws Exception {
+        PhoneLink.preview = contacts;
+        Activity activity = Robolectric.buildActivity(ContactListActivity.class,
+                ContactListActivity.intent(RuntimeEnvironment.getApplication(), key)).setup().get();
+        settle();
+        save(activity, name);
+    }
+
+    @Test
+    public void lists() throws Exception {
+        saveList(Protocol.SIGNAL, sample(), "9-list-signal");
+        saveList(AppLists.RECENT, sample(), "11-list-recent");
+        List<WatchContact> many = new ArrayList<>();
+        String[] first = {"Aldo", "Bea", "Carlo", "Dina", "Elio", "Fede", "Gina", "Ugo", "Ilaria", "Lapo",
+                "Mara", "Nico", "Olga", "Pino", "Rita", "Sara", "Tino", "Vera", "Zeno", "Bruno", "Marta"};
+        for (int i = 0; i < first.length; i++) {
+            many.add(new WatchContact(100 + i, first[i] + " Rossi", apps(Protocol.WHATSAPP)));
+        }
+        many.sort((x, y) -> x.name.compareTo(y.name));
+        saveList(Protocol.WHATSAPP, new PhoneLink.Contacts(many, new ArrayList<>(), new ArrayList<>()), "10-list-whatsapp-strip");
     }
 
     @Test

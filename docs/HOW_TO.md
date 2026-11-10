@@ -1,6 +1,6 @@
 # How to use Wristline
 
-Wristline makes WhatsApp, Telegram and Instagram calls ring on your Wear OS watch, so you can answer, decline and hang up from your wrist.
+Wristline makes WhatsApp, Telegram, Instagram and Signal calls ring on your Wear OS watch, so you can answer, decline and hang up from your wrist.
 
 ## What it can do
 
@@ -14,15 +14,15 @@ Wristline makes WhatsApp, Telegram and Instagram calls ring on your Wear OS watc
 
 **When you want to call someone** (needs the watch app and a one-time install with a computer)
 
-- Search your contacts on the watch, or browse everyone you can reach on WhatsApp or Telegram, A to Z.
+- Search your contacts on the watch, or tap **WhatsApp**, **Telegram** or **Signal** on its home screen to see just the people you can reach there, A to Z.
 - Tap a name to call them, and choose the app if they're on both.
-- Keep your favourite people at the top, and call back from your recent calls.
+- Keep your favourite people one tap away, and call back from your latest calls, each marked with the app it came from (W, T, S).
 - Call with one tap from a tile or a watch-face complication.
 - Use the call screen on the watch: mute when the app allows it, change the volume with the crown, hang up, or minimise it.
 
 **Your rules**
 
-- Choose which apps ring the watch: WhatsApp, Telegram and Instagram.
+- Choose which apps ring the watch: WhatsApp, Telegram, Instagram and Signal.
 - Pause it any time, from the app, Quick Settings or the watch tile.
 - Follow your phone's Do Not Disturb.
 - Stop the watch ringing while you're using the phone.
@@ -34,7 +34,7 @@ Wristline makes WhatsApp, Telegram and Instagram calls ring on your Wear OS watc
 ## What you need
 
 - An Android phone with Android 12 or newer.
-- WhatsApp, Telegram or Instagram on that phone.
+- WhatsApp, Telegram, Instagram or Signal on that phone.
 - A Wear OS watch connected to the phone through its companion app. Wristline has only been tested with a Pixel Watch and the Pixel Watch app, so other watches may not work.
 
 ## 1. Install the app
@@ -66,7 +66,7 @@ Then check one setting on your phone: go to Settings → Bluetooth, open your wa
 2. Your watch should ring. Answer or decline it there.
 3. When the card says **Ready**, you're done.
 
-WhatsApp is on by default. To use Telegram or Instagram, turn on their switches on the Wristline home screen.
+WhatsApp is on by default. To use Telegram, Instagram or Signal, turn on their switches on the Wristline home screen.
 
 ## Everyday use
 
@@ -91,7 +91,7 @@ Missed calls also show up on your watch.
 
 Without this, you answer on the watch but talk on your phone or earbuds. With it, you use the watch's own speaker and microphone.
 
-**You need a computer**, once for each app. WhatsApp and Telegram need this. Instagram doesn't.
+**You need a computer**, once for each app. WhatsApp, Telegram and Signal need this. Instagram doesn't.
 
 **What this changes:** the app can no longer see whether your phone is in a call. So during a call in that app, it won't notice a normal phone call coming in. It otherwise works as usual, and you can undo this at any time.
 
@@ -126,7 +126,7 @@ Make a test call to check that you can hear through the watch.
 
 ## Optional: call from the watch
 
-This lets you start WhatsApp and Telegram calls from the watch: search, favourites, recent calls and all your contacts. It needs the watch app, and installing that needs a computer with `adb` ([get it above](#first-get-adb-on-your-computer)). You only do this once. Instagram can't start calls this way.
+This lets you start WhatsApp, Telegram and Signal calls from the watch: search, favourites, recent calls and all your contacts. It needs the watch app, and installing that needs a computer with `adb` ([get it above](#first-get-adb-on-your-computer)). You only do this once. Instagram can't start calls this way.
 
 ### Install the watch app
 
@@ -147,7 +147,7 @@ This lets you start WhatsApp and Telegram calls from the watch: search, favourit
 
 1. On your phone, open Wristline, tap **Call from the watch**, then **Turn on**.
 2. Allow Contacts and Phone when Android asks. Wristline sends only your contacts' names to your watch, never numbers or photos, and it never calls phone numbers itself.
-3. Open Wristline on the watch and tap a name to call. Hold a name to make it a favourite.
+3. Open Wristline on the watch. Your latest calls are at the top: tap one to call back. Below them, tap **WhatsApp**, **Telegram** or **Signal** to see just those people, then tap a name to call on that app. Hold a name to make it a favourite.
 
 For a quick way to call, add the Wristline tile, or the complication on your watch face. One tap on a person there starts the call straight away.
 
