@@ -30,9 +30,22 @@ final class ListenerRebind {
     private ListenerRebind() {
     }
 
-    /** Asks for a rebind if the listener isn't connected, toggles the component if that fails. */
+    /**
+     * Asks for a rebind if the listener isn't connected, toggles the component if that fails.
+     * Callers may be on any thread: the work always runs on the main looper, so the pending flag
+     * is only touched there and {@code done} runs there too.
+     */
     static void ifNeeded(Context context, String trigger, Runnable done) {
         Context app = context.getApplicationContext();
+        Handler main = new Handler(Looper.getMainLooper());
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            start(app, main, trigger, done);
+        } else {
+            main.post(() -> start(app, main, trigger, done));
+        }
+    }
+
+    private static void start(Context app, Handler main, String trigger, Runnable done) {
         if (RelayListener.isConnected() || !accessGranted(app) || pending) {
             if (done != null) {
                 done.run();
@@ -42,7 +55,7 @@ final class ListenerRebind {
         pending = true;
         Diagnostics.record(app, EventLog.LISTENER_REBIND, "", trigger);
         requestRebind(app);
-        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+        main.postDelayed(() -> {
             try {
                 if (!RelayListener.isConnected() && accessGranted(app)) {
                     toggle(app, trigger);
@@ -50,6 +63,8 @@ final class ListenerRebind {
                         Prefs.setListenerUnboundSince(app, System.currentTimeMillis());
                     }
                 }
+            } catch (RuntimeException e) {
+                Log.w(RelayListener.TAG, "listener check failed", e);
             } finally {
                 pending = false;
             }
