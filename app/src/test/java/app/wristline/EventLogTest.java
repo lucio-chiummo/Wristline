@@ -50,4 +50,12 @@ public class EventLogTest {
         String withApp = EventLog.format(new EventLog.Entry(0, EventLog.INCOMING, "com.whatsapp", "full mode"));
         assertTrue(withApp.endsWith(" incoming com.whatsapp full mode"));
     }
+
+    @Test
+    public void durations() {
+        assertEquals("<1m", EventLog.duration(59_000));
+        assertEquals("12m", EventLog.duration(12 * 60_000 + 30_000));
+        assertEquals("2h 14m", EventLog.duration((2 * 60 + 14) * 60_000L));
+        assertEquals("3d 4h", EventLog.duration(((3 * 24 + 4) * 60 + 5) * 60_000L));
+    }
 }

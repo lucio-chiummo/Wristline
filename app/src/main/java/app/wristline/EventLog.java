@@ -59,6 +59,22 @@ final class EventLog {
     private EventLog() {
     }
 
+    /** Two largest units, rounded down: "<1m", "12m", "2h 14m", "3d 4h". */
+    static String duration(long ms) {
+        long minutes = ms / 60_000;
+        if (minutes < 1) {
+            return "<1m";
+        }
+        if (minutes < 60) {
+            return minutes + "m";
+        }
+        long hours = minutes / 60;
+        if (hours < 24) {
+            return hours + "h " + (minutes % 60) + "m";
+        }
+        return (hours / 24) + "d " + (hours % 24) + "h";
+    }
+
     /** Newest first, at most {@code max}. */
     static List<Entry> push(List<Entry> log, Entry entry, int max) {
         List<Entry> out = new ArrayList<>();

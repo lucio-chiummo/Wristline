@@ -103,6 +103,15 @@ final class Prefs {
         prefs(context).edit().putBoolean("watch_calling", on).apply();
     }
 
+    /** When the listener was last seen unbound, 0 when it is not known to be. */
+    static long listenerUnboundSince(Context context) {
+        return prefs(context).getLong("listener_unbound_since", 0);
+    }
+
+    static void setListenerUnboundSince(Context context, long time) {
+        prefs(context).edit().putLong("listener_unbound_since", time).apply();
+    }
+
     static long[] recentCalls(Context context) {
         String stored = prefs(context).getString("recent_calls", "");
         if (stored.isEmpty()) {

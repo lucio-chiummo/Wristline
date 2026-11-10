@@ -120,6 +120,9 @@ public class RelayListener extends NotificationListenerService {
     public void onListenerDisconnected() {
         instance = null;
         Diagnostics.record(this, EventLog.LISTENER_DISCONNECTED, "", "");
+        if (Prefs.listenerUnboundSince(this) == 0) {
+            Prefs.setListenerUnboundSince(this, System.currentTimeMillis());
+        }
     }
 
     /** Android has bound the listener: call notifications reach Wristline. */
@@ -130,7 +133,11 @@ public class RelayListener extends NotificationListenerService {
     @Override
     public void onListenerConnected() {
         instance = this;
-        Diagnostics.record(this, EventLog.LISTENER_CONNECTED, "", "");
+        long unboundSince = Prefs.listenerUnboundSince(this);
+        String gap = unboundSince > 0
+                ? "after " + EventLog.duration(System.currentTimeMillis() - unboundSince) + " unbound" : "";
+        Diagnostics.record(this, EventLog.LISTENER_CONNECTED, "", gap);
+        Prefs.setListenerUnboundSince(this, 0);
         watchContacts();
         publishContacts.run();
         try {
