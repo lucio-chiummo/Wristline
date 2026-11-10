@@ -3,17 +3,15 @@ package app.wristline;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
-import android.service.notification.NotificationListenerService;
 import android.util.Log;
 
 /**
- * Records events for the diagnostic report, builds and shares it, and keeps the notification
- * listener bound. Nothing leaves the phone unless the user shares the report.
+ * Records events for the diagnostic report, and builds and shares it. Nothing leaves the phone
+ * unless the user shares the report.
  */
 final class Diagnostics {
     private Diagnostics() {
@@ -97,22 +95,5 @@ final class Diagnostics {
                 .setAutoCancel(true)
                 .build();
         context.getSystemService(NotificationManager.class).notify(StatusNotifications.ID_UNREADABLE, notification);
-    }
-
-    /**
-     * Some phones unbind notification listeners (battery savers, app updates): access is still
-     * granted but no call notifications arrive. Ask Android to bind it again.
-     */
-    static void rebindListenerIfNeeded(Context context) {
-        if (RelayListener.isConnected()
-                || !Permissions.isDone(context, Permissions.Step.NOTIFICATION_ACCESS)) {
-            return;
-        }
-        record(context, EventLog.LISTENER_REBIND, "", "");
-        try {
-            NotificationListenerService.requestRebind(new ComponentName(context, RelayListener.class));
-        } catch (RuntimeException e) {
-            Log.w(RelayListener.TAG, "could not ask for the listener to be bound again", e);
-        }
     }
 }
