@@ -292,6 +292,10 @@ public class MainActivity extends Activity {
     }
 
     private void fix() {
+        if (!ListenerRebind.unbound(this)) {
+            refresh();
+            return;
+        }
         ListenerRebind.toggle(this, ListenerRebind.FIX);
         fixTried = true;
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
