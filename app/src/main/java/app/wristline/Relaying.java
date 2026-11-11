@@ -18,6 +18,7 @@ final class Relaying {
             return;
         }
         Prefs.setRelayOn(context, on);
+        ListenerCheckJob.sync(context);
         Log.i(RelayListener.TAG, on ? "relaying resumed" : "relaying paused");
         Diagnostics.record(context, on ? EventLog.RELAY_RESUMED : EventLog.RELAY_PAUSED, "", "");
         changed(context);

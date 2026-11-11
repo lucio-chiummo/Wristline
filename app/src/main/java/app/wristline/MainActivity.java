@@ -110,6 +110,7 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         ListenerRebind.ifNeeded(this, ListenerRebind.HOME, null);
+        ListenerCheckJob.sync(this);
         TestCall.onResult = this::refresh;
         ListenerRebind.onChange = this::refresh;
         Relaying.onChange = this::refresh;

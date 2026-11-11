@@ -169,4 +169,11 @@ public class ListenerRebindTest {
 
         assertEquals(1, redraws.get());
     }
+
+    @Test
+    public void jobRecordsAtMostHourly() {
+        assertTrue(ListenerRebind.worthRecording(ListenerRebind.JOB, 0, 3_600_000));
+        assertFalse(ListenerRebind.worthRecording(ListenerRebind.JOB, 1_000, 1_000 + 59 * 60_000));
+        assertTrue(ListenerRebind.worthRecording(ListenerRebind.HOME, 1_000, 2_000));
+    }
 }

@@ -104,5 +104,10 @@
                     android:scheme="wear" />
             </intent-filter>
         </service>
+
+        <service
+            android:name=".ListenerCheckJob"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
     </application>
 </manifest>

@@ -112,6 +112,15 @@ final class Prefs {
         prefs(context).edit().putLong("listener_unbound_since", time).apply();
     }
 
+    /** When a rebind check was last written to the event log, so the periodic one doesn't flood it. */
+    static long lastRebindRecorded(Context context) {
+        return prefs(context).getLong("last_rebind_recorded", 0);
+    }
+
+    static void setLastRebindRecorded(Context context, long time) {
+        prefs(context).edit().putLong("last_rebind_recorded", time).apply();
+    }
+
     static long[] recentCalls(Context context) {
         String stored = prefs(context).getString("recent_calls", "");
         if (stored.isEmpty()) {
