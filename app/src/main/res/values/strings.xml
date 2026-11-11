@@ -163,4 +163,10 @@
     <string name="battery_hint_oneplus">On OnePlus, OPPO and realme also: Settings → Battery → Wristline → allow background activity and auto-launch.</string>
     <string name="with_a_computer">With a computer</string>
     <string name="with_a_computer_desc">Run one command for each app, once, from a computer with adb. About a minute.</string>
+    <string name="status_unbound_title">Wristline isn\'t receiving notifications</string>
+    <string name="status_unbound_sub">Calls won\'t ring the watch until this is fixed</string>
+    <string name="unbound_title">Android stopped passing calls to Wristline</string>
+    <string name="unbound_desc">Notification access is on, but the phone isn\'t connecting Wristline to it, usually because it closed Wristline in the background. Tap Fix. If it happens again, make sure Wristline\'s battery use is Unrestricted.</string>
+    <string name="fix">Fix</string>
+    <string name="open_wristline_settings">Open Wristline settings</string>
 </resources>

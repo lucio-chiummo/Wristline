@@ -8,6 +8,8 @@ import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
@@ -43,6 +45,8 @@ public class MainActivity extends Activity {
     private View rowTestCall;
     private View rowDnd;
     private static final int REQUEST_CONTACTS = 2;
+    /** The Fix button has been tapped and the card still says nothing is received. */
+    private boolean fixTried;
 
     private final CompoundButton.OnCheckedChangeListener masterListener = (button, checked) -> {
         Relaying.set(this, checked);
@@ -107,6 +111,7 @@ public class MainActivity extends Activity {
         super.onResume();
         ListenerRebind.ifNeeded(this, ListenerRebind.HOME, null);
         TestCall.onResult = this::refresh;
+        ListenerRebind.onChange = this::refresh;
         Relaying.onChange = this::refresh;
         refresh();
     }
@@ -114,6 +119,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onPause() {
         TestCall.onResult = null;
+        ListenerRebind.onChange = null;
         Relaying.onChange = null;
         super.onPause();
     }
@@ -197,7 +203,12 @@ public class MainActivity extends Activity {
         // A relayed call in the history also proves calls reach the watch: no test needed then.
         boolean reachedWatch = Prefs.testCallResult(this) == TestCall.Result.REACHED
                 || !Prefs.callHistory(this).isEmpty();
-        bindStatus(SetupStatus.decide(relayOn, missing.size(), broken.size(), reachedWatch), missing, broken);
+        SetupStatus.Kind kind = SetupStatus.decide(
+                relayOn, missing.size(), ListenerRebind.unbound(this), broken.size(), reachedWatch);
+        if (kind != SetupStatus.Kind.NOT_RECEIVING) {
+            fixTried = false;
+        }
+        bindStatus(kind, missing, broken);
 
         masterSwitch.setOnCheckedChangeListener(null);
         masterSwitch.setChecked(relayOn);
@@ -242,6 +253,20 @@ public class MainActivity extends Activity {
                 showAttention(getString(step.title), description, getString(R.string.allow),
                         v -> Permissions.open(this, step));
                 break;
+            case NOT_RECEIVING:
+                paintStatus(R.color.amber_card, R.color.amber, R.color.on_amber, R.drawable.ic_warning);
+                statusTitle.setText(R.string.status_unbound_title);
+                statusSub.setText(R.string.status_unbound_sub);
+                String unboundDesc = BatteryHint.withBrandHint(this, getString(R.string.unbound_desc));
+                if (fixTried) {
+                    showAttention(getString(R.string.unbound_title), unboundDesc,
+                            getString(R.string.open_wristline_settings),
+                            v -> startActivity(Permissions.appInfo(this)));
+                } else {
+                    showAttention(getString(R.string.unbound_title), unboundDesc, getString(R.string.fix),
+                            v -> fix());
+                }
+                break;
             case NEEDS_REPAIR:
                 paintStatus(R.color.amber_card, R.color.amber, R.color.on_amber, R.drawable.ic_warning);
                 statusTitle.setText(R.string.status_repair_title);
@@ -264,6 +289,16 @@ public class MainActivity extends Activity {
                 statusSub.setText(R.string.status_ready_sub);
                 break;
         }
+    }
+
+    private void fix() {
+        ListenerRebind.toggle(this, ListenerRebind.FIX);
+        fixTried = true;
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            if (!isDestroyed()) {
+                refresh();
+            }
+        }, ListenerRebind.CHECK_AFTER_MS);
     }
 
     private void paintStatus(int cardColor, int iconBgColor, int iconColor, int icon) {

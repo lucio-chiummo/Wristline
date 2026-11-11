@@ -28,11 +28,14 @@ final class BatteryHint {
     static String description(Context context, Permissions.Step step) {
         String text = context.getString(step.description);
         if (step == Permissions.Step.BATTERY) {
-            int hint = of(Brand.of(Build.MANUFACTURER));
-            if (hint != 0) {
-                text += "\n" + context.getString(hint);
-            }
+            text = withBrandHint(context, text);
         }
         return text;
+    }
+
+    /** The text plus this phone brand's hint, when the brand has one. */
+    static String withBrandHint(Context context, String text) {
+        int hint = of(Brand.of(Build.MANUFACTURER));
+        return hint == 0 ? text : text + "\n" + context.getString(hint);
     }
 }

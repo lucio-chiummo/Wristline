@@ -159,7 +159,7 @@ Telegram contacts only appear if **Sync contacts** is on in Telegram's settings.
 |---|---|
 | The watch doesn't ring at all | The card must say **Ready**, and the app's switch must be on. Then tap **Ring my watch**. If that rings, Wristline and the watch are fine, so the problem is with that app's notification. |
 | The Notification access switch is greyed out | Settings → Apps → Wristline → ⋮ → **Allow restricted settings**. |
-| It stopped working after a while | Check that the battery setting is still **Unrestricted**, then open Wristline once. Some phones have an extra battery setting, which Wristline points out on those phones. |
+| It stopped working after a while | If the card says **Wristline isn't receiving notifications**, tap **Fix**. On Xiaomi also turn on Autostart for Wristline. Check that the battery setting is still **Unrestricted**, then open Wristline once. Some phones have an extra battery setting, which Wristline points out on those phones. |
 | The call drops right after answering on the watch | The app reset its setting. Tap **Repair** and run the command again. |
 | The voice stays on the phone | On your phone, go to Settings → Bluetooth → your watch, then turn **Call audio** off and on. |
 | No calls arrive at all, even on the phone | The calling app may have been force-stopped. Open it once. |

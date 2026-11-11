@@ -162,7 +162,7 @@ The [guide](docs/HOW_TO.md#if-something-goes-wrong) has more. The most common pr
 | Symptom | Fix |
 |---|---|
 | Call drops right after answering on the watch | The app reset its setting. Wristline shows **Voice needs repair**: tap **Repair**. |
-| Watch doesn't ring at all | Open Wristline: the card must say **Ready**, and the app's switch must be on. Then tap **Ring my watch**: if the test call rings, Wristline and the watch are fine and the calling app's notification is the problem. |
+| Watch doesn't ring at all | If the card says **Wristline isn't receiving notifications**, tap **Fix**. On Xiaomi also turn on Autostart for Wristline. Open Wristline: the card must say **Ready**, and the app's switch must be on. Then tap **Ring my watch**: if the test call rings, Wristline and the watch are fine and the calling app's notification is the problem. |
 | Voice stays on the phone | Turn the watch's **Call audio** Bluetooth setting off and on. |
 | No calls arrive at all, even on the phone | The app may have been force-stopped. Open it once. |
 | Phone silent for WhatsApp messages, watch shows them | That's the Pixel Watch app muting the phone while you wear the watch, not Wristline. |
