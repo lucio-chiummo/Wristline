@@ -53,13 +53,13 @@ final class ListenerRebind {
             }
             return;
         }
-        record(app, EventLog.LISTENER_REBIND, trigger);
+        boolean record = recordIfWorth(app, EventLog.LISTENER_REBIND, trigger);
         pending = true;
         requestRebind(app);
         main.postDelayed(() -> {
             try {
                 if (!RelayListener.isConnected() && accessGranted(app)) {
-                    toggle(app, trigger);
+                    toggle(app, trigger, record);
                     if (Prefs.listenerUnboundSince(app) == 0) {
                         Prefs.setListenerUnboundSince(app, System.currentTimeMillis());
                     }
@@ -81,12 +81,19 @@ final class ListenerRebind {
 
     /** Disables and re-enables the listener component, then asks for a rebind. */
     static void toggle(Context context, String trigger) {
+        toggle(context, trigger, worthRecording(trigger, Prefs.lastRebindRecorded(context), System.currentTimeMillis()));
+    }
+
+    /** {@code record}: the check this belongs to was logged, so its toggle is too. */
+    private static void toggle(Context context, String trigger, boolean record) {
         ComponentName component = new ComponentName(context, RelayListener.class);
         PackageManager pm = context.getPackageManager();
         setState(pm, component, PackageManager.COMPONENT_ENABLED_STATE_DISABLED);
         setState(pm, component, PackageManager.COMPONENT_ENABLED_STATE_ENABLED);
         requestRebind(context);
-        record(context, EventLog.LISTENER_TOGGLED, trigger);
+        if (record) {
+            Diagnostics.record(context, EventLog.LISTENER_TOGGLED, "", trigger);
+        }
     }
 
     /** The periodic check runs every 15 minutes: write it to the event log at most hourly. */
@@ -94,12 +101,15 @@ final class ListenerRebind {
         return !JOB.equals(trigger) || now - lastRecordedAt >= JOB_RECORD_EVERY_MS;
     }
 
-    private static void record(Context context, String code, String trigger) {
+    /** Records when the throttle allows it, and says whether it did. */
+    private static boolean recordIfWorth(Context context, String code, String trigger) {
         long now = System.currentTimeMillis();
-        if (worthRecording(trigger, Prefs.lastRebindRecorded(context), now)) {
-            Diagnostics.record(context, code, "", trigger);
-            Prefs.setLastRebindRecorded(context, now);
+        if (!worthRecording(trigger, Prefs.lastRebindRecorded(context), now)) {
+            return false;
         }
+        Diagnostics.record(context, code, "", trigger);
+        Prefs.setLastRebindRecorded(context, now);
+        return true;
     }
 
     /** Access granted, listener not connected, and known to be unbound since a failed check or disconnect. */

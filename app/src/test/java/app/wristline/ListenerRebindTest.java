@@ -176,4 +176,35 @@ public class ListenerRebindTest {
         assertFalse(ListenerRebind.worthRecording(ListenerRebind.JOB, 1_000, 1_000 + 59 * 60_000));
         assertTrue(ListenerRebind.worthRecording(ListenerRebind.HOME, 1_000, 2_000));
     }
+
+    @Test
+    public void jobCheckRecordsItsToggleToo() {
+        grantAccess();
+        Prefs.setLastRebindRecorded(context, 0);
+
+        ListenerRebind.ifNeeded(context, ListenerRebind.JOB, null);
+        wait5s();
+
+        assertEquals(Arrays.asList(EventLog.LISTENER_TOGGLED, EventLog.LISTENER_REBIND), codes());
+        for (EventLog.Entry e : Prefs.events(context)) {
+            assertEquals(ListenerRebind.JOB, e.detail);
+        }
+    }
+
+    @Test
+    public void throttledJobCheckStillTogglesSilently() {
+        grantAccess();
+        ComponentName component = new ComponentName(context, RelayListener.class);
+        context.getPackageManager().setComponentEnabledSetting(component,
+                PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
+        Prefs.setLastRebindRecorded(context, System.currentTimeMillis() - 60_000);
+
+        ListenerRebind.ifNeeded(context, ListenerRebind.JOB, null);
+        wait5s();
+
+        assertTrue(codes().isEmpty());
+        assertEquals(PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                context.getPackageManager().getComponentEnabledSetting(component));
+        assertTrue(ListenerRebind.unbound(context));
+    }
 }
