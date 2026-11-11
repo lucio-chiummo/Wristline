@@ -8,6 +8,7 @@ import android.service.quicksettings.TileService;
 public class RelayTileService extends TileService {
     @Override
     public void onStartListening() {
+        ListenerRebind.ifNeeded(this, ListenerRebind.QS_TILE, null);
         update();
     }
 

@@ -9,6 +9,7 @@ import com.google.android.gms.wearable.WearableListenerService;
 public class WatchCallService extends WearableListenerService {
     @Override
     public void onMessageReceived(MessageEvent event) {
+        ListenerRebind.ifNeeded(this, ListenerRebind.WATCH, null);
         if (WatchProtocol.PATH_HANGUP.equals(event.getPath())) {
             RelayListener.hangUpFromWatch();
             return;
