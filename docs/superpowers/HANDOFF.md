@@ -1,6 +1,6 @@
 # Handoff: Wristline without a computer
 
-Last updated 2026-11-10, late evening. Read this first when resuming.
+Last updated 2026-11-11, morning. Read this first when resuming.
 
 ## The goal
 
@@ -32,25 +32,28 @@ All of it is in `docs/superpowers/specs/2026-11-10-no-computer-setup-design.md` 
 
 ## Work in progress
 
-- Branch `listener-rebind` off `main` (commit a3c5f1f holds the docs).
-- Plan: `docs/superpowers/plans/2026-11-10-listener-rebind-and-voice.md`, 7 tasks. Task 7 is
-  optional and skipped (gated on a Telegram/Signal spike that hasn't run).
-- Execution: superpowers:subagent-driven-development. The ledger is
-  `.superpowers/sdd/2026-11-10-listener-rebind-and-voice/progress.md` (git-ignored). It names
-  which tasks are complete; trust it and `git log` over memory.
-- When this handoff was written, Task 1 (log the unbound gap) was dispatched to a Sonnet
-  implementer. Check the ledger and `git log --oneline main..listener-rebind` to see how far it
-  got.
+- Branch `listener-rebind` off `main`. **Phase 1 code is done**: Tasks 1-5 implemented, task-reviewed,
+  final whole-branch review clean after one fix wave (head `1f91fa7`). CI line green at that head.
+  Task 7 skipped (gate not met). Deferred minors (none blocking) are listed in the final review of
+  2026-11-11; the biggest: QS tile rebind lines are unthrottled, Fix gives no feedback for 5 s,
+  `seenAt` goes stale while relaying is paused.
+- Release `v1.3` built from `1f91fa7` and installed on the owner's phone (vivo). Field APK for the
+  Xiaomi reporter: `~/Desktop/Wristline-out/wristline-1.3-listener-rebind-1f91fa7.apk`.
+- Task 6 device check on the vivo: **no way to leave the listener unbound** (`am kill` ignored,
+  `force-stop`/`am crash` restart and rebind, `kill -9` and `pm disable-user` refused). Recovery
+  paths and the card could not be exercised on this phone; the Xiaomi field report is the gate.
+  Expect `listener_toggled job` then `listener_connected after … unbound`; if the toggle doesn't
+  reconnect on HyperOS, report to the owner before changing anything. Also check after the field
+  run whether the periodic job survives a HyperOS kill (`dumpsys jobscheduler | grep wristline`).
+- Telegram contacts (2026-11-11): the owner's phone had Telegram's Contacts permission denied and
+  sync off, so no Telegram rows exist in the contacts provider. Not a Wristline bug; already in the
+  docs. Possible follow-up: detect "Telegram installed, zero rows" and show the hint on the card.
 
 ### To resume
 
-1. `git checkout listener-rebind`, read the ledger, then invoke
-   `superpowers:subagent-driven-development` and continue at the first task without a
-   `complete` line. Scripts live in the skill's `scripts/` directory (`task-brief`,
-   `review-package`).
+1. `git checkout listener-rebind`. The branch is ready to merge or PR (superpowers:finishing-a-development-branch);
+   the owner decides. The SDD workspace was deleted after the clean final review; `git log` is the record.
 2. Tests: `JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ./gradlew :app:testDebugUnitTest`.
-3. Task 6 is a device check on the owner's phone (serial and release build command in memory
-   `build-and-install.md`), then an APK for the Xiaomi field reporter.
 
 ## Owner's phone state to know about
 
@@ -64,9 +67,8 @@ All of it is in `docs/superpowers/specs/2026-11-10-no-computer-setup-design.md` 
 
 ## Next steps, in order
 
-1. Finish Phase 1 (listener fix) through the plan, final review, then
-   `superpowers:finishing-a-development-branch`.
-2. Device check (Task 6) + APK to the Xiaomi reporter.
+1. Merge or PR `listener-rebind` (owner's call), then release v1.3 on GitHub.
+2. Send the field APK to the Xiaomi reporter and wait for a diagnostic report (Task 6 step 6).
 3. Phase 2, Play, can start any time since it is mostly waiting: create the individual account,
    start identity verification, enrol the existing key, add `bundleRelease` tasks, listing assets.
 4. Phase 3, Shizuku: brainstorm the voice screen flow, then plan (superpowers:writing-plans).
