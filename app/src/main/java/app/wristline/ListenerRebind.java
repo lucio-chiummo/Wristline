@@ -21,6 +21,7 @@ final class ListenerRebind {
     static final String FIX = "fix";
 
     static final long CHECK_AFTER_MS = 5_000;
+    private static final long JOB_RECORD_EVERY_MS = 60 * 60_000L;
 
     /** Home, while it's shown: redraw once a check has finished. */
     static volatile Runnable onChange;
@@ -52,8 +53,8 @@ final class ListenerRebind {
             }
             return;
         }
+        record(app, EventLog.LISTENER_REBIND, trigger);
         pending = true;
-        Diagnostics.record(app, EventLog.LISTENER_REBIND, "", trigger);
         requestRebind(app);
         main.postDelayed(() -> {
             try {
@@ -85,7 +86,20 @@ final class ListenerRebind {
         setState(pm, component, PackageManager.COMPONENT_ENABLED_STATE_DISABLED);
         setState(pm, component, PackageManager.COMPONENT_ENABLED_STATE_ENABLED);
         requestRebind(context);
-        Diagnostics.record(context, EventLog.LISTENER_TOGGLED, "", trigger);
+        record(context, EventLog.LISTENER_TOGGLED, trigger);
+    }
+
+    /** The periodic check runs every 15 minutes: write it to the event log at most hourly. */
+    static boolean worthRecording(String trigger, long lastRecordedAt, long now) {
+        return !JOB.equals(trigger) || now - lastRecordedAt >= JOB_RECORD_EVERY_MS;
+    }
+
+    private static void record(Context context, String code, String trigger) {
+        long now = System.currentTimeMillis();
+        if (worthRecording(trigger, Prefs.lastRebindRecorded(context), now)) {
+            Diagnostics.record(context, code, "", trigger);
+            Prefs.setLastRebindRecorded(context, now);
+        }
     }
 
     /** Access granted, listener not connected, and known to be unbound since a failed check or disconnect. */

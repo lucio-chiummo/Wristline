@@ -138,6 +138,7 @@ public class RelayListener extends NotificationListenerService {
                 ? "after " + EventLog.duration(System.currentTimeMillis() - unboundSince) + " unbound" : "";
         Diagnostics.record(this, EventLog.LISTENER_CONNECTED, "", gap);
         Prefs.setListenerUnboundSince(this, 0);
+        ListenerCheckJob.sync(this);
         Runnable home = ListenerRebind.onChange;
         if (home != null) {
             new Handler(Looper.getMainLooper()).post(home);
