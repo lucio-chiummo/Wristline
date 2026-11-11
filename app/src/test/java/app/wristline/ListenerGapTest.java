@@ -3,7 +3,12 @@ package app.wristline;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import static org.robolectric.Shadows.shadowOf;
+
+import android.app.NotificationManager;
+import android.content.ComponentName;
 import android.content.Context;
+import android.os.Looper;
 
 import org.junit.After;
 import org.junit.Before;
@@ -13,6 +18,8 @@ import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.annotation.Config;
+
+import java.time.Duration;
 
 /** The event log says how long the listener was unbound when it reconnects. */
 @RunWith(RobolectricTestRunner.class)
@@ -42,6 +49,23 @@ public class ListenerGapTest {
         assertEquals(EventLog.LISTENER_CONNECTED, latest.code);
         assertEquals("after 2h 14m unbound", latest.detail);
         assertEquals(0, Prefs.listenerUnboundSince(context));
+    }
+
+    @Test
+    public void gapStartsAtTheLastHeartbeatWhenNoDisconnectCame() {
+        Prefs.setListenerUnboundSince(context, 0);
+        long twoHours = 2 * 60 * 60_000L;
+        Prefs.setListenerSeenAt(context, System.currentTimeMillis() - twoHours);
+        shadowOf(context.getSystemService(NotificationManager.class))
+                .setNotificationListenerAccessGranted(new ComponentName(context, RelayListener.class), true);
+
+        ListenerRebind.ifNeeded(context, ListenerRebind.HOME, null);
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(ListenerRebind.CHECK_AFTER_MS));
+        listener.onListenerConnected();
+
+        EventLog.Entry latest = Prefs.events(context).get(0);
+        assertEquals(EventLog.LISTENER_CONNECTED, latest.code);
+        assertEquals("after " + EventLog.duration(twoHours) + " unbound", latest.detail);
     }
 
     @Test

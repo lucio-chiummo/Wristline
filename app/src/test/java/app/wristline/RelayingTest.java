@@ -31,6 +31,7 @@ public class RelayingTest {
     @After
     public void tearDown() {
         Relaying.onChange = null;
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(ListenerRebind.CHECK_AFTER_MS));
     }
 
     @Test
@@ -77,6 +78,5 @@ public class RelayingTest {
         EventLog.Entry newest = Prefs.events(context).get(0);
         assertEquals(EventLog.LISTENER_REBIND, newest.code);
         assertEquals(ListenerRebind.QS_TILE, newest.detail);
-        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(ListenerRebind.CHECK_AFTER_MS));
     }
 }

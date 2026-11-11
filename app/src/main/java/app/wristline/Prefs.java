@@ -112,6 +112,15 @@ final class Prefs {
         prefs(context).edit().putLong("listener_unbound_since", time).apply();
     }
 
+    /** The last time the listener was known to be connected: the unbound gap starts here when nothing says otherwise. */
+    static long listenerSeenAt(Context context) {
+        return prefs(context).getLong("listener_seen_at", 0);
+    }
+
+    static void setListenerSeenAt(Context context, long time) {
+        prefs(context).edit().putLong("listener_seen_at", time).apply();
+    }
+
     /** When a rebind check was last written to the event log, so the periodic one doesn't flood it. */
     static long lastRebindRecorded(Context context) {
         return prefs(context).getLong("last_rebind_recorded", 0);

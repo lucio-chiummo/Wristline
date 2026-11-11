@@ -47,6 +47,10 @@ final class ListenerRebind {
     }
 
     private static void start(Context app, Handler main, String trigger, Runnable done) {
+        long checkStarted = System.currentTimeMillis();
+        if (RelayListener.isConnected()) {
+            Prefs.setListenerSeenAt(app, checkStarted);
+        }
         if (RelayListener.isConnected() || !accessGranted(app) || pending) {
             if (done != null) {
                 done.run();
@@ -58,11 +62,14 @@ final class ListenerRebind {
         requestRebind(app);
         main.postDelayed(() -> {
             try {
-                if (!RelayListener.isConnected() && accessGranted(app)) {
-                    toggle(app, trigger, record);
+                if (RelayListener.isConnected()) {
+                    Prefs.setListenerSeenAt(app, System.currentTimeMillis());
+                } else if (accessGranted(app)) {
                     if (Prefs.listenerUnboundSince(app) == 0) {
-                        Prefs.setListenerUnboundSince(app, System.currentTimeMillis());
+                        long seenAt = Prefs.listenerSeenAt(app);
+                        Prefs.setListenerUnboundSince(app, seenAt > 0 ? seenAt : checkStarted);
                     }
+                    toggle(app, trigger, record);
                 }
             } catch (RuntimeException e) {
                 Log.w(RelayListener.TAG, "listener check failed", e);
@@ -88,8 +95,12 @@ final class ListenerRebind {
     private static void toggle(Context context, String trigger, boolean record) {
         ComponentName component = new ComponentName(context, RelayListener.class);
         PackageManager pm = context.getPackageManager();
-        setState(pm, component, PackageManager.COMPONENT_ENABLED_STATE_DISABLED);
-        setState(pm, component, PackageManager.COMPONENT_ENABLED_STATE_ENABLED);
+        try {
+            setState(pm, component, PackageManager.COMPONENT_ENABLED_STATE_DISABLED);
+        } finally {
+            // Never leave the component disabled: a reboot would lose the job that brings it back.
+            setState(pm, component, PackageManager.COMPONENT_ENABLED_STATE_ENABLED);
+        }
         requestRebind(context);
         if (record) {
             Diagnostics.record(context, EventLog.LISTENER_TOGGLED, "", trigger);
