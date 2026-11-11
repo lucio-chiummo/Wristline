@@ -129,10 +129,21 @@ public class ListenerStatusCardTest {
     public void reconnectTurnsTheCardReady() {
         Prefs.setListenerUnboundSince(context, 1);
         MainActivity a = home();
+        idle(); // the HOME check has finished and the card is still unbound
         assertEquals(context.getString(R.string.status_unbound_title), text(a, R.id.status_title));
         listener.onListenerConnected();
-        idle();
+        shadowOf(Looper.getMainLooper()).idle();
         assertEquals(context.getString(R.string.status_ready_title), text(a, R.id.status_title));
+    }
+
+    @Test
+    public void fixOnAConnectedListenerDoesNotToggle() {
+        Prefs.setListenerUnboundSince(context, 1);
+        MainActivity a = home();
+        listener.onListenerConnected();
+        int before = toggles().size();
+        a.findViewById(R.id.attention_button).performClick();
+        assertEquals(before, toggles().size());
     }
 
     @Test
@@ -144,6 +155,7 @@ public class ListenerStatusCardTest {
         listener.onListenerConnected();
         idle();
         assertEquals(context.getString(R.string.status_ready_title), text(a, R.id.status_title));
+        assertTrue(toggles().isEmpty());
     }
 
     @Test
