@@ -24,11 +24,26 @@ default; Telecom makes the watch active when Wristline's call routes to Bluetoot
 normal app gets the watch's audio link, and an active Telecom call is exactly what makes WhatsApp
 hang up unless its call-state access is cut. No way around the app-op for WhatsApp.
 
-**Conclusion.** Voice through the watch for WhatsApp needs a shell-level app-op change. The
-computer-free way to get shell on the phone alone is Shizuku (Android 11+, pairs with Wireless
-debugging on the phone itself). That becomes the no-computer voice path; adb stays for people with
-a computer. Everything else in this plan (Play for the watch install, the Xiaomi listener fix)
-stands.
+**Spike C (2026-11-11), answer the app first, then go active: FAILS for WhatsApp.** Throwaway
+branch `spike-answer-first`. The mirror stays ringing while Wristline presses WhatsApp's Answer,
+then goes active and routes to the watch. WhatsApp accepts the Answer (no dialog), Telecom makes
+the Pixel Watch the active headset and WhatsApp itself switches its route to Bluetooth SCO within
+300 ms, so the watch *is* reachable by WhatsApp's audio. But the moment the mirror is active
+WhatsApp puts its call on hold (it sees the Telecom call). Variant B ended the mirror 1.5 s after
+routing: WhatsApp resumed and asked AudioService to start SCO, the start failed, and 1.4 s after
+the mirror ended Bluetooth dropped the watch as the active headset (`Active Device Changed: null
+for profile: HEADSET`), the SCO device went away and WhatsApp's call ended. Evidence: `dumpsys
+audio` mode/route log and `dumpsys bluetooth_manager --print` active-device log, 13:30:03-13:30:07.
+So the watch is an active headset only while a Telecom call is active, and WhatsApp holds while a
+Telecom call is active: no ordering or timing between the two gets around the app-op.
+
+**Conclusion.** Voice through the watch for WhatsApp needs a shell-level app-op change. Owner's
+decision (2026-11-11): no Shizuku and no dependency on another installed app. If spike D (Telegram
+and Signal with the Phone permission denied in Settings) does not remove the need for shell, the
+computer-free path is Wristline's own adb client over the phone's Wireless debugging (one-time
+pairing on the phone, INTERNET permission, an app-owned key the owner accepts), designed in a
+separate document. Phase 3 below is superseded by that decision. Everything else in this plan
+(Play for the watch install, the Xiaomi listener fix) stands.
 
 ## Intent
 
@@ -232,7 +247,7 @@ Fixes, all in Phase 1 scope:
 7. After 14 days and the Wear OS review, promote to production. Update README: Play first, GitHub
    second, adb in the appendix.
 
-### Phase 3: voice through the watch without a computer, via Shizuku (two to three days)
+### Phase 3: voice through the watch without a computer, via Shizuku (SUPERSEDED 2026-11-11: no Shizuku, see Conclusion)
 
 Promoted from optional after the spike: it is the only computer-free path for WhatsApp.
 

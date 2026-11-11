@@ -57,12 +57,21 @@ All of it is in `docs/superpowers/specs/2026-11-10-no-computer-setup-design.md` 
 
 ## Owner's phone state to know about
 
-- WhatsApp: Phone permission granted again, app-op `allow` (as found before the spike).
-- Telegram and Signal: app-op was reset to `allow` during the earlier session (by the other
-  Claude session), so their voice-through-the-watch setup is currently **undone** on the owner's
-  phone. Next Telegram/Signal call answered in full mode will drop and trigger Repair. To restore:
-  `adb shell appops set --uid org.telegram.messenger READ_PHONE_STATE ignore` and the same for
-  `org.thoughtcrime.securesms`, then close each app once.
+- Phase 1 merged into `main` (fast-forward, `3ed8ea4`); not pushed.
+- Spike C (answer the app first; branch `spike-answer-first`, throwaway, never merge) ran
+  2026-11-11 and **failed**; mechanism recorded in the design doc. The real v1.3 APK
+  (`wristline-1.3-listener-rebind-1f91fa7.apk`) is installed again on the owner's phone.
+- **Spike D armed 2026-11-11 16:10**: Telegram and Signal have `READ_PHONE_STATE` revoked
+  (`pm revoke`; the uid app-op went to `ignore` by itself, as with WhatsApp). The owner has to
+  answer a Telegram call and a Signal call from the watch in full mode and say where the voice
+  is, and whether the app shows a permission dialog on Answer. Pass = voice on the watch with
+  no dialog: then those two apps need no shell, only a Settings step. Undo:
+  `adb shell pm grant org.telegram.messenger android.permission.READ_PHONE_STATE` and the same
+  for `org.thoughtcrime.securesms`.
+- WhatsApp: Phone permission granted, app-op `allow`; voice through the watch currently
+  needs setup (`appops set --uid com.whatsapp READ_PHONE_STATE ignore`), not done, owner's call.
+- A `logcat` capture may be running from the computer (`scratchpad/spike1-logcat.pid`); the
+  phone's log buffers were raised to 32 MB (`logcat -G 32M`, resets on reboot).
 - Spike app `app.wristline.scospike` was uninstalled.
 
 ## Next steps, in order
@@ -71,8 +80,10 @@ All of it is in `docs/superpowers/specs/2026-11-10-no-computer-setup-design.md` 
 2. Send the field APK to the Xiaomi reporter and wait for a diagnostic report (Task 6 step 6).
 3. Phase 2, Play, can start any time since it is mostly waiting: create the individual account,
    start identity verification, enrol the existing key, add `bundleRelease` tasks, listing assets.
-4. Phase 3, Shizuku: brainstorm the voice screen flow, then plan (superpowers:writing-plans).
-5. Optional: spike Telegram and Signal with Phone permission denied (Task 7 gate).
+4. Read spike D's result (Telegram/Signal with Phone permission denied).
+5. Phase 3 without Shizuku (owner's decision): brainstorm, then a written design for Wristline's
+   own adb client over Wireless debugging, security review of any library, then
+   superpowers:writing-plans. Shizuku is out.
 
 ## Open questions for the owner
 
