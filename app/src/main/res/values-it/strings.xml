@@ -155,4 +155,10 @@
     <string name="battery_hint_oneplus">Su OnePlus, OPPO e realme anche: Impostazioni → Batteria → Wristline → consenti attività in background e avvio automatico.</string>
     <string name="with_a_computer">Con un computer</string>
     <string name="with_a_computer_desc">Esegui un comando per ogni app, una sola volta, da un computer con adb. Circa un minuto.</string>
+    <string name="status_unbound_title">Wristline non riceve le notifiche</string>
+    <string name="status_unbound_sub">Le chiamate non squillano sull\'orologio finché non è risolto</string>
+    <string name="unbound_title">Android ha smesso di passare le chiamate a Wristline</string>
+    <string name="unbound_desc">L\'accesso alle notifiche è attivo, ma il telefono non vi collega Wristline, di solito perché l\'ha chiusa in background. Tocca Risolvi. Se succede di nuovo, controlla che l\'uso della batteria di Wristline sia Senza restrizioni.</string>
+    <string name="fix">Risolvi</string>
+    <string name="open_wristline_settings">Apri impostazioni di Wristline</string>
 </resources>
