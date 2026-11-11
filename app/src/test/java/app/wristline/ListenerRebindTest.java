@@ -192,6 +192,30 @@ public class ListenerRebindTest {
     }
 
     @Test
+    public void recoveryReArmsTheJobLog() {
+        grantAccess();
+        Prefs.setLastRebindRecorded(context, 0);
+        ListenerRebind.ifNeeded(context, ListenerRebind.JOB, null);
+        wait5s();
+        assertTrue(Prefs.lastRebindRecorded(context) > 0);
+
+        listener.onListenerConnected();
+        listener.onListenerDisconnected();
+        assertEquals(0, Prefs.lastRebindRecorded(context));
+        int before = codes().size();
+
+        ListenerRebind.ifNeeded(context, ListenerRebind.JOB, null);
+        wait5s();
+
+        List<String> codes = codes();
+        assertEquals(before + 2, codes.size());
+        assertEquals(EventLog.LISTENER_TOGGLED, codes.get(0));
+        assertEquals(EventLog.LISTENER_REBIND, codes.get(1));
+        assertEquals(ListenerRebind.JOB, Prefs.events(context).get(0).detail);
+        assertEquals(ListenerRebind.JOB, Prefs.events(context).get(1).detail);
+    }
+
+    @Test
     public void throttledJobCheckStillTogglesSilently() {
         grantAccess();
         ComponentName component = new ComponentName(context, RelayListener.class);
