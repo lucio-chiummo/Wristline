@@ -10,6 +10,8 @@ import app.wristline.adb.AdbShell;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * "Full mode" = call audio through the watch. An app that can read the phone's call state hangs up
@@ -17,6 +19,35 @@ import java.util.List;
  * shell-level process can do that, which Wristline isn't: it uses Wristline's built-in adb client, or a computer.
  */
 final class FullMode {
+    /** The shell behind apply/disable/repair; tests swap it for a fake. */
+    interface Adb {
+        boolean isReachable(Context context);
+
+        List<String> run(Context context, List<String> commands);
+
+        void forgetKey(Context context);
+    }
+
+    static volatile Adb adb = new Adb() {
+        @Override
+        public boolean isReachable(Context context) {
+            return AdbShell.isReachable(context);
+        }
+
+        @Override
+        public List<String> run(Context context, List<String> commands) {
+            return AdbShell.run(context, commands);
+        }
+
+        @Override
+        public void forgetKey(Context context) {
+            AdbShell.forgetKey(context);
+        }
+    };
+
+    /** Apps with a repair running now, so a second dropped call doesn't start another. */
+    private static final Set<String> REPAIRING = ConcurrentHashMap.newKeySet();
+
     private FullMode() {
     }
 
@@ -100,8 +131,8 @@ final class FullMode {
             commands.add(AppOpsCommands.set(app.packageName));
             commands.add(AppOpsCommands.get(app.packageName));
         }
-        List<String> out = AdbShell.run(context, commands);
-        if (out == null) {
+        List<String> out = adb.run(context, commands);
+        if (out == null || out.size() != commands.size()) {
             return null;
         }
         List<SupportedApp> ok = new ArrayList<>();
@@ -116,7 +147,7 @@ final class FullMode {
             Log.i(RelayListener.TAG, "full mode setting for " + app.packageName + ": " + ok.contains(app));
         }
         if (!restarts.isEmpty()) {
-            AdbShell.run(context, restarts);
+            adb.run(context, restarts);
         }
         return ok;
     }
@@ -128,6 +159,7 @@ final class FullMode {
      */
     static boolean disable(Context context, List<SupportedApp> apps) {
         List<SupportedApp> toReset = new ArrayList<>();
+        List<SupportedApp> done = new ArrayList<>();
         List<String> commands = new ArrayList<>();
         for (SupportedApp app : apps) {
             Prefs.setFullModeOn(context, app, false);
@@ -136,12 +168,15 @@ final class FullMode {
                 toReset.add(app);
                 commands.add(AppOpsCommands.reset(app.packageName));
                 commands.add(AppOpsCommands.get(app.packageName));
+            } else {
+                done.add(app);
             }
         }
         boolean allBack = true;
         if (!toReset.isEmpty()) {
-            List<String> out = AdbShell.run(context, commands);
-            if (out == null) {
+            List<String> out = adb.run(context, commands);
+            if (out == null || out.size() != commands.size()) {
+                finishTurnOff(context, done);
                 return false;
             }
             List<String> restarts = new ArrayList<>();
@@ -151,18 +186,28 @@ final class FullMode {
                 Log.i(RelayListener.TAG, "normal setting back for " + app.packageName + ": " + back);
                 if (back) {
                     restarts.add(AppOpsCommands.restart(app.packageName));
+                    done.add(app);
                 } else {
                     allBack = false;
                 }
             }
             if (!restarts.isEmpty()) {
-                AdbShell.run(context, restarts);
+                adb.run(context, restarts);
             }
         }
+        finishTurnOff(context, done);
         if (allBack) {
-            AdbShell.forgetKey(context);
+            adb.forgetKey(context);
         }
         return allBack;
+    }
+
+    /** These apps have their normal setting: nothing left to repair, and no repair notification to show. */
+    private static void finishTurnOff(Context context, List<SupportedApp> apps) {
+        markTurnedOff(context, apps);
+        for (SupportedApp app : apps) {
+            Prefs.setBroken(context, app, false);
+        }
     }
 
     /**
@@ -183,24 +228,32 @@ final class FullMode {
             StatusNotifications.showRepairNeeded(context, app);
             return;
         }
+        if (!REPAIRING.add(app.packageName)) {
+            return;
+        }
         new Thread(() -> {
             List<SupportedApp> repaired = null;
             try {
-                if (AdbShell.isReachable(context)) {
+                if (adb.isReachable(context)) {
                     repaired = apply(context, Collections.singletonList(app));
                 }
             } catch (Throwable t) {
                 // Also Errors from the ADB/crypto libraries: this runs in the call listener's process.
                 Log.w(RelayListener.TAG, "automatic repair failed", t);
             }
-            if (repaired != null && repaired.contains(app)) {
-                Log.i(RelayListener.TAG, "full mode repaired automatically");
-                Prefs.setBroken(context, app, false);
-                Diagnostics.record(context, EventLog.REPAIR_SILENT, app, "");
-                StatusNotifications.cancel(context, StatusNotifications.ID_REPAIR);
-            } else {
-                StatusNotifications.showRepairNeeded(context, app);
+            try {
+                if (repaired != null && repaired.contains(app)) {
+                    Log.i(RelayListener.TAG, "full mode repaired automatically");
+                    Prefs.setBroken(context, app, false);
+                    Diagnostics.record(context, EventLog.REPAIR_SILENT, app, "");
+                    StatusNotifications.cancel(context, StatusNotifications.ID_REPAIR);
+                } else {
+                    Diagnostics.record(context, EventLog.SETUP_FAILED, app, "repair");
+                    StatusNotifications.showRepairNeeded(context, app);
+                }
+            } finally {
+                REPAIRING.remove(app.packageName);
             }
-        }).start();
+        }, "wristline-repair").start();
     }
 }

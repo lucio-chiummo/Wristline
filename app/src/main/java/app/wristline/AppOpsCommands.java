@@ -1,8 +1,9 @@
 package app.wristline;
 
 /**
- * Shell commands for full mode, run by Wristline's built-in adb client, or a computer: stop an app from reading the phone's call state (READ_PHONE_STATE
- * app-op "ignore") so it doesn't hang up when Wristline's Telecom call takes the audio.
+ * Shell commands for full mode, run by Wristline's built-in adb client, or a computer: stop an app
+ * from reading the phone's call state (READ_PHONE_STATE app-op "ignore") so it doesn't hang up when
+ * Wristline's Telecom call takes the audio.
  */
 final class AppOpsCommands {
     private AppOpsCommands() {
