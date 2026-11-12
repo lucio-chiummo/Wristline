@@ -24,10 +24,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 /** Finds this phone's own Wireless debugging services on the Wi-Fi network (mDNS). */
-final class AdbDiscovery {
+public final class AdbDiscovery {
     static final String TAG = "Wristline"; // RelayListener.TAG, which this package cannot see
-    static final String PAIRING = "_adb-tls-pairing._tcp";
-    static final String CONNECT = "_adb-tls-connect._tcp";
+    public static final String PAIRING = "_adb-tls-pairing._tcp";
+    public static final String CONNECT = "_adb-tls-connect._tcp";
 
     private AdbDiscovery() {
     }
@@ -52,7 +52,7 @@ final class AdbDiscovery {
     }
 
     /** True when the phone is on Wi-Fi; Wireless debugging only works there. */
-    static boolean onWifi(Context context) {
+    public static boolean onWifi(Context context) {
         return !wifiNetworks(context).isEmpty();
     }
 
@@ -96,7 +96,7 @@ final class AdbDiscovery {
      * same Wi-Fi advertise too), or null after the timeout.
      */
     @SuppressWarnings("deprecation") // resolveService: its replacement needs API 34
-    static InetSocketAddress find(Context context, String serviceType, long timeoutMs) {
+    public static InetSocketAddress find(Context context, String serviceType, long timeoutMs) {
         if (!onWifi(context)) {
             return null;
         }

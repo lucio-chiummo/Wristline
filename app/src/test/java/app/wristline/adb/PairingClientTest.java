@@ -18,21 +18,14 @@ import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.KeyStore;
 import java.security.SecureRandom;
-import java.security.cert.Certificate;
-import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPublicKey;
 import java.util.Arrays;
 import java.util.Base64;
-import java.util.Date;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import javax.net.ssl.KeyManager;
-import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.SSLSocket;
@@ -56,8 +49,8 @@ public class PairingClientTest {
         }
     }
 
-    private static final KeyPair CLIENT = rsa();
-    private static final KeyPair SERVER = rsa();
+    private static final KeyPair CLIENT = TlsTestSupport.rsa();
+    private static final KeyPair SERVER = TlsTestSupport.rsa();
 
     /** One server-side session script; throws to record a failure on the fake's side. */
     private interface Script {
@@ -206,7 +199,7 @@ public class PairingClientTest {
 
     private static void runAgainst(Script script, int clientSoTimeoutMs) throws Exception {
         SSLContext serverContext = SSLContext.getInstance("TLSv1.3");
-        serverContext.init(keyManagers(SERVER, "adbd"), new TrustManager[] {new TrustAny()}, null);
+        serverContext.init(TlsTestSupport.keyManagers(SERVER, "adbd"), new TrustManager[] {new TrustAny()}, null);
         AtomicReference<Throwable> serverFailure = new AtomicReference<>();
         CountDownLatch serverDone = new CountDownLatch(1);
         try (SSLServerSocket server = (SSLServerSocket) serverContext.getServerSocketFactory()
@@ -228,7 +221,7 @@ public class PairingClientTest {
             thread.start();
 
             SSLContext clientContext = SSLContext.getInstance("TLSv1.3");
-            clientContext.init(keyManagers(CLIENT, "wristline"), new TrustManager[] {new TrustAny()}, null);
+            clientContext.init(TlsTestSupport.keyManagers(CLIENT, "wristline"), new TrustManager[] {new TrustAny()}, null);
             SSLSocket client = (SSLSocket) clientContext.getSocketFactory()
                     .createSocket(InetAddress.getLoopbackAddress(), server.getLocalPort());
             try {
@@ -276,28 +269,6 @@ public class PairingClientTest {
         byte[] out = new byte[8192];
         System.arraycopy(line, 0, out, 1, line.length);
         return out;
-    }
-
-    private static KeyManager[] keyManagers(KeyPair pair, String cn) throws Exception {
-        long now = System.currentTimeMillis();
-        X509Certificate cert = SelfSigned.certificate(pair, cn, new Date(now - 86_400_000L), new Date(now + 86_400_000L));
-        char[] pass = "test".toCharArray();
-        KeyStore store = KeyStore.getInstance("PKCS12");
-        store.load(null, pass);
-        store.setKeyEntry("k", pair.getPrivate(), pass, new Certificate[] {cert});
-        KeyManagerFactory factory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-        factory.init(store, pass);
-        return factory.getKeyManagers();
-    }
-
-    private static KeyPair rsa() {
-        try {
-            KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
-            generator.initialize(2048);
-            return generator.generateKeyPair();
-        } catch (GeneralSecurityException e) {
-            throw new IllegalStateException(e);
-        }
     }
 
     private static DataInputStream stream(int... bytes) {
