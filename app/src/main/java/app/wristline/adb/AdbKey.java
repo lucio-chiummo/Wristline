@@ -223,11 +223,18 @@ public final class AdbKey {
             if (!store.containsAlias(ALIAS)) {
                 long now = System.currentTimeMillis();
                 KeyPairGenerator generator = KeyPairGenerator.getInstance(KeyProperties.KEY_ALGORITHM_RSA, KEYSTORE);
-                generator.initialize(new KeyGenParameterSpec.Builder(ALIAS, KeyProperties.PURPOSE_SIGN)
+                // Android's TLS stack (Conscrypt) does the TLS signature on a keystore key through a
+                // raw private-key operation (Cipher RSA/ECB/NoPadding for TLS 1.3 PSS, where it pads
+                // itself; RSA/ECB/PKCS1Padding for TLS 1.2), so the key must allow DECRYPT with
+                // DIGEST_NONE and those encryption paddings, not just SHA256 signatures.
+                generator.initialize(new KeyGenParameterSpec.Builder(ALIAS,
+                        KeyProperties.PURPOSE_SIGN | KeyProperties.PURPOSE_DECRYPT)
                         .setAlgorithmParameterSpec(new RSAKeyGenParameterSpec(2048, RSAKeyGenParameterSpec.F4))
-                        .setDigests(KeyProperties.DIGEST_SHA256)
+                        .setDigests(KeyProperties.DIGEST_NONE, KeyProperties.DIGEST_SHA256)
                         .setSignaturePaddings(KeyProperties.SIGNATURE_PADDING_RSA_PKCS1,
                                 KeyProperties.SIGNATURE_PADDING_RSA_PSS)
+                        .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE,
+                                KeyProperties.ENCRYPTION_PADDING_RSA_PKCS1)
                         .setCertificateSubject(new X500Principal("CN=" + CN))
                         .setCertificateNotBefore(new Date(now - DAY_MS))
                         .setCertificateNotAfter(new Date(now + YEARS_20_MS))
