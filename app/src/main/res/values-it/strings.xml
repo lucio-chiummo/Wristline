@@ -161,4 +161,27 @@
     <string name="unbound_desc">L\'accesso alle notifiche è attivo, ma il telefono non vi collega Wristline, di solito perché l\'ha chiusa in background. Tocca Risolvi. Se succede di nuovo, controlla che l\'uso della batteria di Wristline sia Senza restrizioni.</string>
     <string name="fix">Risolvi</string>
     <string name="open_wristline_settings">Apri impostazioni di Wristline</string>
+
+    <string name="setup_applying">Cambio l\'impostazione dell\'app…</string>
+    <string name="setup_bad_code">Non è un codice di 6 cifre. Riprova.</string>
+    <string name="setup_code_hint">Codice di accoppiamento</string>
+    <string name="setup_done_text">Configurata per %1$s. Ora puoi disattivare il Debug wireless.</string>
+    <string name="setup_done_title">La voce dall\'orologio è attiva</string>
+    <string name="setup_enter_code">Inserisci il codice di 6 cifre</string>
+    <string name="setup_enter_code_text">Lo trovi in Debug wireless › Associa dispositivo con codice di accoppiamento.</string>
+    <string name="setup_failed_title">Impossibile configurare la voce dall\'orologio</string>
+    <string name="setup_looking">Cerco il Debug wireless…</string>
+    <string name="setup_looking_text">Attiva il Debug wireless e tocca \"Associa dispositivo con codice di accoppiamento\".</string>
+    <string name="setup_no_connection">Impossibile collegarsi al Debug wireless. Riprova da Wristline.</string>
+    <string name="setup_not_found">Debug wireless non trovato. Assicurati di essere sul Wi-Fi e riprova da Wristline.</string>
+    <string name="setup_not_paired">L\'associazione non è stata completata. Riprova da Wristline.</string>
+    <string name="setup_pairing">Associazione…</string>
+    <string name="setup_partly_text">Configurata per %1$s. Non è stato possibile cambiare %2$s; riprova da Wristline.</string>
+    <string name="setup_send_code">Associa</string>
+    <string name="setup_waiting_code">In attesa del codice di accoppiamento</string>
+    <string name="setup_wrong_code">L\'associazione non è riuscita. Controlla il codice (cambia ogni volta) e riprova.</string>
+    <string name="try_again">Riprova</string>
+    <string name="turn_off_wireless_debugging">Disattiva il Debug wireless</string>
+    <string name="wifi_needed">Il Debug wireless funziona solo con il Wi-Fi. Connettiti a una rete Wi-Fi e riprova.</string>
+    <string name="channel_setup">Configurazione</string>
 </resources>

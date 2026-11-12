@@ -111,6 +111,12 @@
             </intent-filter>
         </service>
 
+        <!-- On-phone voice setup: waits for the pairing code, then exits. -->
+        <service
+            android:name=".AdbSetupService"
+            android:exported="false"
+            android:foregroundServiceType="shortService" />
+
         <service
             android:name=".ListenerCheckJob"
             android:exported="false"

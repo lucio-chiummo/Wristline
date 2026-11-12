@@ -169,4 +169,27 @@
     <string name="unbound_desc">Notification access is on, but the phone isn\'t connecting Wristline to it, usually because it closed Wristline in the background. Tap Fix. If it happens again, make sure Wristline\'s battery use is Unrestricted.</string>
     <string name="fix">Fix</string>
     <string name="open_wristline_settings">Open Wristline settings</string>
+
+    <string name="setup_applying">Changing the app setting…</string>
+    <string name="setup_bad_code">That isn\'t a 6-digit code. Try again.</string>
+    <string name="setup_code_hint">Pairing code</string>
+    <string name="setup_done_text">Set up for %1$s. You can turn off Wireless debugging now.</string>
+    <string name="setup_done_title">Voice through the watch is on</string>
+    <string name="setup_enter_code">Enter the 6-digit pairing code</string>
+    <string name="setup_enter_code_text">It\'s shown in Wireless debugging › Pair device with pairing code.</string>
+    <string name="setup_failed_title">Couldn\'t set up voice through the watch</string>
+    <string name="setup_looking">Looking for Wireless debugging…</string>
+    <string name="setup_looking_text">Turn on Wireless debugging and tap \"Pair device with pairing code\".</string>
+    <string name="setup_no_connection">Couldn\'t connect to Wireless debugging. Try again from Wristline.</string>
+    <string name="setup_not_found">Couldn\'t find Wireless debugging. Make sure you\'re on Wi-Fi and try again from Wristline.</string>
+    <string name="setup_not_paired">Pairing didn\'t finish. Try again from Wristline.</string>
+    <string name="setup_pairing">Pairing…</string>
+    <string name="setup_partly_text">Set up for %1$s. Couldn\'t change %2$s; try again from Wristline.</string>
+    <string name="setup_send_code">Pair</string>
+    <string name="setup_waiting_code">Waiting for the pairing code</string>
+    <string name="setup_wrong_code">Pairing didn\'t work. Check the code (it changes each time) and try again.</string>
+    <string name="try_again">Try again</string>
+    <string name="turn_off_wireless_debugging">Turn off Wireless debugging</string>
+    <string name="wifi_needed">Wireless debugging only works on Wi-Fi. Connect to a Wi-Fi network and try again.</string>
+    <string name="channel_setup">Setup</string>
 </resources>

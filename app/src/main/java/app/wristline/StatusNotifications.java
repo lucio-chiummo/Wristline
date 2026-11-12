@@ -11,6 +11,7 @@ import android.content.Intent;
 final class StatusNotifications {
     static final String CHANNEL_INCOMING = "incoming_calls";
     static final String CHANNEL_ONGOING = "ongoing_call_controls";
+    static final String CHANNEL_SETUP = "voice_setup";
     static final String CHANNEL_STATUS = "status";
     static final String CHANNEL_MISSED = "missed_calls";
     /** Missed-call notifications: this tag, one id per call. */
@@ -19,6 +20,10 @@ final class StatusNotifications {
     static final int ID_INCOMING_FALLBACK = 1;
     static final int ID_ONGOING = 2;
     static final int ID_REPAIR = 3;
+    static final int ID_PAIRING = 4;
+    static final int ID_SETUP_RESULT = 5;
+    /** Its own id, not the foreground one, so it pops up over Settings with the code field showing. */
+    static final int ID_PAIRING_CODE = 6;
     static final int ID_UNREADABLE = 7;
     static final int ID_VOICE = 8;
 
@@ -46,6 +51,13 @@ final class StatusNotifications {
         // Default importance: the watch buzzes once, like for a message.
         manager.createNotificationChannel(new NotificationChannel(CHANNEL_MISSED,
                 context.getString(R.string.channel_missed), NotificationManager.IMPORTANCE_DEFAULT));
+
+        // High importance so the pairing-code field pops up over the Wireless debugging screen.
+        NotificationChannel setup = new NotificationChannel(CHANNEL_SETUP,
+                context.getString(R.string.channel_setup), NotificationManager.IMPORTANCE_HIGH);
+        setup.setSound(null, null);
+        setup.enableVibration(false);
+        manager.createNotificationChannel(setup);
 
         // Older versions asked for the pairing code through this channel.
         manager.deleteNotificationChannel("adb_setup");
