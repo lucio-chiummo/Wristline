@@ -33,8 +33,9 @@ a computer talks to, reachable over Wi-Fi after a one-time pairing with a six-di
 on the phone. Wristline pairs with its own phone's adbd (the user reads the code in Settings and
 types it into a Wristline notification), keeps the key it paired with, connects to adbd over TLS,
 and runs the app-op command for each app. After that Wireless debugging can be turned off; the
-app-op persists until the app is uninstalled or its data is cleared, in which case the existing
-Repair flow runs the command again (no new pairing while the key is still authorised).
+app-op persists until that app is uninstalled, in which case the existing Repair flow runs the
+command again (no new pairing while Wristline's key is still authorised). Clearing Wristline's
+own data deletes its key, so setup then starts again from pairing.
 
 This is exactly what Wristline 1.2 did with a third-party library. 1.3 removed it because the
 owner did not want the internet permission and an adb key in the app. The owner now accepts both,
@@ -111,7 +112,8 @@ reference for the user experience; the transport and pairing code are written ne
   - `PeerInfo` is `uint8 type` + `uint8 data[8191]`, packed. Type `ADB_RSA_PUB_KEY = 0`
     (`ADB_DEVICE_GUID = 1` is what adbd sends back). The host adb fills `data` with the
     contents of `adbkey.pub`: the adb public-key encoding (`android_pubkey` struct, base64) then
-    a space and a name such as `wristline@phone`, NUL-terminated, rest zero.
+    a space and a name, NUL-terminated, rest zero. Wristline uses `wristline@` + `Build.MODEL`
+    with every character outside `[A-Za-z0-9_-]` dropped.
 - adb connection after pairing (AOSP, unchanged since Android 11): plain TCP to the
   `_adb-tls-connect._tcp` port, client sends `CNXN` (version 0x01000001, max payload 1 MiB,
   banner `host::features=...`), adbd answers `STLS`, client replies `STLS`, then TLS 1.3 starts on
@@ -163,28 +165,34 @@ ABI splits to a Java-only build for ~300 lines of C.
 The SPAKE2 port is the one piece of real cryptography written here, so it gets the strictest
 treatment: a faithful line-by-line port of `spake25519.cc` (including the
 `password_scalar` "copy-paste error" compatibility adjustment that BoringSSL keeps for adb; adbd
-runs that code), the `M` and `N` points taken from BoringSSL's precomputed tables (the first
-entry of each table is the point itself in `(y+x, y−x)` form) and checked in a test against the
-points regenerated from the seeds `"edwards25519 point generation seed (M)"` / `"(N)"` with
-BoringSSL's generation procedure, a round-trip test (alice and bob in Java derive the same key,
-and a wrong password gives a different key), and a test that the hash transcript order matches
-(`my_name, their_name, my_msg, their_msg` for alice; swapped for bob; then the shared point;
-then the password scalar; each with a little-endian 64-bit length prefix). The arithmetic is not
-constant-time; the scalar is single-use and the exchange is local and one-off, which the code
-comment states.
+runs that code; the private scalar is `sc_reduce` of 64 random bytes then `left_shift_3`, ×8),
+the `M` and `N` points taken from the affine x/y values in BoringSSL's source comments (the
+precomputed tables' entry 0 is the same point as `encodeint(x) || encodeint(y)`, 32 bytes each,
+little-endian; a test checks both agree), received points rejected when not on the curve, a
+round-trip test (alice and bob in Java derive the same key, and a wrong password gives a
+different key), and a test that the hash transcript matches BoringSSL: alice's name, bob's name,
+alice's message, bob's message (the same absolute order for both roles), then the shared point,
+then the SHA-512 of the password, each with a little-endian 64-bit length prefix. The arithmetic
+is not constant-time; the scalar is single-use and the exchange is local and one-off, which the
+code comment states.
 
 ### Keys and certificates
 
 - RSA-2048 key pair generated in the Android Keystore (`AndroidKeyStore`, `PURPOSE_SIGN`,
-  digests SHA-256, paddings PKCS1 and PSS, no user authentication), certificate subject
+  public exponent 65537, digest SHA-256, signature paddings `SIGNATURE_PADDING_RSA_PKCS1` and
+  `SIGNATURE_PADDING_RSA_PSS`, no user authentication), certificate subject
   `CN=Wristline`, long validity. The Keystore produces the self-signed certificate itself. The
   private key never leaves the hardware-backed store; TLS client authentication uses it through
   the standard `KeyManager`. TLS 1.3 signs `CertificateVerify` with RSA-PSS, so PSS padding
   must be declared.
 - **Spike first.** Task 1 of the plan is a throwaway that pairs and connects to the owner's
   Android 17 phone with a Keystore key. If the Keystore key cannot do the TLS 1.3 handshake on
-  some device, fallback: a software RSA key in app-private storage, wrapped with an AES key from
-  the Keystore. The spike decides; the design accepts either, Keystore preferred.
+  some device, fallback: a software RSA key in app-private storage (`filesDir`, which is
+  already private to the app), wrapped with an AES key from the Keystore. The spike decides; the
+  design accepts either, Keystore preferred. The spike also confirms that
+  `SSLSockets.isSupportedSocket` is true, that the exporter keeps the label's embedded NUL, and
+  that a custom `X509KeyManager` returning Wristline's alias is needed (adbd sends a client-CA
+  list of fake issuer names that a default key manager may filter our self-signed cert on).
 - The key is deleted when voice through the watch is turned off for the last app (the 1.2
   behaviour) and on "Forget" from the Voice screen. `LegacyAdbKey` is replaced by the new key
   code and its one-time cleanup of 1.2's PEM file stays.
@@ -193,12 +201,12 @@ comment states.
 
 ### Permissions and manifest
 
-Add `INTERNET` and `ACCESS_NETWORK_STATE`. Add `FOREGROUND_SERVICE` and
-`FOREGROUND_SERVICE_SHORT_SERVICE` for the setup service (shortService type, ~3 minutes, API
-34+; plain foreground service below). Add `android:usesCleartextTraffic="false"` is irrelevant
-(adb is TLS); instead add a network security config that pins nothing and allows nothing special,
-so the manifest states the app's network use is ordinary TLS. The Play data-safety form will say:
-no data collected or shared; internet permission used to configure the phone itself.
+Add `INTERNET`, `ACCESS_NETWORK_STATE` and `FOREGROUND_SERVICE` (no type-specific permission:
+shortService needs none). The setup service declares `foregroundServiceType="shortService"` and
+starts with that type on API 34+, untyped below, as 1.2 did. No network security config: it
+does not govern raw `SSLSocket` use and cleartext is already off at targetSdk 36. The Play
+data-safety form will say: no data collected or shared; internet permission used to configure
+the phone itself.
 
 ### Flow (phone only), ported from 1.2 with these changes
 
@@ -214,15 +222,32 @@ no data collected or shared; internet permission used to configure the phone its
 5. **Setup service** (foreground, shortService): discovers the pairing service, posts a
    notification with an inline reply field for the six-digit code so the user never leaves
    Settings, pairs, discovers the connect service, connects, runs `appops set` + `appops get` for
-   each app, verifies `ignore`, restarts the apps (`am force-stop`, as `AppOpsCommands.restart`
-   does today), marks each app set up (`FullMode.markSetUp`), posts the result notification with
-   a "Turn off Wireless debugging" action. Already paired and reachable: skip straight to the
-   commands. Timeouts, wrong code and re-opened pairing dialog (new port) handled as in 1.2.
-6. **Repair.** `FullMode.onCallDropped` today posts the repair notification. New: if the key
-   exists and adbd is reachable, repair silently in the background and record it; else the
-   notification opens the Voice screen, which resumes at the right step.
+   each app, verifies `ignore`, restarts the apps with `am kill <pkg>` (never `force-stop`: a
+   force-stopped app stops receiving pushes, so calls stop arriving; port 1.2's
+   `AppOpsCommands.get/isIgnored/isAllowed/restart`, today's class only has `set`/`reset`),
+   marks each app set up (`FullMode.markSetUp`), posts the result notification with a "Turn off
+   Wireless debugging" action. Already paired and reachable: skip straight to the commands.
+   "Reachable" means the adb handshake completed (CNXN after TLS); no shell command is run for
+   that. Timeouts, wrong code and re-opened pairing dialog (new port) handled as in 1.2.
+   The service starts when the user taps the guide's "Open Developer options" button and
+   detects Wireless debugging through mDNS polling; as a shortcut only, it may also read
+   `Settings.Global` key `adb_wifi_enabled` (a plain settings read, undocumented key, may be
+   absent on some phones; never relied on). The 165 s budget must cover the user's time in
+   Settings; when it runs out the result notification offers "Try again" (restarts the service
+   from the notification, as 1.2 did). Notifications: a new channel `voice_setup`,
+   IMPORTANCE_HIGH, silent (today's `createChannels` deletes 1.2's `adb_setup` channel; keep that
+   deletion), new IDs for progress, code entry and result, and a "notifications allowed" guide
+   step before the Settings step, as 1.2 had.
+6. **Repair.** `FullMode.onCallDropped` and `checkReinstall` both end in `needsRepair`. New: an
+   app the user set up on this phone (consent recorded for it) is repaired silently in the
+   background when the key exists and adbd is reachable, and the repair is recorded; apps set up
+   with a computer keep today's notification (owner's call, same as 1.2: Wristline runs shell
+   on its own only where the user agreed to that on the phone). Otherwise the notification opens
+   the Voice screen, which resumes at the right step.
 7. **Turning off.** "Turn off for <app>" runs `appops set … allow` through the same path when
    reachable, else shows the computer command as today; the last app off deletes the key.
+   "Forget this phone's key" is an overflow action on the Voice screen, shown only while a key
+   exists, behind a confirm dialog.
 8. **Diagnostics.** New events: `setup_started`, `setup_done`, `setup_failed` (with a short
    reason code, never the code or key), `repair_silent`. Never log command output.
 
@@ -247,7 +272,7 @@ no data collected or shared; internet permission used to configure the phone its
 - Pairing code, keys, SPAKE2 messages and shell output are never logged (`Log.*`) or recorded.
 - Shell commands are exactly `AppOpsCommands` strings; no concatenation of user input.
 - All sockets go to own addresses; no DNS names anywhere.
-- Keystore key not exportable; software fallback (if used) file mode 0600 in `filesDir`.
+- Keystore key not exportable; software fallback (if used) lives in `filesDir`, wrapped.
 - Foreground service stops itself on every path (`finish`, `onTimeout`, `onDestroy`).
 
 ## Left to the builder
@@ -255,7 +280,9 @@ no data collected or shared; internet permission used to configure the phone its
 - Exact Edwards arithmetic representation (affine `BigInteger` with modular inverse per
   operation is fine).
 - Whether shell runs over `shell,v2,raw:` (exit codes) or legacy `shell:` with output parsing;
-  v2 preferred if adbd advertises `shell_v2` in its CNXN banner.
+  v2 preferred if adbd advertises `shell_v2` in its CNXN banner. Client banner
+  `host::features=shell_v2,cmd`; the CNXN checksum field is 0 (adbd ignores it from version
+  0x01000001 on).
 - Notification channel reuse vs a new one for setup progress.
 - Layout details of the guide steps on the Voice screen (follow the existing card style).
 - Test doubles for `NsdManager` and sockets (Robolectric shadows exist for NSD; sockets can use a
@@ -275,8 +302,9 @@ no data collected or shared; internet permission used to configure the phone its
 8. Voice screen: buttons, consent, guide, repair, turn off, forget key.
 9. Docs: README, HOW_TO, privacy section, Play data-safety notes, diagnostics events; remove the
    obsolete 1.3 line "Wristline has no shell access of its own".
-10. Device check on the owner's phone: full flow from a fresh key, repair after `pm clear`, turn
-    off, forget.
+10. Device check on the owner's phone: full flow from a fresh key; silent repair after WhatsApp
+    is uninstalled and reinstalled (that resets its app-op); re-pair after Wristline's data is
+    cleared; turn off; forget.
 
 Global constraints for every task: Java 21, no new Gradle dependency, strings in EN and IT,
 no logging of secrets, every network call bounded by a timeout, minSdk 31.
