@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Talking to this phone's own Wireless debugging (adb) on its local address; nothing leaves the phone. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Finding out whether the phone is on Wi-Fi, which Wireless debugging needs. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Keeps the set-up running while the user switches to Settings to read the pairing code. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <!-- Lets Wristline fire WhatsApp's own Answer action, which opens WhatsApp's call screen. -->

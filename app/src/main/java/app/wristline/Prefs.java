@@ -63,6 +63,15 @@ final class Prefs {
         prefs(context).edit().putBoolean("broken_" + app.packageName, broken).apply();
     }
 
+    /** The user agreed that Wristline may change this app's setting again by itself (repair). */
+    static boolean consent(Context context, SupportedApp app) {
+        return prefs(context).getBoolean("consent_" + app.packageName, false);
+    }
+
+    static void setConsent(Context context, SupportedApp app, boolean consent) {
+        prefs(context).edit().putBoolean("consent_" + app.packageName, consent).apply();
+    }
+
     /** Calls the phone's Do Not Disturb silences don't ring the watch either (on unless turned off). */
     static boolean followDnd(Context context) {
         return prefs(context).getBoolean("follow_dnd", true);

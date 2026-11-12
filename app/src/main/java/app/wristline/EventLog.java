@@ -39,6 +39,9 @@ final class EventLog {
     static final String ENDED = "ended";
     static final String DROPPED_TAKING_AUDIO = "dropped_taking_audio";
     static final String REINSTALLED = "reinstalled";
+    static final String SETUP_DONE = "setup_done";
+    static final String SETUP_FAILED = "setup_failed";
+    static final String REPAIR_SILENT = "repair_silent";
     static final String MISSED = "missed";
     static final String TEST_CALL = "test_call";
 
