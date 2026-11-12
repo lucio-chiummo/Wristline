@@ -54,6 +54,10 @@
             android:name=".VoiceActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".VoiceSetupActivity"
+            android:exported="false" />
+
         <service
             android:name=".RelayListener"
             android:exported="true"

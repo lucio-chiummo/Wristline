@@ -231,7 +231,7 @@ public class AdbSetupService extends Service {
                 .setContentText(text)
                 .setStyle(new Notification.BigTextStyle().bigText(text))
                 .setContentIntent(PendingIntent.getActivity(this, 0,
-                        new Intent(this, VoiceActivity.class), PendingIntent.FLAG_IMMUTABLE))
+                        new Intent(this, VoiceSetupActivity.class), PendingIntent.FLAG_IMMUTABLE))
                 .setAutoCancel(true);
         if (failure != null) {
             // Started from the notification, so the user can retry without leaving Settings.

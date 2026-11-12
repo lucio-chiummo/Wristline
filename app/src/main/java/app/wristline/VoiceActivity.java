@@ -9,6 +9,9 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import app.wristline.adb.AdbKey;
+import app.wristline.adb.AdbShell;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -17,8 +20,11 @@ public class VoiceActivity extends Activity {
     private LinearLayout appsList;
     private View noApps;
     private View setUpSection;
-    private Button setUp;
+    private Button setUpOnPhone;
+    private TextView setUpNote;
+    private View setUp;
     private View turnOff;
+    private View forgetKey;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,17 +35,29 @@ public class VoiceActivity extends Activity {
         appsList = findViewById(R.id.voice_apps);
         noApps = findViewById(R.id.voice_no_apps);
         setUpSection = findViewById(R.id.set_up_section);
+        setUpOnPhone = findViewById(R.id.set_up_on_phone);
+        setUpNote = findViewById(R.id.set_up_note);
         setUp = findViewById(R.id.set_up);
         turnOff = findViewById(R.id.turn_off);
+        forgetKey = findViewById(R.id.forget_key);
         setUp.setOnClickListener(v ->
                 ComputerSetup.show(this, appsIn(VoiceState.SET_UP, VoiceState.NEEDS_REPAIR), this::refresh));
+        setUpOnPhone.setOnClickListener(v -> askConsent());
         turnOff.setOnClickListener(v -> turnOff());
+        forgetKey.setOnClickListener(v -> askForgetKey());
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        SetupProgress.listener = () -> runOnUiThread(this::refresh);
         refresh();
+    }
+
+    @Override
+    protected void onPause() {
+        SetupProgress.listener = null;
+        super.onPause();
     }
 
     /** Installed apps the user switched on. */
@@ -84,10 +102,12 @@ public class VoiceActivity extends Activity {
 
         List<SupportedApp> needSetUp = appsIn(VoiceState.SET_UP, VoiceState.NEEDS_REPAIR);
         setUpSection.setVisibility(needSetUp.isEmpty() ? View.GONE : View.VISIBLE);
-        boolean repairOnly = appsIn(VoiceState.SET_UP).isEmpty();
-        setUp.setText(getString(repairOnly ? R.string.repair_apps : R.string.set_up_apps,
-                AppUi.labels(this, needSetUp)));
+        boolean busy = SetupProgress.running();
+        setUpOnPhone.setEnabled(!busy);
+        setUpOnPhone.setAlpha(busy ? 0.5f : 1f);
+        setUpNote.setVisibility(busy ? View.VISIBLE : View.GONE);
         turnOff.setVisibility(FullMode.appsWithVoiceOn(this).isEmpty() ? View.GONE : View.VISIBLE);
+        forgetKey.setVisibility(AdbKey.exists(this) ? View.VISIBLE : View.GONE);
     }
 
     private void bindState(View row, VoiceState state) {
@@ -145,7 +165,20 @@ public class VoiceActivity extends Activity {
             refresh();
             return;
         }
-        showResetInstructions(apps, withSetting);
+        turnOff.setEnabled(false);
+        new Thread(() -> {
+            boolean reset = AdbShell.isReachable(this) && FullMode.disable(this, apps);
+            runOnUiThread(() -> {
+                if (isFinishing() || isDestroyed()) {
+                    return; // left the screen while ADB was being looked for: no dialog on a dead window
+                }
+                turnOff.setEnabled(true);
+                refresh();
+                if (!reset) {
+                    showResetInstructions(apps, withSetting);
+                }
+            });
+        }).start();
     }
 
     /** The commands that give the apps their setting back, to run on a computer. */
@@ -161,6 +194,41 @@ public class VoiceActivity extends Activity {
                 .setNeutralButton(R.string.copy, (d, w) -> ComputerSetup.copy(this, commands))
                 .setPositiveButton(R.string.adb_done, (d, w) -> {
                     FullMode.markTurnedOff(this, apps);
+                    refresh();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    // On-phone setup, step 1: the user agrees to the exact change for each app.
+    private void askConsent() {
+        List<SupportedApp> apps = appsIn(VoiceState.SET_UP, VoiceState.NEEDS_REPAIR);
+        if (apps.isEmpty()) {
+            return;
+        }
+        StringBuilder message = new StringBuilder();
+        for (SupportedApp app : apps) {
+            message.append(message.length() > 0 ? "\n\n" : "").append(getString(R.string.consent_app, app.label));
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(getString(R.string.consent_title, AppUi.labels(this, apps)))
+                .setMessage(message)
+                .setPositiveButton(R.string.agree, (d, w) -> {
+                    for (SupportedApp app : apps) {
+                        Prefs.setConsent(this, app, true);
+                    }
+                    startActivity(VoiceSetupActivity.intent(this, apps));
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void askForgetKey() {
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.forget_key_title)
+                .setMessage(R.string.forget_key_message)
+                .setPositiveButton(R.string.forget_key_confirm, (d, w) -> {
+                    AdbShell.forgetKey(this);
                     refresh();
                 })
                 .setNegativeButton(android.R.string.cancel, null)
