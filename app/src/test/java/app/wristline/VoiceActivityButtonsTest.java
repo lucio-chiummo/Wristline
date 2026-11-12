@@ -85,4 +85,28 @@ public class VoiceActivityButtonsTest {
     public void forgetKeyHiddenWithoutKey() {
         assertEquals(View.GONE, open().findViewById(R.id.forget_key).getVisibility());
     }
+
+    @SuppressWarnings("unchecked")
+    private java.util.List<String> guidePackages() throws Exception {
+        VoiceSetupActivity guide = Robolectric.buildActivity(VoiceSetupActivity.class,
+                new Intent(context, VoiceSetupActivity.class)).setup().get();
+        java.lang.reflect.Field field = VoiceSetupActivity.class.getDeclaredField("packages");
+        field.setAccessible(true);
+        return (java.util.List<String>) field.get(guide);
+    }
+
+    @Test
+    public void guideOpenedFromANotificationSkipsAppsWithoutConsent() throws Exception {
+        Prefs.setAppOn(context, SupportedApp.WHATSAPP, true);
+
+        assertTrue(guidePackages().isEmpty());
+    }
+
+    @Test
+    public void guideOpenedFromANotificationKeepsAppsThatConsented() throws Exception {
+        Prefs.setAppOn(context, SupportedApp.WHATSAPP, true);
+        Prefs.setConsent(context, SupportedApp.WHATSAPP, true);
+
+        assertEquals(Collections.singletonList("com.whatsapp"), guidePackages());
+    }
 }

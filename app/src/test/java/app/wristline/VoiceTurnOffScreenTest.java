@@ -59,15 +59,6 @@ public class VoiceTurnOffScreenTest {
     private static AlertDialog tapForDialog(VoiceActivity activity, int button) {
         activity.findViewById(button).performClick();
         shadowOf(Looper.getMainLooper()).idle();
-        // Turning off looks for Wireless debugging on a background thread first, then posts the dialog.
-        for (int i = 0; i < 100 && ShadowAlertDialog.getLatestAlertDialog() == null; i++) {
-            try {
-                Thread.sleep(50);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-            shadowOf(Looper.getMainLooper()).idle();
-        }
         AlertDialog dialog = ShadowAlertDialog.getLatestAlertDialog();
         assertNotNull(dialog);
         return dialog;

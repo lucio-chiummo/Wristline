@@ -166,7 +166,7 @@ public class VoiceSetupActivity extends Activity {
         List<SupportedApp> apps = new ArrayList<>();
         for (SupportedApp app : AppUi.installedApps(this)) {
             VoiceState state = FullMode.state(this, app);
-            if (Prefs.appOn(this, app) && (state == VoiceState.SET_UP || state == VoiceState.NEEDS_REPAIR)) {
+            if (Prefs.appOn(this, app) && Prefs.consent(this, app) && (state == VoiceState.SET_UP || state == VoiceState.NEEDS_REPAIR)) {
                 apps.add(app);
             }
         }

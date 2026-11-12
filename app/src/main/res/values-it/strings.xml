@@ -123,8 +123,6 @@
     <string name="pill_repair">Da riparare</string>
     <string name="pill_not_verified">Non ancora</string>
     <string name="section_set_up">Configura</string>
-    <string name="set_up_apps">Configura %1$s</string>
-    <string name="repair_apps">Ripara %1$s</string>
     <string name="turn_off_voice">Disattiva la voce dall\'orologio</string>
     <string name="voice_footer">Gli aggiornamenti delle app possono annullarla. Wristline se ne accorge e ti chiede di ripararla.</string>
     <string name="adb_message_apps">Attiva il Debug USB sul telefono, collegalo a un computer con ADB ed esegui:\n\n%1$s\n\nPoi chiudi %2$s una volta. Eseguilo di nuovo se un\'app viene reinstallata o se cambia il suo permesso Telefono.</string>
@@ -234,4 +232,5 @@
     <string name="forget_key_message">Wristline non potrà più cambiare le impostazioni di questo telefono con il Debug wireless. Per configurare di nuovo la voce dovrai rifare l\'abbinamento.</string>
     <string name="forget_key_confirm">Dimentica</string>
     <string name="use_computer">Usa un computer</string>
+    <string name="setup_no_consent">Niente da configurare: prima dai il consenso in Wristline.</string>
 </resources>

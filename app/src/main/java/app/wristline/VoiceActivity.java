@@ -165,6 +165,11 @@ public class VoiceActivity extends Activity {
             refresh();
             return;
         }
+        if (!AdbKey.exists(this)) {
+            // No key: adbd can't let Wristline in, so go straight to the computer instructions.
+            showResetInstructions(apps, withSetting);
+            return;
+        }
         turnOff.setEnabled(false);
         new Thread(() -> {
             boolean reset = AdbShell.isReachable(this) && FullMode.disable(this, apps);

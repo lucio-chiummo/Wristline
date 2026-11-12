@@ -79,8 +79,13 @@ public class AdbSetupService extends Service {
             if (packages != null) {
                 for (String pkg : packages) {
                     SupportedApp app = SupportedApp.forPackage(pkg);
-                    if (app != null) {
+                    if (app == null) {
+                        continue;
+                    }
+                    if (Prefs.consent(this, app)) {
                         apps.add(app);
+                    } else {
+                        Log.i(RelayListener.TAG, "setup skips " + pkg + ": no consent");
                     }
                 }
             }
@@ -100,7 +105,13 @@ public class AdbSetupService extends Service {
         String failure;
         List<SupportedApp> done = null;
         try {
-            failure = connect(deadline);
+            if (apps.isEmpty()) {
+                // Nothing the user agreed to: never touch the shell.
+                reason = "no_consent";
+                failure = getString(R.string.setup_no_consent);
+            } else {
+                failure = connect(deadline);
+            }
             if (failure == null) {
                 notifyProgress(getString(R.string.setup_applying), null);
                 SetupProgress.set(SetupProgress.Phase.APPLYING);

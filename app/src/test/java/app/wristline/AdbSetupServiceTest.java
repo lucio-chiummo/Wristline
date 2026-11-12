@@ -46,6 +46,7 @@ public class AdbSetupServiceTest {
     }
 
     private void start() {
+        Prefs.setConsent(context, SupportedApp.WHATSAPP, true);
         ArrayList<String> packages = new ArrayList<>(List.of("com.whatsapp"));
         controller.withIntent(AdbSetupService.startIntent(context, packages)).startCommand(0, 1);
     }
@@ -111,5 +112,35 @@ public class AdbSetupServiceTest {
         controller.destroy();
 
         assertEquals(SetupProgress.Phase.DONE, SetupProgress.phase());
+    }
+
+    @Test
+    public void appWithoutConsentIsNeverSetUpAndRunsNoShell() throws InterruptedException {
+        FullMode.Adb previous = FullMode.adb;
+        FullMode.adb = new FullMode.Adb() {
+            @Override
+            public boolean isReachable(android.content.Context c) {
+                throw new AssertionError("no shell without consent");
+            }
+
+            @Override
+            public List<String> run(android.content.Context c, List<String> commands) {
+                throw new AssertionError("no shell without consent");
+            }
+
+            @Override
+            public void forgetKey(android.content.Context c) {
+            }
+        };
+        try {
+            ArrayList<String> packages = new ArrayList<>(List.of("com.whatsapp"));
+            controller.withIntent(AdbSetupService.startIntent(context, packages)).startCommand(0, 1);
+            awaitFinished();
+
+            assertEquals(SetupProgress.Phase.FAILED, SetupProgress.phase());
+            assertEquals(context.getString(R.string.setup_no_consent), SetupProgress.message());
+        } finally {
+            FullMode.adb = previous;
+        }
     }
 }

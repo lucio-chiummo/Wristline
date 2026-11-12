@@ -130,8 +130,6 @@
     <string name="pill_repair">Needs repair</string>
     <string name="pill_not_verified">Not yet</string>
     <string name="section_set_up">Set up</string>
-    <string name="set_up_apps">Set up %1$s</string>
-    <string name="repair_apps">Repair %1$s</string>
     <string name="turn_off_voice">Turn off voice through the watch</string>
     <string name="voice_footer">App updates can reset this. Wristline notices and asks you to repair it.</string>
     <string name="adb_message_apps">Turn on USB debugging on the phone, connect it to a computer with ADB, and run:\n\n%1$s\n\nThen close %2$s once. Run it again if an app is reinstalled or its Phone permission is changed.</string>
@@ -241,5 +239,6 @@
     <string name="forget_key_title">Forget this phone\'s key?</string>
     <string name="forget_key_message">Wristline will no longer be able to change settings on this phone through Wireless debugging. To set up voice again you will pair once more.</string>
     <string name="forget_key_confirm">Forget</string>
-        <string name="use_computer">Use a computer instead</string>
+    <string name="use_computer">Use a computer instead</string>
+    <string name="setup_no_consent">Nothing to set up: agree in Wristline first.</string>
 </resources>
