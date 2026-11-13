@@ -239,7 +239,7 @@
     <string name="set_up_with_computer">Set up with a computer</string>
     <string name="forget_key">Forget this phone\'s key</string>
     <string name="forget_key_title">Forget this phone\'s key?</string>
-    <string name="forget_key_message">Wristline will no longer be able to change settings on this phone through Wireless debugging. To set up voice again you will pair once more.</string>
+    <string name="forget_key_message">Voice through the watch stays on for the apps already set up. Wristline just won\'t be able to change or repair that setting by itself any more; to set it up again you\'ll pair once more. To switch voice off, use Turn off. You can also remove \"wristline@…\" under Wireless debugging › Paired devices.</string>
     <string name="forget_key_confirm">Forget</string>
     <string name="use_computer">Use a computer instead</string>
     <string name="setup_no_consent">Nothing to set up: agree in Wristline first.</string>

@@ -256,6 +256,8 @@ public class AdbSetupService extends Service {
     private void cancelRun() {
         cancelled = true;
         running = false;
+        // The code prompt must not outlive a run the system or the user ended.
+        StatusNotifications.cancel(this, StatusNotifications.ID_PAIRING_CODE);
         Thread thread = worker;
         if (thread != null) {
             thread.interrupt();

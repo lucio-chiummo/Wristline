@@ -231,7 +231,7 @@
     <string name="set_up_with_computer">Configura con un computer</string>
     <string name="forget_key">Dimentica la chiave di questo telefono</string>
     <string name="forget_key_title">Dimenticare la chiave di questo telefono?</string>
-    <string name="forget_key_message">Wristline non potrà più cambiare le impostazioni di questo telefono con il Debug wireless. Per configurare di nuovo la voce dovrai rifare l\'abbinamento.</string>
+    <string name="forget_key_message">La voce sull\'orologio resta attiva per le app già configurate. Wristline non potrà più cambiare o riparare da sola quell\'impostazione; per configurarla di nuovo dovrai rifare l\'abbinamento. Per disattivare la voce usa Disattiva. Puoi anche rimuovere \"wristline@…\" in Debug wireless › Dispositivi accoppiati.</string>
     <string name="forget_key_confirm">Dimentica</string>
     <string name="use_computer">Usa un computer</string>
     <string name="setup_no_consent">Niente da configurare: prima dai il consenso in Wristline.</string>

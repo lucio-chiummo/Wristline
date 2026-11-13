@@ -61,4 +61,40 @@ public class AdbSetupStopTest {
         // Still the first run's thread: the second start did not start another worker.
         assertEquals(Thread.currentThread(), ReflectionHelpers.getField(service, "worker"));
     }
+
+    private static AdbSetupService serviceShowingTheCodePrompt() {
+        android.app.Application app = RuntimeEnvironment.getApplication();
+        StatusNotifications.createChannels(app);
+        AdbSetupService service = Robolectric.buildService(AdbSetupService.class).create().get();
+        ReflectionHelpers.setField(service, "running", true);
+        app.getSystemService(android.app.NotificationManager.class).notify(StatusNotifications.ID_PAIRING_CODE,
+                new android.app.Notification.Builder(app, StatusNotifications.CHANNEL_SETUP)
+                        .setSmallIcon(R.drawable.ic_notification).build());
+        return service;
+    }
+
+    private static boolean codePromptShown() {
+        android.app.NotificationManager manager = RuntimeEnvironment.getApplication()
+                .getSystemService(android.app.NotificationManager.class);
+        return shadowOf(manager).getNotification(StatusNotifications.ID_PAIRING_CODE) != null;
+    }
+
+    @Test
+    public void timingOutRemovesThePairingCodePrompt() {
+        AdbSetupService service = serviceShowingTheCodePrompt();
+        org.junit.Assert.assertTrue(codePromptShown());
+
+        service.onTimeout(1);
+
+        org.junit.Assert.assertFalse(codePromptShown());
+    }
+
+    @Test
+    public void beingDestroyedRemovesThePairingCodePrompt() {
+        AdbSetupService service = serviceShowingTheCodePrompt();
+
+        service.onDestroy();
+
+        org.junit.Assert.assertFalse(codePromptShown());
+    }
 }
