@@ -80,7 +80,9 @@ public class VoiceSetupActivity extends Activity {
                 packages.add(app.packageName);
             }
         }
-        if (!SetupProgress.running()) {
+        // A finished run's result stays (DONE shows the done card, FAILED waits for Try again);
+        // only a DONE left from an earlier run for other apps is forgotten, so these get set up.
+        if (SetupProgress.phase() == SetupProgress.Phase.DONE && !stillNeedingSetUp().isEmpty()) {
             SetupProgress.set(SetupProgress.Phase.IDLE);
         }
         for (int i = 0; i < steps.length; i++) {
@@ -132,9 +134,10 @@ public class VoiceSetupActivity extends Activity {
                 devOptionsConfirmed);
     }
 
-    /** Everything is on and nothing has run yet: start waiting for the pairing screen. */
+    /** Everything is on, nothing has run yet and an app still needs it: start waiting for the pairing screen. */
     private void startIfReady() {
         if (SetupProgress.phase() == SetupProgress.Phase.IDLE
+                && !stillNeedingSetUp().isEmpty()
                 && SetupStart.ready(Permissions.canShowCodePopUp(this), AdbDiscovery.onWifi(this),
                         developerOptionsOn(), wirelessDebuggingOn())) {
             startService();
@@ -174,6 +177,17 @@ public class VoiceSetupActivity extends Activity {
         return apps;
     }
 
+    /** This guide's apps that are not on yet. */
+    private List<SupportedApp> stillNeedingSetUp() {
+        List<SupportedApp> apps = new ArrayList<>();
+        for (SupportedApp app : apps()) {
+            if (FullMode.state(this, app) != VoiceState.ON) {
+                apps.add(app);
+            }
+        }
+        return apps;
+    }
+
     private List<SupportedApp> appsNeedingSetUp() {
         List<SupportedApp> apps = new ArrayList<>();
         for (SupportedApp app : AppUi.installedApps(this)) {
@@ -190,33 +204,56 @@ public class VoiceSetupActivity extends Activity {
      * card when every app is already on, else a plain "nothing to set up", never a guide that waits.
      */
     private void showNothingLeft() {
-        List<SupportedApp> on = new ArrayList<>();
+        List<SupportedApp> on = appsOn();
         boolean allOn = true;
         for (SupportedApp app : AppUi.installedApps(this)) {
-            if (!Prefs.appOn(this, app)) {
-                continue;
-            }
-            if (FullMode.state(this, app) == VoiceState.ON) {
-                on.add(app);
-            } else {
+            if (Prefs.appOn(this, app) && !on.contains(app)) {
                 allOn = false;
             }
         }
-        boolean done = allOn && !on.isEmpty();
+        if (allOn && !on.isEmpty()) {
+            showDone(on);
+            return;
+        }
         stepsList.setVisibility(View.GONE);
         findViewById(R.id.guide_intro).setVisibility(View.GONE);
         findViewById(R.id.guide_use_computer).setVisibility(View.GONE);
-        findViewById(R.id.guide_nothing).setVisibility(done ? View.GONE : View.VISIBLE);
-        doneCard.setVisibility(done ? View.VISIBLE : View.GONE);
-        if (done) {
-            doneText.setText(getString(R.string.guide_done_text, AppUi.labels(this, on)));
+        findViewById(R.id.guide_nothing).setVisibility(View.VISIBLE);
+        doneCard.setVisibility(View.GONE);
+    }
+
+    /** The relayed apps whose voice through the watch is on. */
+    private List<SupportedApp> appsOn() {
+        List<SupportedApp> on = new ArrayList<>();
+        for (SupportedApp app : AppUi.installedApps(this)) {
+            if (Prefs.appOn(this, app) && FullMode.state(this, app) == VoiceState.ON) {
+                on.add(app);
+            }
         }
+        return on;
+    }
+
+    private void showDone(List<SupportedApp> apps) {
+        stepsList.setVisibility(View.GONE);
+        findViewById(R.id.guide_intro).setVisibility(View.GONE);
+        findViewById(R.id.guide_use_computer).setVisibility(View.GONE);
+        findViewById(R.id.guide_nothing).setVisibility(View.GONE);
+        doneCard.setVisibility(View.VISIBLE);
+        doneText.setText(getString(R.string.guide_done_text, AppUi.labels(this, apps)));
     }
 
     private void refresh() {
-        if (packages.isEmpty() && !SetupProgress.running()) {
-            showNothingLeft();
-            return;
+        SetupProgress.Phase current = SetupProgress.phase();
+        if (!SetupProgress.running() && current != SetupProgress.Phase.FAILED) {
+            if (packages.isEmpty() && current != SetupProgress.Phase.DONE) {
+                showNothingLeft();
+                return;
+            }
+            if (packages.isEmpty() || stillNeedingSetUp().isEmpty()) {
+                // Every app of this guide is on (just now, or before it opened): done, never a new run.
+                showDone(packages.isEmpty() ? appsOn() : apps());
+                return;
+            }
         }
         startIfReady();
         boolean notifications = Permissions.canShowCodePopUp(this);
@@ -227,7 +264,7 @@ public class VoiceSetupActivity extends Activity {
         doneCard.setVisibility(phase == SetupProgress.Phase.DONE ? View.VISIBLE : View.GONE);
         stepsList.setVisibility(phase == SetupProgress.Phase.DONE ? View.GONE : View.VISIBLE);
         if (phase == SetupProgress.Phase.DONE) {
-            doneText.setText(getString(R.string.guide_done_text, AppUi.labels(this, apps())));
+            showDone(apps());
             return;
         }
 
