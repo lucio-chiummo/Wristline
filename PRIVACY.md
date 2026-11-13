@@ -1,6 +1,6 @@
 # Privacy Policy: Wristline
 
-_Last updated: 2 November 2026_
+_Last updated: 13 November 2026_
 
 Wristline helps you answer WhatsApp, Telegram and Instagram calls on a Wear OS watch. This policy explains what the app accesses and what it does with it.
 
@@ -18,6 +18,7 @@ Wristline helps you answer WhatsApp, Telegram and Instagram calls on a Wear OS w
 | **Notifications** | To show call controls and status messages. | No data involved. |
 | **Contacts** (only if you turn on "Call from the watch") | To show the people you can call with WhatsApp or Telegram on your watch. | Wristline reads contact names and which of those apps can reach them, and sends that list, with your recent calls, only to the Wristline app on your own paired watch over the Wear OS connection. |
 | **Make phone calls** (`CALL_PHONE`, only with "Call from the watch") | WhatsApp and Telegram start their voice calls through Android's call system; starting one for you needs this permission. | Calls start only when you tap a name on your watch. |
+| **Internet** (`INTERNET`) | Android needs it for any network socket, including one to the phone itself. Wristline uses it only to reach your phone's own Wireless debugging, over the phone's own Wi-Fi address, when you set up voice through the watch on the phone (and to redo that setting if an app update resets it). | Nothing is sent off the phone. Only the fixed commands described below go to Wireless debugging. |
 
 Voice through the watch needs one app setting (`READ_PHONE_STATE` app-op) changed. You can do it yourself with a computer, or let Wristline do it on the phone. In that case Wristline pairs with your phone's own Wireless debugging and connects to it over the phone's own Wi-Fi address only. It has no servers and sends nothing off the phone. The only commands it runs are `appops set --uid <package> READ_PHONE_STATE ignore` (or `allow`) and `am kill <package>`. The key it pairs with is kept in the phone's Keystore. On phones where the Keystore can't hold it, it is kept in Wristline's private storage, protected by a Keystore key where possible. Turning voice off for the last app deletes the key. You can also delete it with **Forget this phone's key** on the Voice screen, or revoke it in Developer options → Wireless debugging → Paired devices (the entry is `wristline@<model>`). You can switch Wireless debugging off right after setup.
 

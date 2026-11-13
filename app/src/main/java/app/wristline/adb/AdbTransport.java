@@ -30,9 +30,14 @@ import javax.net.ssl.SSLSocket;
 import javax.net.ssl.TrustManager;
 
 /**
- * An authenticated connection to adbd (AOSP adb/protocol.txt): CNXN, STLS both ways, TLS 1.3
- * presenting {@link AdbKey}'s certificate, then adbd's CNXN. A paired key is what lets the TLS
- * handshake through; there is no AUTH step on this path. Then one shell stream at a time.
+ * A connection to adbd (AOSP adb/protocol.txt): CNXN, STLS both ways, TLS 1.3 presenting
+ * {@link AdbKey}'s certificate, then adbd's CNXN. A paired key is what lets the TLS handshake
+ * through; there is no AUTH step on this path. Then one shell stream at a time.
+ *
+ * <p>adbd authenticates Wristline; Wristline does not authenticate adbd. The server certificate
+ * is accepted unchecked ({@link TrustAny}), so an app on the same phone could pose as adbd on the
+ * phone's own address and fake command output. It gains no secret or privilege: adbd trusts
+ * Wristline because of the pairing code, and Wristline sends only fixed commands.
  */
 final class AdbTransport implements Closeable {
     static final String HOST_BANNER = "host::features=shell_v2,cmd";
