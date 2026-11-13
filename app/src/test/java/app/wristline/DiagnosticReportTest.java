@@ -38,6 +38,14 @@ public class DiagnosticReportTest {
     }
 
     @Test
+    public void saysWhetherTheAdbKeyIsPresent() {
+        DiagnosticReport.Facts f = facts();
+        assertTrue(DiagnosticReport.build(f).contains("adb key present: no\n"));
+        f.keyPresent = true;
+        assertTrue(DiagnosticReport.build(f).contains("adb key present: yes\n"));
+    }
+
+    @Test
     public void noEventsSaysSo() {
         DiagnosticReport.Facts f = facts();
         f.events = List.of();

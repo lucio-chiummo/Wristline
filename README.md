@@ -12,7 +12,7 @@ Wristline is a small Android app for the **phone**. It exists because these apps
 
 - Your watch rings like a normal phone call, showing the app and who's calling.
 - Answer, decline or hang up from your wrist.
-- Talk through the watch's own speaker and microphone, without touching your phone. This needs a one-time setup with a computer.
+- Talk through the watch's own speaker and microphone, without touching your phone. This needs a one-time setup, on the phone or with a computer.
 - Move the voice between the watch and the phone during a call.
 - See missed calls on the watch, with **Call back** for contacts.
 
@@ -41,7 +41,7 @@ Instagram can't start calls from outside its own app, so calling from the watch 
 | Answer / decline from the watch | ✅ | ✅ |
 | Hang up from the watch | ✅ (call-controls card) | ✅ (call screen) |
 | Talk through the watch speaker and mic | ❌ phone or earbuds | ✅ |
-| Extra setup | none | a one-time `adb` command from a computer |
+| Extra setup | none | a one-time setup on the phone, or an `adb` command from a computer |
 
 | App | Ring + answer on the watch | Voice through the watch |
 |---|---|---|
@@ -126,11 +126,25 @@ When the card turns green ("Ready"), calls ring on the watch. Use the switches t
 
 ### Voice through the watch
 
-This takes a computer with [adb](https://developer.android.com/tools/releases/platform-tools), once for each app:
+You can set this up on the phone alone, or with a computer. Either way it's once for each app.
+
+**On the phone**
+
+1. In Wristline, open **Voice through the watch**, tap **Set up on this phone** and agree.
+2. Follow the guide: allow notifications, join Wi-Fi, and turn on Developer options (Settings → About phone → tap **Build number** 7 times).
+3. In Developer options, turn on **Wireless debugging**, then tap **Pair device with pairing code**.
+4. Type the 6-digit code into Wristline's notification.
+5. When Wristline says it's done, turn Wireless debugging off.
+
+Wristline pairs with your phone's own Wireless debugging, keeps the key it paired with in the phone's Keystore (where the Keystore can't hold it, in Wristline's private storage, protected by a Keystore key where possible), and runs only `appops set --uid <package> READ_PHONE_STATE ignore` (or `allow` to undo) and `am kill <package>`. Apps you set up this way are repaired silently after an update when Wireless debugging is on and the key is still authorised. Turning voice off for the last app deletes the key. **Forget this phone's key** on the Voice screen deletes it too.
+
+**With a computer**
+
+This takes a computer with [adb](https://developer.android.com/tools/releases/platform-tools):
 
 1. On the phone: Settings → About phone → tap **Build number** 7 times, then turn on **USB debugging** in Developer options.
 2. Connect the phone to the computer and allow debugging when the phone asks.
-3. In Wristline, open **Voice through the watch** and tap **Set up …**. It shows the exact command, for example:
+3. In Wristline, open **Voice through the watch**, tap **Set up with a computer** and choose the app. It shows the exact command, for example:
 
    ```sh
    adb shell appops set --uid com.whatsapp READ_PHONE_STATE ignore
@@ -139,9 +153,7 @@ This takes a computer with [adb](https://developer.android.com/tools/releases/pl
 4. Run it, close that app once, and tap **I've run it**.
 5. Turn USB debugging off again.
 
-If an app update resets the setting, Wristline notices on the next call and asks you to tap **Repair**, which shows the command again.
-
-Wristline has no shell access of its own, and it doesn't ask for the internet permission. Versions before 1.3 could set this up on the phone; updating deletes the key they used.
+If an app update resets the setting and you used the computer, Wristline notices on the next call and asks you to tap **Repair**, which shows the command again.
 
 ## How it works
 
@@ -204,7 +216,7 @@ That only records artifacts for the system it runs on. A new Android Gradle plug
 
 ## Uninstall
 
-Uninstall Wristline normally. If you used voice through the watch, give the apps their setting back first: Voice through the watch → **Turn off voice through the watch** shows the command to run on a computer: `adb shell appops set --uid <package> READ_PHONE_STATE allow`.
+Uninstall Wristline normally. If you used voice through the watch, give the apps their setting back first: Voice through the watch → **Turn off voice through the watch**. If you set an app up on the phone, Wristline does it for you, with Wireless debugging on. If you used a computer, it shows the command to run: `adb shell appops set --uid <package> READ_PHONE_STATE allow`.
 
 ## License
 
@@ -221,4 +233,4 @@ This summary doesn't replace the license. Third-party components keep their own 
 
 ## Disclaimer
 
-Wristline doesn't modify the apps it relays and never reads, records or transmits call audio. It only presses the apps' own notification buttons, and Android routes the audio. It has no servers and doesn't ask for the internet permission; data for the watch goes through Google's Wear OS connection ([privacy policy](PRIVACY.md)). It is an independent project, not affiliated with WhatsApp, Meta, Telegram or Google, and may break if those apps or Wear OS change how calls work.
+Wristline doesn't modify the apps it relays and never reads, records or transmits call audio. It only presses the apps' own notification buttons, and Android routes the audio. It has no servers, accounts or analytics. It asks for the internet permission only to talk to your phone's own Wireless debugging over the phone's own Wi-Fi address: nothing leaves the phone. The key it pairs with lives in the phone's Keystore. On phones where the Keystore can't hold it, it is kept in Wristline's private storage, protected by a Keystore key where possible. You can delete it with **Forget this phone's key** on the Voice screen, or revoke it in Developer options → Wireless debugging → Paired devices (the entry is `wristline@<model>`). The only commands it runs are the app-op ones above and `am kill`, and you can switch Wireless debugging off right after setup. Wristline doesn't check the certificate of the Wireless debugging it connects to, so another app on the phone could pretend to be it and fake its replies; that app would gain nothing, because Android trusts Wristline only through the pairing code and Wristline sends only those fixed commands. Data for the watch goes through Google's Wear OS connection ([privacy policy](PRIVACY.md)). It is an independent project, not affiliated with WhatsApp, Meta, Telegram or Google, and may break if those apps or Wear OS change how calls work.

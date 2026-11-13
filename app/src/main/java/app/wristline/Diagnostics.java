@@ -39,6 +39,7 @@ final class Diagnostics {
         f.relayOn = Prefs.relayOn(context);
         f.watchCalling = Prefs.watchCalling(context);
         f.listenerConnected = RelayListener.isConnected();
+        f.keyPresent = app.wristline.adb.AdbKey.exists(context);
         for (Permissions.Step step : Permissions.missing(context)) {
             f.missingPermissions.add(step.name());
         }

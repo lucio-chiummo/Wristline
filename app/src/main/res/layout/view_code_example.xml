@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A drawn example of Wristline's pairing-code notification, so people know what to look for. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="12dp"
+    android:background="@drawable/bg_inner"
+    android:backgroundTint="@color/paused_card"
+    android:contentDescription="@string/guide_pair_example"
+    android:focusable="true"
+    android:importantForAccessibility="yes"
+    android:orientation="vertical"
+    android:padding="12dp">
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:importantForAccessibility="noHideDescendants">
+
+        <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:background="@drawable/bg_circle"
+            android:backgroundTint="@color/accent"
+            android:padding="3dp"
+            android:src="@drawable/ic_notification"
+            android:tint="@color/on_accent" />
+
+        <TextView
+            style="@style/Text.Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="@string/app_name" />
+    </LinearLayout>
+
+    <TextView
+        style="@style/Text.RowTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:importantForAccessibility="no"
+        android:text="@string/setup_enter_code"
+        android:textSize="14sp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="center_vertical"
+        android:importantForAccessibility="noHideDescendants">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_outline_pill"
+            android:fontFamily="@font/figtree"
+            android:gravity="center_vertical"
+            android:letterSpacing="0.2"
+            android:paddingStart="14dp"
+            android:text="4 8 2 _ _ _"
+            android:textColor="@color/text"
+            android:textSize="15sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/bg_pill"
+            android:backgroundTint="@color/accent"
+            android:fontFamily="@font/figtree"
+            android:fontVariationSettings="\'wght\' 700"
+            android:gravity="center"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:text="@string/setup_send_code"
+            android:textColor="@color/on_accent"
+            android:textSize="14sp" />
+    </LinearLayout>
+</LinearLayout>
