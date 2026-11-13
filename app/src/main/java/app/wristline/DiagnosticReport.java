@@ -30,6 +30,7 @@ final class DiagnosticReport {
         boolean relayOn;
         boolean watchCalling;
         boolean listenerConnected;
+        boolean keyPresent;
         List<String> missingPermissions = new ArrayList<>();
         List<AppState> apps = new ArrayList<>();
         List<EventLog.Entry> events = new ArrayList<>();
@@ -47,6 +48,7 @@ final class DiagnosticReport {
         out.append("Relaying: ").append(f.relayOn ? "on" : "paused")
                 .append(" · Notification listener: ").append(f.listenerConnected ? "connected" : "NOT connected")
                 .append(" · Calling from the watch: ").append(f.watchCalling ? "on" : "off").append('\n');
+        out.append("Set up on this phone: ").append(f.keyPresent ? "yes" : "no").append('\n');
         out.append("Missing permissions: ")
                 .append(f.missingPermissions.isEmpty() ? "none" : String.join(", ", f.missingPermissions)).append('\n');
         out.append('\n').append("Apps:").append('\n');

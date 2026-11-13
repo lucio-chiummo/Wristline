@@ -8,7 +8,7 @@ Wristline makes WhatsApp, Telegram, Instagram and Signal calls ring on your Wear
 
 - Your watch rings like a normal phone call, showing the app and who's calling.
 - Answer, decline or hang up from your wrist.
-- Talk through the watch's own speaker and microphone, without touching your phone. This needs a one-time setup with a computer.
+- Talk through the watch's own speaker and microphone, without touching your phone. This needs a one-time setup, on the phone or with a computer.
 - Move the voice between the watch and the phone during a call.
 - See missed calls on the watch, with **Call back** for contacts.
 
@@ -27,7 +27,7 @@ Wristline makes WhatsApp, Telegram, Instagram and Signal calls ring on your Wear
 - Follow your phone's Do Not Disturb.
 - Stop the watch ringing while you're using the phone.
 
-**The basics take about 5 minutes and need only your phone.** Two extras are optional and need a computer: talking through the watch, and starting calls from the watch.
+**The basics take about 5 minutes and need only your phone.** Two extras are optional: talking through the watch (set up on the phone or with a computer), and starting calls from the watch (needs a computer).
 
 **Jump to:** [What it can do](#what-it-can-do) · [Install](#1-install-the-app) · [Set up](#2-give-wristline-its-permissions) · [Test](#3-test-it) · [Everyday use](#everyday-use) · [Talk through the watch](#optional-talk-through-the-watch) · [Call from the watch](#optional-call-from-the-watch) · [Problems](#if-something-goes-wrong) · [Uninstall](#turning-things-off-and-uninstalling)
 
@@ -91,23 +91,42 @@ Missed calls also show up on your watch.
 
 Without this, you answer on the watch but talk on your phone or earbuds. With it, you use the watch's own speaker and microphone.
 
-**You need a computer**, once for each app. WhatsApp, Telegram and Signal need this. Instagram doesn't.
+You set this up once for each app. WhatsApp, Telegram and Signal need it. Instagram doesn't.
 
 **What this changes:** the app can no longer see whether your phone is in a call. So during a call in that app, it won't notice a normal phone call coming in. It otherwise works as usual, and you can undo this at any time.
 
-### First, get adb on your computer
+### On the phone, no computer
+
+1. In Wristline, open **Voice through the watch** and tap **Set up on this phone**. Read what it says and agree.
+2. Follow the guide. Allow notifications, and make sure the phone is on Wi-Fi.
+3. If you haven't yet, go to Settings → About phone and tap **Build number** 7 times. This turns on Developer options. The exact menu varies by phone.
+4. In Developer options, open **Wireless debugging** and turn it on. Tap **Pair device with pairing code**. The phone shows a 6-digit code.
+5. Wristline shows a notification asking for the code. Type the code into it.
+6. When Wristline says it's done, turn **Wireless debugging** off again.
+
+Make a test call to check that you can hear through the watch.
+
+What Wristline does here: it pairs with your phone's own Wireless debugging, over the phone's own Wi-Fi address only. It keeps the key it paired with in the phone's Keystore. The only commands it runs are `appops set --uid <package> READ_PHONE_STATE ignore` (or `allow` to undo) and `am kill <package>`.
+
+**If an app update resets the setting,** Wristline repairs it silently the next time you're on Wi-Fi with Wireless debugging on. It only does this for apps you set up this way. If Wireless debugging is off, Wristline tells you to turn it on.
+
+### With a computer
+
+Use this if you'd rather not use Wireless debugging on the phone.
+
+#### First, get adb on your computer
 
 `adb` is Google's free tool for talking to Android devices.
 
 1. Download [Android SDK Platform-Tools](https://developer.android.com/tools/releases/platform-tools) for your computer and unzip it.
 2. Open a terminal (Command Prompt on Windows, Terminal on a Mac) in the unzipped `platform-tools` folder. If your computer can't find `adb`, type `./adb` instead on a Mac or Linux.
 
-### Then, set it up
+#### Then, set it up
 
 1. On your phone, go to Settings → About phone and tap **Build number** 7 times. This turns on Developer options. The exact menu varies by phone.
 2. In Developer options, turn on **USB debugging**.
 3. Connect the phone to the computer with a cable. If the phone asks whether to allow debugging, tap **Allow**.
-4. In Wristline, open **Voice through the watch** and tap **Set up** for your app. Wristline shows the exact command. For WhatsApp, it's:
+4. In Wristline, open **Voice through the watch** and tap **Set up with a computer** for your app. Wristline shows the exact command. For WhatsApp, it's:
 
    ```sh
    adb shell appops set --uid com.whatsapp READ_PHONE_STATE ignore
@@ -174,15 +193,16 @@ Found a security problem? Please don't post it publicly. See the [security polic
 ## Turning things off and uninstalling
 
 - **Pause for a while:** turn off **Relay calls to my watch**.
-- **Stop talking through the watch:** open **Voice through the watch**, tap **Turn off voice through the watch**, and run the command it shows on a computer. For WhatsApp, it's:
+- **Stop talking through the watch:** open **Voice through the watch** and tap **Turn off voice through the watch**. If you set the app up on the phone, Wristline does it for you: turn Wireless debugging on first, and off again after. If you used a computer, run the command it shows. For WhatsApp, it's:
 
   ```sh
   adb shell appops set --uid com.whatsapp READ_PHONE_STATE allow
   ```
 
   Then close the app once and tap **I've run it**.
+- **Delete Wristline's key:** turning voice off for the last app deletes it. You can also tap **Forget this phone's key** on the Voice screen. To revoke it from Android, open Developer options → Wireless debugging → Paired devices and remove `wristline@<model>`.
 - **Uninstall:** if you set up talking through the watch, turn that off first, because uninstalling Wristline doesn't undo the setting. Then uninstall it like any other app.
 
 ## Your privacy
 
-Wristline has no servers, accounts, analytics or ads, and the phone app doesn't ask for the internet permission. It never listens to or records calls. Your watch gets its data through Google's Wear OS connection. The [privacy policy](../PRIVACY.md) has the details.
+Wristline has no servers, accounts, analytics or ads. It never listens to or records calls. It asks for the internet permission only to talk to your phone's own Wireless debugging, over the phone's own Wi-Fi address. Nothing leaves the phone. The key it pairs with lives in the phone's Keystore: delete it with **Forget this phone's key** on the Voice screen, or revoke it in Developer options → Wireless debugging → Paired devices (`wristline@<model>`). The only commands it runs are the app-op ones above and `am kill`. You can switch Wireless debugging off right after setup. Your watch gets its data through Google's Wear OS connection. The [privacy policy](../PRIVACY.md) has the details.

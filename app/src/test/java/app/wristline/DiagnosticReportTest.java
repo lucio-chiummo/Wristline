@@ -38,6 +38,14 @@ public class DiagnosticReportTest {
     }
 
     @Test
+    public void saysWhetherSetUpOnThisPhone() {
+        DiagnosticReport.Facts f = facts();
+        assertTrue(DiagnosticReport.build(f).contains("Set up on this phone: no\n"));
+        f.keyPresent = true;
+        assertTrue(DiagnosticReport.build(f).contains("Set up on this phone: yes\n"));
+    }
+
+    @Test
     public void noEventsSaysSo() {
         DiagnosticReport.Facts f = facts();
         f.events = List.of();
