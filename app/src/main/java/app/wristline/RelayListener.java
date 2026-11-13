@@ -309,6 +309,11 @@ public class RelayListener extends NotificationListenerService {
         incomingHandled = true;
     }
 
+    /** The ringing call was answered or declined from the watch, so it isn't a missed call. */
+    static boolean isIncomingHandled() {
+        return incomingHandled;
+    }
+
     /** The app couldn't start the call the watch asked for: forget it. */
     static void outgoingFailed(SupportedApp app) {
         RelayListener listener = instance;

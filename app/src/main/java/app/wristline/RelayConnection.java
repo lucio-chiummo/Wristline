@@ -114,6 +114,7 @@ public class RelayConnection extends Connection {
     /** Answered test call: audio to the watch, a few beeps there, then hang up. */
     private void answerTestCall() {
         Log.i(RelayListener.TAG, "test call answered on the watch");
+        Diagnostics.record(context, EventLog.ANSWERED_ON_WATCH, "", "test call");
         testResult(TestCall.Result.REACHED);
         handler.removeCallbacksAndMessages(null);
         setActive();
@@ -214,6 +215,7 @@ public class RelayConnection extends Connection {
     public void onReject() {
         if (testCall) {
             Log.i(RelayListener.TAG, "test call declined on the watch");
+            Diagnostics.record(context, EventLog.DECLINED_ON_WATCH, "", "test call");
             testResult(TestCall.Result.REACHED);
             end(new DisconnectCause(DisconnectCause.REJECTED));
             return;

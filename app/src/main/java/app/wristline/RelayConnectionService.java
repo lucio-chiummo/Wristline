@@ -18,11 +18,14 @@ public class RelayConnectionService extends ConnectionService {
         connection.setAddress(Uri.fromParts(PhoneAccount.SCHEME_SIP, caller, null), TelecomManager.PRESENTATION_ALLOWED);
         connection.setCallerDisplayName(caller, TelecomManager.PRESENTATION_ALLOWED);
         connection.setRinging();
-        if (request.getExtras().getBoolean(TestCall.EXTRA)) {
+        boolean testCall = request.getExtras().getBoolean(TestCall.EXTRA);
+        if (testCall) {
             connection.markTestCall();
         }
         RelayConnection.current = connection;
         Log.i(RelayListener.TAG, "mirrored call created");
+        Diagnostics.record(this, EventLog.CALL_CREATED, testCall ? null : RelayListener.currentApp,
+                testCall ? "test call" : "");
         return connection;
     }
 
@@ -55,5 +58,8 @@ public class RelayConnectionService extends ConnectionService {
     @Override
     public void onCreateIncomingConnectionFailed(PhoneAccountHandle account, ConnectionRequest request) {
         Log.w(RelayListener.TAG, "Telecom could not create the mirrored call");
+        boolean testCall = request != null && request.getExtras().getBoolean(TestCall.EXTRA);
+        Diagnostics.record(this, EventLog.CALL_NOT_CREATED, testCall ? null : RelayListener.currentApp,
+                testCall ? "test call" : "");
     }
 }
