@@ -31,6 +31,10 @@ final class EventLog {
     static final String BUSY = "busy";
     static final String UNREADABLE_CALL = "unreadable_call";
     static final String TELECOM_REFUSED = "telecom_refused";
+    /** Telecom made Wristline's ringing call (detail "test call" for Ring my watch). */
+    static final String CALL_CREATED = "call_created";
+    /** Telecom accepted the request but then failed to make the ringing call. */
+    static final String CALL_NOT_CREATED = "call_not_created";
     static final String OUTGOING = "outgoing";
     static final String OUTGOING_NOT_STARTED = "outgoing_not_started";
     static final String ANSWERED_ON_WATCH = "answered_on_watch";
