@@ -22,7 +22,7 @@ final class CallActions {
             "refuser", "weigeren", "afwijzen", "odrzuć", "odrzuc", "отклонить", "reddet",
             "رفض", "अस्वीकार", "拒绝", "拒絕", "拒否", "거절"};
     private static final String[] HANG_UP_WORDS = {
-            "hang up", "end call", "end", "cancel call", "annulla chiamata", "termina", "riaggancia", "chiudi", "colgar", "finalizar",
+            "hang up", "end call", "end", "cancel call", "cancel", "annulla chiamata", "annulla", "termina", "riaggancia", "chiudi", "colgar", "finalizar",
             "encerrar", "desligar", "auflegen", "beenden", "raccrocher", "terminer", "ophangen",
             "beëindigen", "rozłącz", "rozlacz", "завершить", "kapat", "إنهاء", "समाप्त", "挂断",
             "掛斷", "終了", "종료"};
@@ -33,6 +33,8 @@ final class CallActions {
     final PendingIntent hangUp;
     final CharSequence caller;
     final Notification.Action[] actions;
+    /** The label of {@link #hangUp}'s button, for the diagnostic report; null when it has none. */
+    final CharSequence hangUpLabel;
     /** The app's mute toggle, or null when its notification has none. */
     final PendingIntent mute;
     /** Whether {@link #mute} currently reads "Unmute". */
@@ -44,12 +46,13 @@ final class CallActions {
     final long connectedAt;
 
     private CallActions(boolean incoming, PendingIntent answer, PendingIntent decline,
-            PendingIntent hangUp, CharSequence caller, Notification.Action[] actions,
+            PendingIntent hangUp, CharSequence hangUpLabel, CharSequence caller, Notification.Action[] actions,
             PendingIntent mute, boolean muted, long connectedAt) {
         this.incoming = incoming;
         this.answer = answer;
         this.decline = decline;
         this.hangUp = hangUp;
+        this.hangUpLabel = hangUpLabel;
         this.caller = caller;
         this.actions = actions;
         this.mute = mute;
@@ -76,10 +79,15 @@ final class CallActions {
         PendingIntent hangUp = extras.getParcelable(Notification.EXTRA_HANG_UP_INTENT);
         PendingIntent mute = null;
         boolean muted = false;
+        CharSequence hangUpLabel = null;
 
         for (Notification.Action action : actions) {
             String title = action.title == null ? "" : action.title.toString().toLowerCase(Locale.ROOT);
             MuteAction.Kind muteKind = MuteAction.classify(title);
+            if (RedialAction.is(title)) {
+                // "Call again" after the other side hung up: never pressed as anything else.
+                continue;
+            }
             if (muteKind != MuteAction.Kind.NONE) {
                 if (mute == null) {
                     mute = action.actionIntent;
@@ -91,6 +99,7 @@ final class CallActions {
                 decline = action.actionIntent;
             } else if (hangUp == null && matches(title, HANG_UP_WORDS)) {
                 hangUp = action.actionIntent;
+                hangUpLabel = action.title;
             }
         }
 
@@ -113,13 +122,15 @@ final class CallActions {
             decline = actions[0].actionIntent;
             answer = actions[1].actionIntent;
         }
-        if (!incoming && hangUp == null && actions.length > 0 && actions[0].actionIntent != mute) {
+        if (!incoming && hangUp == null && actions.length > 0 && actions[0].actionIntent != mute
+                && !RedialAction.is(actions[0].title)) {
             hangUp = actions[0].actionIntent;
+            hangUpLabel = actions[0].title;
         }
 
         CharSequence caller = extras.getCharSequence(Notification.EXTRA_TITLE);
         long connectedAt = !incoming && extras.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER) && n.when > 0 ? n.when : 0;
-        return new CallActions(incoming, answer, decline, hangUp, caller, actions, mute, muted, connectedAt);
+        return new CallActions(incoming, answer, decline, hangUp, hangUpLabel, caller, actions, mute, muted, connectedAt);
     }
 
     private static boolean matches(String title, String[] words) {

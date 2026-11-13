@@ -24,6 +24,8 @@ public class RelayConnection extends Connection {
     private boolean testCall;
     /** The user moved the voice to the phone mid-call: stop pulling it back to the watch. */
     private volatile boolean voiceOnPhone;
+    /** The audio route last written to the event log, so it's logged only when it changes. */
+    private String loggedRoute;
 
     RelayConnection(Context context) {
         this.context = context.getApplicationContext();
@@ -235,9 +237,13 @@ public class RelayConnection extends Connection {
             return;
         }
         Log.i(RelayListener.TAG, "hung up from the watch");
-        Diagnostics.record(context, EventLog.HUNG_UP_ON_WATCH, RelayListener.currentApp, "");
         CallActions ongoing = RelayListener.ongoingCall;
         CallActions incoming = RelayListener.incomingCall;
+        // The app's button pressed: a button label, never who's calling.
+        String pressed = ongoing != null && ongoing.hangUp != null
+                ? "pressed " + (ongoing.hangUpLabel == null ? "?" : ongoing.hangUpLabel)
+                : incoming != null ? "declined" : "no app button";
+        Diagnostics.record(context, EventLog.HUNG_UP_ON_WATCH, RelayListener.currentApp, pressed);
         if (ongoing != null && ongoing.hangUp != null) {
             RelayListener.send(context, ongoing.hangUp);
         } else if (incoming != null) {
@@ -251,6 +257,17 @@ public class RelayConnection extends Connection {
         end(new DisconnectCause(DisconnectCause.CANCELED));
     }
 
+    /**
+     * Telecom asks to stop ringing. The Pixel Watch never does this; logged to see whether another
+     * watch's Answer arrives here instead of {@link #onAnswer()}.
+     */
+    @Override
+    public void onSilence() {
+        Log.i(RelayListener.TAG, "asked to silence the ringing call");
+        Diagnostics.record(context, EventLog.SILENCED_ON_WATCH, testCall ? null : RelayListener.currentApp,
+                testCall ? "test call" : "");
+    }
+
     @Override
     public void onShowIncomingCallUi() {
         // The app already shows its own incoming-call screen on the phone.
@@ -258,6 +275,7 @@ public class RelayConnection extends Connection {
 
     @Override
     public void onCallAudioStateChanged(CallAudioState state) {
+        logRoute(state);
         routeToWatch(state);
     }
 
@@ -279,6 +297,18 @@ public class RelayConnection extends Connection {
                 && state.getRoute() != CallAudioState.ROUTE_BLUETOOTH) {
             Log.i(RelayListener.TAG, "routing call audio to the watch");
             setAudioRoute(CallAudioState.ROUTE_BLUETOOTH);
+        }
+    }
+
+    private void logRoute(CallAudioState state) {
+        if (state == null) {
+            return;
+        }
+        String route = AudioRoute.describe(state.getRoute(), state.getSupportedRouteMask());
+        if (!route.equals(loggedRoute)) {
+            loggedRoute = route;
+            Diagnostics.record(context, EventLog.AUDIO_ROUTE, testCall ? null : RelayListener.currentApp,
+                    (testCall ? "test call, " : "") + route);
         }
     }
 

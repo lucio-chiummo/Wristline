@@ -40,6 +40,10 @@ final class EventLog {
     static final String ANSWERED_ON_WATCH = "answered_on_watch";
     static final String DECLINED_ON_WATCH = "declined_on_watch";
     static final String HUNG_UP_ON_WATCH = "hung_up_on_watch";
+    /** The watch asked to stop ringing without answering or declining (some companions' Answer). */
+    static final String SILENCED_ON_WATCH = "silenced_on_watch";
+    /** Where Telecom sent the call audio, and which routes it had; logged when it changes. */
+    static final String AUDIO_ROUTE = "audio_route";
     static final String ENDED = "ended";
     static final String DROPPED_TAKING_AUDIO = "dropped_taking_audio";
     static final String REINSTALLED = "reinstalled";
