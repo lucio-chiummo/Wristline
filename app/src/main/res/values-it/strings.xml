@@ -206,6 +206,7 @@
     <string name="guide_status_waiting_screen">In attesa che tocchi \"Associa dispositivo con codice di accoppiamento\"…</string>
     <string name="guide_step_dev">Opzioni sviluppatore</string>
     <string name="guide_step_dev_done">Attive</string>
+    <string name="guide_dev_confirm">L\'ho attivato</string>
     <string name="guide_step_dev_todo">%1$s Inserisci il PIN se richiesto, poi torna qui.</string>
     <string name="guide_step_notifications">Notifiche</string>
     <string name="guide_step_notifications_done">Consentite</string>

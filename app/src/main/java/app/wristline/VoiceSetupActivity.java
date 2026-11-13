@@ -46,6 +46,7 @@ public class VoiceSetupActivity extends Activity {
     private TextView doneText;
     private final View[] steps = new View[4];
     private ArrayList<String> packages;
+    private boolean devOptionsConfirmed;
 
     static Intent intent(Activity from, List<SupportedApp> apps) {
         ArrayList<String> packages = new ArrayList<>();
@@ -58,6 +59,7 @@ public class VoiceSetupActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        devOptionsConfirmed = savedInstanceState != null && savedInstanceState.getBoolean("dev_confirmed");
         setContentView(R.layout.activity_voice_setup);
         ((TextView) findViewById(R.id.screen_title)).setText(R.string.guide_title);
         findViewById(R.id.back).setOnClickListener(v -> finish());
@@ -107,6 +109,12 @@ public class VoiceSetupActivity extends Activity {
     };
 
     @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putBoolean("dev_confirmed", devOptionsConfirmed);
+    }
+
+    @Override
     protected void onDestroy() {
         getContentResolver().unregisterContentObserver(debuggingObserver);
         super.onDestroy();
@@ -117,7 +125,11 @@ public class VoiceSetupActivity extends Activity {
     }
 
     private boolean developerOptionsOn() {
-        return Settings.Global.getInt(getContentResolver(), Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 0) != 0;
+        return GuideSteps.developerOptionsOn(
+                Settings.Global.getInt(getContentResolver(), Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 0),
+                Settings.Global.getInt(getContentResolver(), Settings.Global.ADB_ENABLED, 0),
+                Settings.Global.getInt(getContentResolver(), ADB_WIFI_ENABLED, 0),
+                devOptionsConfirmed);
     }
 
     /** Everything is on and nothing has run yet: start waiting for the pairing screen. */
@@ -222,6 +234,16 @@ public class VoiceSetupActivity extends Activity {
         primary.setVisibility(status == GuideSteps.Status.CURRENT ? View.VISIBLE : View.GONE);
         primary.setText(button);
         primary.setOnClickListener(onClick);
+        Button second = step.findViewById(R.id.step_second_button);
+        second.setVisibility(View.GONE);
+        if (index == 2 && status == GuideSteps.Status.CURRENT) {
+            second.setVisibility(View.VISIBLE);
+            second.setText(R.string.guide_dev_confirm);
+            second.setOnClickListener(v -> {
+                devOptionsConfirmed = true;
+                refresh();
+            });
+        }
         step.setBackgroundColor(status == GuideSteps.Status.CURRENT ? getColor(R.color.highlight_row) : 0);
     }
 

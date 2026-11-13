@@ -214,6 +214,7 @@
     <string name="guide_status_waiting_screen">Waiting for you to tap \"Pair device with pairing code\"…</string>
     <string name="guide_step_dev">Developer options</string>
     <string name="guide_step_dev_done">On</string>
+    <string name="guide_dev_confirm">I\'ve turned it on</string>
     <string name="guide_step_dev_todo">%1$s Enter your PIN if asked, then come back here.</string>
     <string name="guide_step_notifications">Notifications</string>
     <string name="guide_step_notifications_done">Allowed</string>

@@ -5,6 +5,8 @@ import static app.wristline.GuideSteps.Status.DONE;
 import static app.wristline.GuideSteps.Status.FAILED;
 import static app.wristline.GuideSteps.Status.TODO;
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
@@ -62,5 +64,30 @@ public class GuideStepsTest {
     public void wifiLostGoesBackToItsStep() { // Wireless debugging switches itself off too
         assertArrayEquals(new GuideSteps.Status[] {DONE, CURRENT, DONE, TODO},
                 GuideSteps.of(true, false, true, SetupProgress.Phase.FAILED));
+    }
+
+    @Test
+    public void developerOptionsOnWhenOnlyAdbEnabled() {
+        assertTrue(GuideSteps.developerOptionsOn(0, 1, 0, false));
+    }
+
+    @Test
+    public void developerOptionsOnWhenOnlyWirelessDebugging() {
+        assertTrue(GuideSteps.developerOptionsOn(0, 0, 1, false));
+    }
+
+    @Test
+    public void developerOptionsOnWhenUserConfirmed() {
+        assertTrue(GuideSteps.developerOptionsOn(0, 0, 0, true));
+    }
+
+    @Test
+    public void developerOptionsOffWhenNothingSet() {
+        assertFalse(GuideSteps.developerOptionsOn(0, 0, 0, false));
+    }
+
+    @Test
+    public void developerOptionsOnWithStandardFlag() {
+        assertTrue(GuideSteps.developerOptionsOn(1, 0, 0, false));
     }
 }
