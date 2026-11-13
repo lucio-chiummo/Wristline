@@ -25,9 +25,14 @@ public class ActionReceiver extends BroadcastReceiver {
             return;
         }
         StatusNotifications.cancel(context, StatusNotifications.ID_INCOMING_FALLBACK);
+        boolean answer = ANSWER.equals(action);
+        // Answered or declined here: not a missed call.
+        RelayListener.incomingHandledOnWatch();
+        Diagnostics.record(context, answer ? EventLog.ANSWERED_ON_WATCH : EventLog.DECLINED_ON_WATCH,
+                RelayListener.currentApp, "notification");
         CallActions call = RelayListener.incomingCall;
         if (call != null) {
-            RelayListener.send(context, ANSWER.equals(action) ? call.answer : call.decline);
+            RelayListener.send(context, answer ? call.answer : call.decline);
         }
     }
 }
