@@ -14,7 +14,7 @@ import java.util.Locale;
  * numbers: only event codes, app packages and short technical details.
  */
 final class EventLog {
-    static final int MAX = 100;
+    static final int MAX = 200;
 
     // Event codes, as they appear in the report.
     static final String LISTENER_CONNECTED = "listener_connected";
@@ -44,6 +44,20 @@ final class EventLog {
     static final String SILENCED_ON_WATCH = "silenced_on_watch";
     /** Where Telecom sent the call audio, and which routes it had; logged when it changes. */
     static final String AUDIO_ROUTE = "audio_route";
+    /**
+     * What Telecom did with Wristline's call: "state ringing", "state active", "hold asked",
+     * "event <name>", "ended <cause>". Shows whether the watch's taps reach the phone at all.
+     */
+    static final String TELECOM = "telecom";
+    /**
+     * A calling app's call notification, without the caller (see NotificationShape): logged when a
+     * call starts and whenever its buttons change, so a report shows exactly what the app offered.
+     */
+    static final String CALL_NOTIFICATION = "call_notification";
+    /** An app's notification button couldn't be pressed: "no button" or "no longer valid". */
+    static final String APP_ACTION_FAILED = "app_action_failed";
+    /** A message from Wristline's watch app reached the phone: hangup, mute, relay on/off, call ignored. */
+    static final String WATCH_MESSAGE = "watch_message";
     static final String ENDED = "ended";
     static final String DROPPED_TAKING_AUDIO = "dropped_taking_audio";
     static final String REINSTALLED = "reinstalled";

@@ -253,6 +253,33 @@ public class RelayConnection extends Connection {
     }
 
     @Override
+    public void onStateChanged(int state) {
+        telecom("state " + TelecomNames.state(state));
+    }
+
+    /** Some watches send Hold where the Pixel Watch sends Answer or Hang up. */
+    @Override
+    public void onHold() {
+        telecom("hold asked");
+    }
+
+    @Override
+    public void onUnhold() {
+        telecom("unhold asked");
+    }
+
+    @Override
+    public void onCallEvent(String event, android.os.Bundle extras) {
+        telecom("event " + event);
+    }
+
+    private void telecom(String detail) {
+        Log.i(RelayListener.TAG, "telecom: " + detail);
+        Diagnostics.record(context, EventLog.TELECOM, testCall ? null : RelayListener.currentApp,
+                (testCall ? "test call, " : "") + detail);
+    }
+
+    @Override
     public void onAbort() {
         end(new DisconnectCause(DisconnectCause.CANCELED));
     }
@@ -318,6 +345,7 @@ public class RelayConnection extends Connection {
         }
         awaitingAppAnswer = false;
         handler.removeCallbacksAndMessages(null);
+        telecom("ended " + TelecomNames.cause(cause.getCode()));
         setDisconnected(cause);
         destroy();
         VoiceControls.update(context);

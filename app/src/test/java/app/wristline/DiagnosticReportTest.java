@@ -50,7 +50,8 @@ public class DiagnosticReportTest {
         DiagnosticReport.Facts f = facts();
         f.events = List.of();
         String report = DiagnosticReport.build(f);
-        assertTrue(report.endsWith("Recent events (newest first):\nnone\n"));
+        assertTrue(report.endsWith("):\nnone\n"));
+        assertTrue(report.contains(DiagnosticReport.EVENTS_DOC));
     }
 
     @Test
@@ -59,5 +60,29 @@ public class DiagnosticReportTest {
         assertEquals("category=call ongoing=true callType=1 fullScreen=false actions=[Decline, Answer]", shape);
         assertEquals("category=none ongoing=false callType=none fullScreen=true actions=[]",
                 NotificationShape.describe(null, false, null, true, List.of()));
+    }
+
+    @Test
+    public void saysWhichWatchCompanionAndPhoneSettings() {
+        DiagnosticReport.Facts f = facts();
+        f.osBuild = "OS3.0.1.0";
+        f.watch = "ready";
+        f.companions = List.of(Companions.describe("com.heytap.health.international", "4.29"));
+        f.bluetoothCallAudio = false;
+        f.phoneSettings.put("battery unrestricted", "no");
+        f.phoneSettings.put("contacts", "yes");
+        String report = DiagnosticReport.build(f);
+
+        assertTrue(report.contains("Phone OS build: OS3.0.1.0\n"));
+        assertTrue(report.contains("Watch: ready · Companion apps: OHealth (com.heytap.health.international 4.29)\n"));
+        assertTrue(report.contains("Bluetooth call audio: NOT available now\n"));
+        assertTrue(report.contains("Phone settings: battery unrestricted no · contacts yes\n"));
+    }
+
+    @Test
+    public void unknownsSaySo() {
+        String report = DiagnosticReport.build(facts());
+        assertTrue(report.contains("Watch: unknown · Companion apps: none found\n"));
+        assertTrue(report.contains("Bluetooth call audio: unknown\n"));
     }
 }

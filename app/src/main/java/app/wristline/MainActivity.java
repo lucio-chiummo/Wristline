@@ -92,7 +92,14 @@ public class MainActivity extends Activity {
         View rowReport = findViewById(R.id.row_report);
         bindRow(rowReport, R.drawable.ic_help, R.string.row_report);
         ((TextView) rowReport.findViewById(R.id.row_sub)).setText(R.string.report_sub);
-        rowReport.setOnClickListener(v -> startActivity(Diagnostics.shareIntent(this)));
+        rowReport.setOnClickListener(v -> new Thread(() -> {
+            Intent share = Diagnostics.shareIntent(this);
+            runOnUiThread(() -> {
+                if (!isFinishing()) {
+                    startActivity(share);
+                }
+            });
+        }, "diagnostic-report").start());
         View rowLicence = findViewById(R.id.row_licence);
         bindRow(rowLicence, R.drawable.ic_info, R.string.row_licence);
         ((TextView) rowLicence.findViewById(R.id.row_sub)).setText(R.string.licence_sub);

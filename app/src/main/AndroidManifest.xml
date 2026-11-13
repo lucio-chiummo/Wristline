@@ -27,6 +27,16 @@
         <package android:name="org.telegram.messenger" />
         <package android:name="com.instagram.android" />
         <package android:name="org.thoughtcrime.securesms" />
+        <!-- Watch companion apps, named in the diagnostic report (Companions.KNOWN). -->
+        <package android:name="com.google.android.apps.wear.companion" />
+        <package android:name="com.google.android.wearable.app" />
+        <package android:name="com.samsung.android.app.watchmanager" />
+        <package android:name="com.heytap.health.international" />
+        <package android:name="com.heytap.health" />
+        <package android:name="com.mobvoi.companion" />
+        <package android:name="com.xiaomi.wearable" />
+        <package android:name="com.huami.watch.hmwatchmanager" />
+        <package android:name="com.huawei.health" />
     </queries>
 
     <application

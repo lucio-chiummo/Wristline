@@ -1,0 +1,30 @@
+name: Something doesn't work
+description: Calls don't ring, can't answer, no voice, or anything else wrong.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please paste the diagnostic report: in Wristline on the phone, Home → **Share diagnostic report**.
+        It has no names or numbers, but it does show **when** recent calls happened: check it before posting.
+  - type: input
+    id: watch
+    attributes:
+      label: Watch model and companion app
+      description: e.g. "Pixel Watch 3, Pixel Watch app" or "OPPO Watch X3, OHealth"
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What you did and what happened
+      description: e.g. "WhatsApp call, tapped Answer on the watch at 17:29, the watch showed a call but no sound"
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: Diagnostic report
+      render: text
+    validations:
+      required: true

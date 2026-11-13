@@ -17,11 +17,11 @@ public class RelayConnectionService extends ConnectionService {
         RelayConnection connection = new RelayConnection(this);
         connection.setAddress(Uri.fromParts(PhoneAccount.SCHEME_SIP, caller, null), TelecomManager.PRESENTATION_ALLOWED);
         connection.setCallerDisplayName(caller, TelecomManager.PRESENTATION_ALLOWED);
-        connection.setRinging();
         boolean testCall = request.getExtras().getBoolean(TestCall.EXTRA);
         if (testCall) {
             connection.markTestCall();
         }
+        connection.setRinging();
         RelayConnection.current = connection;
         Log.i(RelayListener.TAG, "mirrored call created");
         Diagnostics.record(this, EventLog.CALL_CREATED, testCall ? null : RelayListener.currentApp,

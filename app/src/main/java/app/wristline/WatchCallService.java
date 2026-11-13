@@ -11,10 +11,13 @@ public class WatchCallService extends WearableListenerService {
     public void onMessageReceived(MessageEvent event) {
         ListenerRebind.ifNeeded(this, ListenerRebind.WATCH, null);
         if (WatchProtocol.PATH_HANGUP.equals(event.getPath())) {
+            Diagnostics.record(this, EventLog.WATCH_MESSAGE, RelayListener.currentApp,
+                    "hangup" + (RelayConnection.current == null ? ", no call on the phone" : ""));
             RelayListener.hangUpFromWatch();
             return;
         }
         if (WatchProtocol.PATH_MUTE.equals(event.getPath())) {
+            Diagnostics.record(this, EventLog.WATCH_MESSAGE, RelayListener.currentApp, "mute");
             RelayListener.muteFromWatch();
             return;
         }
@@ -24,7 +27,9 @@ public class WatchCallService extends WearableListenerService {
             return;
         }
         if (WatchProtocol.PATH_SET_RELAY.equals(event.getPath())) {
-            Relaying.set(this, "1".equals(new String(event.getData(), java.nio.charset.StandardCharsets.UTF_8)));
+            boolean on = "1".equals(new String(event.getData(), java.nio.charset.StandardCharsets.UTF_8));
+            Diagnostics.record(this, EventLog.WATCH_MESSAGE, "", on ? "relay on" : "relay off");
+            Relaying.set(this, on);
             return;
         }
         if (!WatchProtocol.PATH_CALL.equals(event.getPath())) {
@@ -33,6 +38,8 @@ public class WatchCallService extends WearableListenerService {
         WatchProtocol.CallRequest request = WatchProtocol.parseCall(event.getData());
         if (request == null || !Prefs.watchCalling(this)) {
             Log.w(RelayListener.TAG, "ignoring call request from the watch");
+            Diagnostics.record(this, EventLog.WATCH_MESSAGE, "",
+                    request == null ? "call ignored, unreadable" : "call ignored, calling from the watch is off");
             return;
         }
         OutgoingCalls.start(this, request.contactId, request.app);

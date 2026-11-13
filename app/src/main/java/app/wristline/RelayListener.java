@@ -47,6 +47,8 @@ public class RelayListener extends NotificationListenerService {
     /** Answered (anywhere) or declined on the watch: not a missed call when it ends. */
     private static volatile boolean incomingHandled;
     private static String shownOngoingLabels;
+    /** The call notification shape last written to the event log for this call. */
+    private static volatile String loggedShape;
 
     private final CallTracker tracker = new CallTracker();
     /** The running listener, for calls started from the watch. */
@@ -164,6 +166,10 @@ public class RelayListener extends NotificationListenerService {
         }
         CallActions call = CallActions.from(sbn.getNotification(), app.ongoingLacksCallCategory);
         if (call == null) {
+            if (app.packageName.equals(tracker.trackedPackage())) {
+                // During a call: what the app's notifications turned into (e.g. "Call again" once it ended).
+                logShape(app, sbn.getNotification());
+            }
             if (app.ownCallBack) {
                 OwnCallBack.capture(app.packageName, sbn.getNotification(), System.currentTimeMillis());
             }
@@ -173,6 +179,7 @@ public class RelayListener extends NotificationListenerService {
         }
         if (!call.incoming) {
             if (tracker.ongoing(app.packageName, sbn.getKey()) == CallTracker.Result.ONGOING) {
+                logShape(app, sbn.getNotification());
                 onOngoingCall(call);
             }
             return;
@@ -188,6 +195,8 @@ public class RelayListener extends NotificationListenerService {
         switch (tracker.incoming(app.packageName, sbn.getKey(), allowed)) {
             case START:
                 incomingCall = call;
+                loggedShape = null;
+                logShape(app, sbn.getNotification());
                 startCall(app, call);
                 break;
             case NONE:
@@ -195,6 +204,7 @@ public class RelayListener extends NotificationListenerService {
                 // same app mustn't replace them, or Answer on the watch would pick up that call.
                 if (tracker.isIncomingKey(app.packageName, sbn.getKey())) {
                     incomingCall = call;
+                    logShape(app, sbn.getNotification());
                 }
                 break;
             default:
@@ -205,6 +215,19 @@ public class RelayListener extends NotificationListenerService {
                         : rule == IncomingRule.Decision.PHONE_IN_USE ? EventLog.PHONE_IN_USE
                         : EventLog.SWITCHED_OFF, app, "");
                 break;
+        }
+    }
+
+    /** Logs the call notification's shape (no caller) when it differs from the last one logged for this call. */
+    private void logShape(SupportedApp app, Notification n) {
+        try {
+            String shape = NotificationShape.of(n);
+            if (!shape.equals(loggedShape)) {
+                loggedShape = shape;
+                Diagnostics.record(this, EventLog.CALL_NOTIFICATION, app, shape);
+            }
+        } catch (RuntimeException e) {
+            Log.w(TAG, "could not describe the call notification", e);
         }
     }
 
@@ -393,6 +416,7 @@ public class RelayListener extends NotificationListenerService {
         incomingCall = null;
         ongoingCall = null;
         shownOngoingLabels = null;
+        loggedShape = null;
         outgoingName = name;
         toldWatch = null;
         WatchSync.callState(this, WatchProtocol.STATE_CALLING, app, name);
@@ -510,6 +534,7 @@ public class RelayListener extends NotificationListenerService {
     static void send(Context context, PendingIntent intent) {
         if (intent == null) {
             Log.w(TAG, "no app action to send");
+            Diagnostics.record(context, EventLog.APP_ACTION_FAILED, currentApp, "no button");
             return;
         }
         ActivityOptions options = ActivityOptions.makeBasic();
@@ -520,6 +545,7 @@ public class RelayListener extends NotificationListenerService {
             intent.send(context, 0, null, null, null, null, options.toBundle());
         } catch (PendingIntent.CanceledException e) {
             Log.w(TAG, "app action no longer valid", e);
+            Diagnostics.record(context, EventLog.APP_ACTION_FAILED, currentApp, "no longer valid");
         }
     }
 

@@ -1,13 +1,21 @@
 package app.wristline;
 
+import android.Manifest;
+import android.app.ActivityManager;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.media.AudioDeviceInfo;
+import android.media.AudioManager;
 import android.os.Build;
+import android.os.PowerManager;
+import android.provider.Settings;
 import android.util.Log;
+
+import java.util.Map;
 
 /**
  * Records events for the diagnostic report, and builds and shares it. Nothing leaves the phone
@@ -30,6 +38,12 @@ final class Diagnostics {
         }
     }
 
+    static DiagnosticReport.Facts collectWithWatch(Context context) {
+        DiagnosticReport.Facts f = collect(context);
+        f.watch = WatchSync.status(context).name().toLowerCase(java.util.Locale.ROOT);
+        return f;
+    }
+
     static DiagnosticReport.Facts collect(Context context) {
         DiagnosticReport.Facts f = new DiagnosticReport.Facts();
         f.appVersion = version(context, context.getPackageName());
@@ -49,7 +63,75 @@ final class Diagnostics {
                     version == null ? "" : FullMode.state(context, app).name()));
         }
         f.events = Prefs.events(context);
+        f.osBuild = Build.DISPLAY;
+        for (String pkg : Companions.KNOWN.keySet()) {
+            String version = version(context, pkg);
+            if (version != null) {
+                f.companions.add(Companions.describe(pkg, version));
+            }
+        }
+        f.bluetoothCallAudio = bluetoothCallAudio(context);
+        phoneSettings(context, f.phoneSettings);
         return f;
+    }
+
+    /** Whether a Bluetooth headset (the watch) can carry call audio right now; needs no permission. */
+    private static Boolean bluetoothCallAudio(Context context) {
+        try {
+            for (AudioDeviceInfo device : context.getSystemService(AudioManager.class).getAvailableCommunicationDevices()) {
+                if (device.getType() == AudioDeviceInfo.TYPE_BLUETOOTH_SCO) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    /**
+     * The phone settings that most often stop calls on makers' Android builds (HyperOS, ColorOS,
+     * One UI): battery limits, background limits, pop-ups over other apps, and so on.
+     */
+    private static void phoneSettings(Context context, Map<String, String> out) {
+        try {
+            out.put("battery unrestricted", yes(context.getSystemService(PowerManager.class)
+                    .isIgnoringBatteryOptimizations(context.getPackageName())));
+            out.put("background restricted", yes(context.getSystemService(ActivityManager.class).isBackgroundRestricted()));
+            out.put("display over other apps", yes(Settings.canDrawOverlays(context)));
+            if (Build.VERSION.SDK_INT >= 34) {
+                out.put("full-screen calls", yes(context.getSystemService(NotificationManager.class).canUseFullScreenIntent()));
+            }
+            out.put("notifications", yes(context.getSystemService(NotificationManager.class).areNotificationsEnabled()));
+            out.put("contacts", granted(context, Manifest.permission.READ_CONTACTS));
+            out.put("phone (calls)", granted(context, Manifest.permission.CALL_PHONE));
+            out.put("do not disturb", dnd(context.getSystemService(NotificationManager.class).getCurrentInterruptionFilter()));
+        } catch (RuntimeException e) {
+            out.put("unreadable", e.getClass().getSimpleName());
+        }
+    }
+
+    private static String yes(boolean value) {
+        return value ? "yes" : "no";
+    }
+
+    private static String granted(Context context, String permission) {
+        return yes(context.checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED);
+    }
+
+    private static String dnd(int filter) {
+        switch (filter) {
+            case NotificationManager.INTERRUPTION_FILTER_ALL:
+                return "off";
+            case NotificationManager.INTERRUPTION_FILTER_PRIORITY:
+                return "priority only";
+            case NotificationManager.INTERRUPTION_FILTER_ALARMS:
+                return "alarms only";
+            case NotificationManager.INTERRUPTION_FILTER_NONE:
+                return "total silence";
+            default:
+                return "unknown";
+        }
     }
 
     /** Installed version name, or null when the package isn't installed. */
@@ -62,12 +144,12 @@ final class Diagnostics {
         }
     }
 
-    /** The share sheet with the report as plain text. */
+    /** The share sheet with the report as plain text. Off the main thread: it asks Wear OS about the watch. */
     static Intent shareIntent(Context context) {
         Intent send = new Intent(Intent.ACTION_SEND)
                 .setType("text/plain")
                 .putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.report_subject))
-                .putExtra(Intent.EXTRA_TEXT, DiagnosticReport.build(collect(context)));
+                .putExtra(Intent.EXTRA_TEXT, DiagnosticReport.build(collectWithWatch(context)));
         return Intent.createChooser(send, context.getString(R.string.row_report));
     }
 
