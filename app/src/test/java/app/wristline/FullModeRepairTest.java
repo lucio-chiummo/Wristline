@@ -47,7 +47,8 @@ public class FullModeRepairTest {
     }
 
     private static class FakeAdb implements FullMode.Adb {
-        final List<String> seen = new ArrayList<>();
+        // Written on the repair thread, read on the test thread.
+        final List<String> seen = java.util.Collections.synchronizedList(new ArrayList<>());
         boolean reachable = true;
         boolean shortAnswer;
 
@@ -110,8 +111,9 @@ public class FullModeRepairTest {
         Prefs.setConsent(context, WHATSAPP, true);
 
         FullMode.onCallDropped(context, WHATSAPP);
-        long end = System.currentTimeMillis() + 2000;
-        while (Prefs.broken(context, WHATSAPP) && System.currentTimeMillis() < end) {
+        // Not Prefs.broken: apply() clears it before the restart runs. The event is the repair's last step.
+        long end = System.currentTimeMillis() + 5000;
+        while (Prefs.events(context).isEmpty() && System.currentTimeMillis() < end) {
             Thread.sleep(20);
         }
 
