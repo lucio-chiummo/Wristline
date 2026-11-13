@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.SSLContext;
@@ -45,18 +46,27 @@ final class PairingClient {
     private static final int HEADER_BYTES = 6;
     private static final int MAX_PAYLOAD = 16384;
     private static final int SPAKE2_MSG_BYTES = 32;
+    /** Marks a holder whose attempt was cancelled before its socket was made. */
+    private static final Socket CANCELLED = new Socket();
 
     private PairingClient() {
     }
 
     /**
      * Connects (connect timeout, then SO_TIMEOUT on every read), does TLS 1.3 presenting
-     * {@code key}'s certificate, and pairs. Throws on any failure, including a wrong code.
+     * {@code key}'s certificate, and pairs. Throws on any failure, including a wrong code. The raw
+     * socket is put in {@code socketHolder} so another thread can {@link #cancel} the attempt.
      */
-    static void pair(InetSocketAddress address, String code, AdbKey key, int connectTimeoutMs, int readTimeoutMs)
-            throws IOException {
+    static void pair(InetSocketAddress address, String code, AdbKey key, int connectTimeoutMs, int readTimeoutMs,
+            AtomicReference<Socket> socketHolder) throws IOException {
         Socket raw = new Socket();
         SSLSocket tls = null;
+        Socket previous = socketHolder.getAndSet(raw);
+        if (previous != null) {
+            // Already cancelled (the holder only ever gets a socket from here or from cancel).
+            closeQuietly(raw);
+            throw new IOException("pairing cancelled");
+        }
         try {
             raw.setSoTimeout(readTimeoutMs);
             raw.connect(address, connectTimeoutMs);
@@ -68,7 +78,7 @@ final class PairingClient {
                 throw new IOException("TLS 1.3 unavailable", e);
             }
             tls = (SSLSocket) context.getSocketFactory()
-                    .createSocket(raw, address.getHostString(), address.getPort(), true);
+                    .createSocket(raw, address.getAddress().getHostAddress(), address.getPort(), true);
             tls.setSoTimeout(readTimeoutMs);
             tls.setEnabledProtocols(new String[] {"TLSv1.3"});
             tls.setUseClientMode(true);
@@ -79,6 +89,14 @@ final class PairingClient {
                 closeQuietly(tls);
             }
             closeQuietly(raw);
+        }
+    }
+
+    /** Ends a {@link #pair} in progress on another thread by closing its socket; later pairs on the holder fail at once. */
+    static void cancel(AtomicReference<Socket> socketHolder) {
+        Socket socket = socketHolder.getAndSet(CANCELLED);
+        if (socket != null && socket != CANCELLED) {
+            closeQuietly(socket);
         }
     }
 

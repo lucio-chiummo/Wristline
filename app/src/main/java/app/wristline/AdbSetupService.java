@@ -42,6 +42,10 @@ public class AdbSetupService extends Service {
 
     private final LinkedBlockingQueue<String> codes = new LinkedBlockingQueue<>();
     private volatile boolean running;
+    /** Set when the system ends the run (time-out or destroy): the worker stops without a result. */
+    private volatile boolean cancelled;
+    /** The current run's thread; a thread that is no longer this one must stop too. */
+    private volatile Thread worker;
     /** A fixed code for the event log: never the pairing code or any user text. */
     private String reason = "done";
     private volatile int runStartId;
@@ -67,9 +71,15 @@ public class AdbSetupService extends Service {
             }
             return START_NOT_STICKY;
         }
-        if (ACTION_START.equals(action) && !running) {
+        if (ACTION_START.equals(action) && running) {
+            // One run at a time; this start is now the latest, so finishing must stop with its id.
+            runStartId = startId;
+            return START_NOT_STICKY;
+        }
+        if (ACTION_START.equals(action)) {
             StatusNotifications.cancel(this, StatusNotifications.ID_SETUP_RESULT);
             running = true;
+            cancelled = false;
             runStartId = startId;
             codes.clear();
             SetupProgress.set(SetupProgress.Phase.WAITING_FOR_PAIRING_SCREEN);
@@ -95,7 +105,10 @@ public class AdbSetupService extends Service {
             } else {
                 startForeground(StatusNotifications.ID_PAIRING, progress);
             }
-            new Thread(() -> work(apps), "adb-setup").start();
+            Diagnostics.record(this, EventLog.SETUP_STARTED, "", "");
+            Thread thread = new Thread(() -> work(apps), "adb-setup");
+            worker = thread;
+            thread.start();
         }
         return START_NOT_STICKY;
     }
@@ -111,6 +124,9 @@ public class AdbSetupService extends Service {
                 failure = getString(R.string.setup_no_consent);
             } else {
                 failure = connect(deadline);
+            }
+            if (stopped()) {
+                return;
             }
             if (failure == null) {
                 notifyProgress(getString(R.string.setup_applying), null);
@@ -135,6 +151,9 @@ public class AdbSetupService extends Service {
         InetSocketAddress pairing = null;
         boolean waiting = true;
         while (waiting) {
+            if (stopped()) {
+                return null;
+            }
             boolean wifi = AdbDiscovery.onWifi(this);
             // Already paired (e.g. a repair after Wireless debugging was turned back on): no code needed.
             boolean reachable = wifi && AdbShell.isReachable(this);
@@ -157,6 +176,9 @@ public class AdbSetupService extends Service {
                     break;
             }
         }
+        if (stopped()) {
+            return null;
+        }
         long codeDeadline = deadline - SetupStep.FINISH_MARGIN_MS;
         notifyCodeEntry(getString(R.string.setup_enter_code_text), codeDeadline);
         notifyProgress(getString(R.string.setup_waiting_code), null);
@@ -168,6 +190,9 @@ public class AdbSetupService extends Service {
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 break;
+            }
+            if (stopped()) {
+                return null;
             }
             if (code == null) {
                 if (remaining(codeDeadline) <= 0) {
@@ -190,7 +215,15 @@ public class AdbSetupService extends Service {
             if (current != null) {
                 pairing = current;
             }
-            if (AdbShell.pair(this, pairing, code)) {
+            if (AdbShell.pair(this, pairing, code) || stopped()) {
+                return null;
+            }
+            // A pairing that timed out here may still have finished on adbd's side: if Wristline
+            // is let in now, it is paired and needs no new code.
+            if (AdbShell.isReachable(this)) {
+                return null;
+            }
+            if (stopped()) {
                 return null;
             }
             // The user may have reopened the pairing dialog, which moves it to a new port.
@@ -214,7 +247,25 @@ public class AdbSetupService extends Service {
         return deadline - SystemClock.elapsedRealtime();
     }
 
+    /** True once this run was cancelled, or a newer run replaced this thread: stop without a result. */
+    private boolean stopped() {
+        return cancelled || Thread.currentThread() != worker;
+    }
+
+    /** Ends the run from outside the worker: no result is posted and progress is left as set here. */
+    private void cancelRun() {
+        cancelled = true;
+        running = false;
+        Thread thread = worker;
+        if (thread != null) {
+            thread.interrupt();
+        }
+    }
+
     private void finish(List<SupportedApp> apps, List<SupportedApp> done, String failure) {
+        if (stopped()) {
+            return;
+        }
         String title;
         String text;
         if (failure != null) {
@@ -269,6 +320,7 @@ public class AdbSetupService extends Service {
     @Override
     public void onTimeout(int startId) {
         Log.w(RelayListener.TAG, "ADB setup ran out of time");
+        cancelRun();
         SetupProgress.set(SetupProgress.Phase.FAILED, getString(R.string.setup_not_paired), 0);
         stopForeground(STOP_FOREGROUND_REMOVE);
         stopSelf();
@@ -276,6 +328,7 @@ public class AdbSetupService extends Service {
 
     @Override
     public void onDestroy() {
+        cancelRun();
         if (SetupProgress.running()) {
             // Stopped before it finished (e.g. by the system): the guide must offer Try again.
             SetupProgress.set(SetupProgress.Phase.FAILED, getString(R.string.setup_not_paired), 0);

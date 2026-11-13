@@ -5,11 +5,14 @@ import android.util.Log;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
 /**
  * Talks to this phone's own adbd over Wireless debugging: pairs once with a pairing code, then runs
@@ -21,6 +24,8 @@ public final class AdbShell {
     static final int CONNECT_TIMEOUT_MS = 4000;
     static final int SOCKET_TIMEOUT_MS = 15000;
     static final long PAIR_TIMEOUT_MS = 20000;
+    /** How long one look for the connect service waits. */
+    static final long DISCOVERY_STEP_MS = 3000;
 
     private AdbShell() {
     }
@@ -54,18 +59,24 @@ public final class AdbShell {
 
     /**
      * Pairs with the "Pair device with pairing code" service. Waits on a side thread so a stuck
-     * peer cannot hold the caller past {@link #PAIR_TIMEOUT_MS}.
+     * peer cannot hold the caller past {@link #PAIR_TIMEOUT_MS}; on time-out the pairing socket is
+     * closed, which ends that thread. Only pairing creates the adb key.
      */
     public static boolean pair(Context context, InetSocketAddress pairing, String code) {
+        return pair(pairing, code, () -> AdbKey.load(context), PAIR_TIMEOUT_MS);
+    }
+
+    static boolean pair(InetSocketAddress pairing, String code, Supplier<AdbKey> key, long timeoutMs) {
+        AtomicReference<Socket> socket = new AtomicReference<>();
         FutureTask<Void> task = new FutureTask<>(() -> {
-            PairingClient.pair(pairing, code, AdbKey.load(context), CONNECT_TIMEOUT_MS, SOCKET_TIMEOUT_MS);
+            PairingClient.pair(pairing, code, key.get(), CONNECT_TIMEOUT_MS, SOCKET_TIMEOUT_MS, socket);
             return null;
         });
         Thread thread = new Thread(task, "adb-pair");
         thread.setDaemon(true);
         thread.start();
         try {
-            task.get(PAIR_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+            task.get(timeoutMs, TimeUnit.MILLISECONDS);
             return true;
         } catch (ExecutionException e) {
             log("adb pairing failed", e.getCause() == null ? e : e.getCause());
@@ -76,6 +87,8 @@ public final class AdbShell {
             }
         }
         task.cancel(true);
+        // A blocked socket read ignores interrupts: closing the socket is what ends the thread.
+        PairingClient.cancel(socket);
         return false;
     }
 
@@ -84,18 +97,32 @@ public final class AdbShell {
         AdbKey.forget(context);
     }
 
-    /** The handshaken transport, or null when not on Wi-Fi or no connect service is advertised. */
+    /**
+     * The handshaken transport, or null when there is no adb key (never paired, or forgotten), not
+     * on Wi-Fi, or no connect service is advertised. Never creates a key: only {@link #pair} does,
+     * so "Forget this phone's key" sticks.
+     */
     private static AdbTransport connect(Context context) throws IOException {
+        AdbKey key = existingKey(context);
+        if (key == null) {
+            Log.i(TAG, "adb: no key, not paired");
+            return null;
+        }
         if (!AdbDiscovery.onWifi(context)) {
             Log.i(TAG, "adb: not on Wi-Fi");
             return null;
         }
-        InetSocketAddress address = AdbDiscovery.find(context, AdbDiscovery.CONNECT, CONNECT_TIMEOUT_MS);
+        InetSocketAddress address = AdbDiscovery.find(context, AdbDiscovery.CONNECT, DISCOVERY_STEP_MS);
         if (address == null) {
             Log.i(TAG, "adb: no Wireless debugging service found");
             return null;
         }
-        return AdbTransport.connect(address, AdbKey.load(context), CONNECT_TIMEOUT_MS, SOCKET_TIMEOUT_MS);
+        return AdbTransport.connect(address, key, CONNECT_TIMEOUT_MS, SOCKET_TIMEOUT_MS);
+    }
+
+    /** The paired key, or null when there is none; unlike {@link AdbKey#load} never makes one. */
+    static AdbKey existingKey(Context context) {
+        return AdbKey.exists(context) ? AdbKey.load(context) : null;
     }
 
     private static void log(String what, Throwable t) {

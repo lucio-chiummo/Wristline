@@ -17,6 +17,7 @@ import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.annotation.Config;
 
+import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.util.Arrays;
 import java.util.List;
@@ -91,5 +92,17 @@ public class AdbDiscoveryTest {
         assertSame(v6, AdbDiscovery.preferIpv4(Arrays.asList(v6), v6)); // no IPv4 of ours
         InetAddress foreign = ip("fe80::2");
         assertSame(foreign, AdbDiscovery.preferIpv4(Arrays.asList(v6, v4), foreign));
+    }
+
+    @Test
+    public void withoutOwnIpv4TheOwnScopedEntryIsUsed() throws Exception {
+        byte[] bytes = ip("fe80::1").getAddress();
+        Inet6Address scoped = Inet6Address.getByAddress(null, bytes, 7);
+        InetAddress resolved = InetAddress.getByAddress(bytes); // as NSD hands it back: no scope
+
+        InetAddress chosen = AdbDiscovery.preferIpv4(Arrays.asList(scoped), resolved);
+
+        assertSame(scoped, chosen);
+        assertEquals(7, ((Inet6Address) chosen).getScopeId());
     }
 }

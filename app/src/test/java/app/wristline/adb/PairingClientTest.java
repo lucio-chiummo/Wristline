@@ -14,6 +14,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
@@ -141,7 +142,16 @@ public class PairingClientTest {
     public void pairFailsWhenNothingListens() throws Exception {
         // pair() needs SSLSockets (Android) past the handshake; here only the connect failure is checked.
         assertThrows(IOException.class, () -> PairingClient.pair(
-                new InetSocketAddress(InetAddress.getLoopbackAddress(), 1), CODE, null, 500, 500));
+                new InetSocketAddress(InetAddress.getLoopbackAddress(), 1), CODE, null, 500, 500,
+                new AtomicReference<>()));
+    }
+
+    @Test
+    public void cancelledBeforeStartFailsWithoutConnecting() {
+        AtomicReference<Socket> holder = new AtomicReference<>();
+        PairingClient.cancel(holder);
+        assertThrows(IOException.class, () -> PairingClient.pair(
+                new InetSocketAddress(InetAddress.getLoopbackAddress(), 1), CODE, null, 500, 500, holder));
     }
 
     // ---- fake adbd ----

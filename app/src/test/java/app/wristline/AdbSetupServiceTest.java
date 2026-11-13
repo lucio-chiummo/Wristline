@@ -1,7 +1,9 @@
 package app.wristline;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.robolectric.Shadows.shadowOf;
 
@@ -20,6 +22,8 @@ import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.android.controller.ServiceController;
 import org.robolectric.annotation.Config;
+import org.robolectric.util.ReflectionHelpers;
+import org.robolectric.util.ReflectionHelpers.ClassParameter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -142,5 +146,59 @@ public class AdbSetupServiceTest {
         } finally {
             FullMode.adb = previous;
         }
+    }
+
+    @Test
+    public void startRecordsSetupStartedOnce() throws InterruptedException {
+        start();
+        awaitFinished();
+
+        int started = 0;
+        for (EventLog.Entry entry : Prefs.events(context)) {
+            if (EventLog.SETUP_STARTED.equals(entry.code)) {
+                started++;
+                assertEquals("", entry.detail);
+            }
+        }
+        assertEquals(1, started);
+    }
+
+    @Test
+    public void afterTheSystemTimeoutTheWorkerPostsNothing() {
+        AdbSetupService service = controller.get();
+        ReflectionHelpers.setField(service, "running", true);
+        // Stand in for the worker thread.
+        ReflectionHelpers.setField(service, "worker", Thread.currentThread());
+        SetupProgress.set(SetupProgress.Phase.PAIRING);
+
+        service.onTimeout(1);
+        assertTrue("worker interrupted", Thread.interrupted());
+        assertFalse(ReflectionHelpers.<Boolean>getField(service, "running"));
+        ReflectionHelpers.callInstanceMethod(service, "finish",
+                ClassParameter.from(List.class, List.of(SupportedApp.WHATSAPP)),
+                ClassParameter.from(List.class, null),
+                ClassParameter.from(String.class, "late failure"));
+
+        assertEquals(SetupProgress.Phase.FAILED, SetupProgress.phase());
+        assertEquals(context.getString(R.string.setup_not_paired), SetupProgress.message());
+        assertNull(posted(StatusNotifications.ID_SETUP_RESULT));
+    }
+
+    @Test
+    public void afterDestroyTheWorkerPostsNothing() {
+        AdbSetupService service = controller.get();
+        ReflectionHelpers.setField(service, "running", true);
+        ReflectionHelpers.setField(service, "worker", Thread.currentThread());
+        SetupProgress.set(SetupProgress.Phase.WAITING_FOR_CODE);
+
+        controller.destroy();
+        assertTrue("worker interrupted", Thread.interrupted());
+        ReflectionHelpers.callInstanceMethod(service, "finish",
+                ClassParameter.from(List.class, List.of(SupportedApp.WHATSAPP)),
+                ClassParameter.from(List.class, List.of(SupportedApp.WHATSAPP)),
+                ClassParameter.from(String.class, null));
+
+        assertEquals(SetupProgress.Phase.FAILED, SetupProgress.phase());
+        assertNull(posted(StatusNotifications.ID_SETUP_RESULT));
     }
 }

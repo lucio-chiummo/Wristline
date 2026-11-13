@@ -30,6 +30,8 @@ public class AdbSetupStopTest {
         AdbSetupService service = Robolectric.buildService(AdbSetupService.class).create().get();
         ReflectionHelpers.setField(service, "running", true);
         ReflectionHelpers.setField(service, "runStartId", 1);
+        // finish() only acts for the run's own worker thread.
+        ReflectionHelpers.setField(service, "worker", Thread.currentThread());
 
         service.onStartCommand(new Intent(AdbSetupService.ACTION_CODE), 0, 2);
         ReflectionHelpers.callInstanceMethod(service, "finish",
@@ -38,5 +40,25 @@ public class AdbSetupStopTest {
                 ClassParameter.from(String.class, "failed"));
 
         assertEquals(2, shadowOf(service).getStopSelfId());
+    }
+
+    @Test
+    public void aSecondStartWhileRunningIsTheOneFinishingStops() {
+        StatusNotifications.createChannels(RuntimeEnvironment.getApplication());
+        AdbSetupService service = Robolectric.buildService(AdbSetupService.class).create().get();
+        ReflectionHelpers.setField(service, "running", true);
+        ReflectionHelpers.setField(service, "runStartId", 1);
+        ReflectionHelpers.setField(service, "worker", Thread.currentThread());
+
+        service.onStartCommand(AdbSetupService.startIntent(RuntimeEnvironment.getApplication(),
+                new java.util.ArrayList<>(List.of("com.whatsapp"))), 0, 2);
+        ReflectionHelpers.callInstanceMethod(service, "finish",
+                ClassParameter.from(List.class, Collections.emptyList()),
+                ClassParameter.from(List.class, null),
+                ClassParameter.from(String.class, "failed"));
+
+        assertEquals(2, shadowOf(service).getStopSelfId());
+        // Still the first run's thread: the second start did not start another worker.
+        assertEquals(Thread.currentThread(), ReflectionHelpers.getField(service, "worker"));
     }
 }

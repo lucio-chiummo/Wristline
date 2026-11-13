@@ -77,7 +77,8 @@ public final class AdbDiscovery {
 
     /**
      * Connect to the phone's own Wi-Fi IPv4 address rather than a scoped IPv6 link-local one or
-     * loopback: those resolve to the same phone but are fragile to dial.
+     * loopback: those resolve to the same phone but are fragile to dial. Without an own IPv4, the
+     * phone's own entry for that address, which carries the interface scope the resolved one may lack.
      */
     static InetAddress preferIpv4(List<InetAddress> own, InetAddress resolved) {
         if (!isOwn(own, resolved) || resolved instanceof Inet4Address) {
@@ -88,7 +89,8 @@ public final class AdbDiscovery {
                 return address;
             }
         }
-        return resolved;
+        // InetAddress.equals ignores the IPv6 scope id, so this finds the own (scoped) entry.
+        return own.get(own.indexOf(resolved));
     }
 
     /**
