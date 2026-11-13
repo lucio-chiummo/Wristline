@@ -106,7 +106,7 @@ You set this up once for each app. WhatsApp, Telegram and Signal need it. Instag
 
 Make a test call to check that you can hear through the watch.
 
-What Wristline does here: it pairs with your phone's own Wireless debugging, over the phone's own Wi-Fi address only. It keeps the key it paired with in the phone's Keystore. The only commands it runs are `appops set --uid <package> READ_PHONE_STATE ignore` (or `allow` to undo) and `am kill <package>`.
+What Wristline does here: it pairs with your phone's own Wireless debugging, over the phone's own Wi-Fi address only. It keeps the key it paired with in the phone's Keystore. On phones where the Keystore can't hold it, it is kept in Wristline's private storage, protected by a Keystore key where possible. The only commands it runs are `appops set --uid <package> READ_PHONE_STATE ignore` (or `allow` to undo) and `am kill <package>`.
 
 **If an app update resets the setting,** Wristline repairs it silently the next time you're on Wi-Fi with Wireless debugging on. It only does this for apps you set up this way. If Wireless debugging is off, Wristline tells you to turn it on.
 
@@ -205,4 +205,4 @@ Found a security problem? Please don't post it publicly. See the [security polic
 
 ## Your privacy
 
-Wristline has no servers, accounts, analytics or ads. It never listens to or records calls. It asks for the internet permission only to talk to your phone's own Wireless debugging, over the phone's own Wi-Fi address. Nothing leaves the phone. The key it pairs with lives in the phone's Keystore: delete it with **Forget this phone's key** on the Voice screen, or revoke it in Developer options → Wireless debugging → Paired devices (`wristline@<model>`). The only commands it runs are the app-op ones above and `am kill`. You can switch Wireless debugging off right after setup. Your watch gets its data through Google's Wear OS connection. The [privacy policy](../PRIVACY.md) has the details.
+Wristline has no servers, accounts, analytics or ads. It never listens to or records calls. It asks for the internet permission only to talk to your phone's own Wireless debugging, over the phone's own Wi-Fi address. Nothing leaves the phone. The key it pairs with lives in the phone's Keystore. On phones where the Keystore can't hold it, it is kept in Wristline's private storage, protected by a Keystore key where possible: delete it with **Forget this phone's key** on the Voice screen, or revoke it in Developer options → Wireless debugging → Paired devices (`wristline@<model>`). The only commands it runs are the app-op ones above and `am kill`. You can switch Wireless debugging off right after setup. Your watch gets its data through Google's Wear OS connection. The [privacy policy](../PRIVACY.md) has the details.

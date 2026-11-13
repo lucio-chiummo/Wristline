@@ -132,11 +132,11 @@ You can set this up on the phone alone, or with a computer. Either way it's once
 
 1. In Wristline, open **Voice through the watch**, tap **Set up on this phone** and agree.
 2. Follow the guide: allow notifications, join Wi-Fi, and turn on Developer options (Settings → About phone → tap **Build number** 7 times).
-3. Open Developer options → **Wireless debugging** → **Pair device with pairing code**.
+3. In Developer options, turn on **Wireless debugging**, then tap **Pair device with pairing code**.
 4. Type the 6-digit code into Wristline's notification.
 5. When Wristline says it's done, turn Wireless debugging off.
 
-Wristline pairs with your phone's own Wireless debugging, keeps the key it paired with in the phone's Keystore, and runs only `appops set --uid <package> READ_PHONE_STATE ignore` (or `allow` to undo) and `am kill <package>`. Apps you set up this way are repaired silently after an update when Wireless debugging is on and the key is still authorised. Turning voice off for the last app deletes the key. **Forget this phone's key** on the Voice screen deletes it too.
+Wristline pairs with your phone's own Wireless debugging, keeps the key it paired with in the phone's Keystore (where the Keystore can't hold it, in Wristline's private storage, protected by a Keystore key where possible), and runs only `appops set --uid <package> READ_PHONE_STATE ignore` (or `allow` to undo) and `am kill <package>`. Apps you set up this way are repaired silently after an update when Wireless debugging is on and the key is still authorised. Turning voice off for the last app deletes the key. **Forget this phone's key** on the Voice screen deletes it too.
 
 **With a computer**
 
@@ -233,4 +233,4 @@ This summary doesn't replace the license. Third-party components keep their own 
 
 ## Disclaimer
 
-Wristline doesn't modify the apps it relays and never reads, records or transmits call audio. It only presses the apps' own notification buttons, and Android routes the audio. It has no servers, accounts or analytics. It asks for the internet permission only to talk to your phone's own Wireless debugging over the phone's own Wi-Fi address: nothing leaves the phone. The key it pairs with lives in the phone's Keystore. You can delete it with **Forget this phone's key** on the Voice screen, or revoke it in Developer options → Wireless debugging → Paired devices (the entry is `wristline@<model>`). The only commands it runs are the app-op ones above and `am kill`, and you can switch Wireless debugging off right after setup. Data for the watch goes through Google's Wear OS connection ([privacy policy](PRIVACY.md)). It is an independent project, not affiliated with WhatsApp, Meta, Telegram or Google, and may break if those apps or Wear OS change how calls work.
+Wristline doesn't modify the apps it relays and never reads, records or transmits call audio. It only presses the apps' own notification buttons, and Android routes the audio. It has no servers, accounts or analytics. It asks for the internet permission only to talk to your phone's own Wireless debugging over the phone's own Wi-Fi address: nothing leaves the phone. The key it pairs with lives in the phone's Keystore. On phones where the Keystore can't hold it, it is kept in Wristline's private storage, protected by a Keystore key where possible. You can delete it with **Forget this phone's key** on the Voice screen, or revoke it in Developer options → Wireless debugging → Paired devices (the entry is `wristline@<model>`). The only commands it runs are the app-op ones above and `am kill`, and you can switch Wireless debugging off right after setup. Data for the watch goes through Google's Wear OS connection ([privacy policy](PRIVACY.md)). It is an independent project, not affiliated with WhatsApp, Meta, Telegram or Google, and may break if those apps or Wear OS change how calls work.

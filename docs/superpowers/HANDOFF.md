@@ -25,7 +25,7 @@ code (Opus/Sonnet) and research.
   - Forcing call audio to the watch from a second app without a Telecom call: the watch is
     HFP-connected but never the *active* headset device, and only Telecom (system API) can make
     it active. Dead.
-  - So the computer-free path is **Shizuku** (phone-only shell). Planned as Phase 3, not started.
+  - So the computer-free path is Wristline's own adb client over Wireless debugging (in-house, no third-party app; Shizuku is out). Built on branch `on-phone-setup`.
 - **Xiaomi/HyperOS kills the listener** without `onListenerDisconnected` and never rebinds it;
   the status card still says Ready. This is the code work in progress (Phase 1 plan).
 
