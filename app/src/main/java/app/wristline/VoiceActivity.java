@@ -25,6 +25,7 @@ public class VoiceActivity extends Activity {
     private View setUp;
     private View turnOff;
     private View forgetKey;
+    private View setUpAgain;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,11 +41,13 @@ public class VoiceActivity extends Activity {
         setUp = findViewById(R.id.set_up);
         turnOff = findViewById(R.id.turn_off);
         forgetKey = findViewById(R.id.forget_key);
+        setUpAgain = findViewById(R.id.set_up_again);
         setUp.setOnClickListener(v ->
                 ComputerSetup.show(this, appsIn(VoiceState.SET_UP, VoiceState.NEEDS_REPAIR), this::refresh));
         setUpOnPhone.setOnClickListener(v -> askConsent());
         turnOff.setOnClickListener(v -> turnOff());
         forgetKey.setOnClickListener(v -> askForgetKey());
+        setUpAgain.setOnClickListener(v -> askSetUpAgain());
     }
 
     @Override
@@ -107,7 +110,19 @@ public class VoiceActivity extends Activity {
         setUpOnPhone.setAlpha(busy ? 0.5f : 1f);
         setUpNote.setVisibility(busy ? View.VISIBLE : View.GONE);
         turnOff.setVisibility(FullMode.appsWithVoiceOn(this).isEmpty() ? View.GONE : View.VISIBLE);
+        setUpAgain.setVisibility(appsToSetUpAgain().isEmpty() ? View.GONE : View.VISIBLE);
         forgetKey.setVisibility(AdbKey.exists(this) ? View.VISIBLE : View.GONE);
+    }
+
+    /** Apps shown as ON that have a real setting to redo. */
+    private List<SupportedApp> appsToSetUpAgain() {
+        List<SupportedApp> apps = new ArrayList<>();
+        for (SupportedApp app : appsIn(VoiceState.ON)) {
+            if (FullMode.needsAppOp(this, app)) {
+                apps.add(app);
+            }
+        }
+        return apps;
     }
 
     private void bindState(View row, VoiceState state) {
@@ -205,9 +220,29 @@ public class VoiceActivity extends Activity {
                 .show();
     }
 
-    // On-phone setup, step 1: the user agrees to the exact change for each app.
+    private void askSetUpAgain() {
+        List<SupportedApp> apps = appsToSetUpAgain();
+        if (apps.isEmpty()) {
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.set_up_again_title)
+                .setMessage(getString(R.string.set_up_again_message, AppUi.labels(this, apps)))
+                .setPositiveButton(R.string.set_up_again_confirm, (d, w) -> {
+                    FullMode.forgetSetUp(this, apps);
+                    refresh();
+                    askConsent(apps);
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
     private void askConsent() {
-        List<SupportedApp> apps = appsIn(VoiceState.SET_UP, VoiceState.NEEDS_REPAIR);
+        askConsent(appsIn(VoiceState.SET_UP, VoiceState.NEEDS_REPAIR));
+    }
+
+    // On-phone setup, step 1: the user agrees to the exact change for each app.
+    private void askConsent(List<SupportedApp> apps) {
         if (apps.isEmpty()) {
             return;
         }

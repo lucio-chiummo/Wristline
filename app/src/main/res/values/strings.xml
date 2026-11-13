@@ -237,6 +237,10 @@
     <string name="setup_running">Setup is running. Check the notification.</string>
     <string name="set_up_on_phone">Set up on this phone</string>
     <string name="set_up_with_computer">Set up with a computer</string>
+    <string name="set_up_again">Set up again</string>
+    <string name="set_up_again_title">Set up voice again?</string>
+    <string name="set_up_again_message">Use this if calls from %1$s stop using the watch. Wristline forgets that it set them up and walks you through setup again.</string>
+    <string name="set_up_again_confirm">Set up again</string>
     <string name="forget_key">Forget this phone\'s key</string>
     <string name="forget_key_title">Forget this phone\'s key?</string>
     <string name="forget_key_message">Voice through the watch stays on for the apps already set up. Wristline just won\'t be able to change or repair that setting by itself any more; to set it up again you\'ll pair once more. To switch voice off, use Turn off. You can also remove \"wristline@…\" under Wireless debugging › Paired devices.</string>

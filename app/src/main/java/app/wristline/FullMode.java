@@ -101,6 +101,17 @@ final class FullMode {
                 == PackageManager.PERMISSION_GRANTED;
     }
 
+    /**
+     * Wristline stops believing these apps are set up, so the setup runs again. Runs no command and
+     * leaves the app's real setting alone.
+     */
+    static void forgetSetUp(Context context, List<SupportedApp> apps) {
+        for (SupportedApp app : apps) {
+            Prefs.setFullModeOn(context, app, false);
+            Prefs.setBroken(context, app, false);
+        }
+    }
+
     /** Every app with the setting applied, whether or not it's being relayed right now. */
     static List<SupportedApp> appsWithVoiceOn(Context context) {
         List<SupportedApp> apps = new ArrayList<>();

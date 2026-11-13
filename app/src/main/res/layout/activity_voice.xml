@@ -151,6 +151,15 @@
             android:text="@string/turn_off_voice" />
 
         <Button
+            android:id="@+id/set_up_again"
+            style="@style/Button.Outline"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/set_up_again"
+            android:visibility="gone" />
+
+        <Button
             android:id="@+id/forget_key"
             style="@style/Button.Outline"
             android:layout_width="match_parent"

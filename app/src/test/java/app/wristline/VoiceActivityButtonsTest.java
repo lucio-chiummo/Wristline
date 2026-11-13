@@ -82,6 +82,49 @@ public class VoiceActivityButtonsTest {
     }
 
     @Test
+    public void setUpAgainHiddenWhenNoAppIsOn() {
+        assertEquals(View.GONE, open().findViewById(R.id.set_up_again).getVisibility());
+    }
+
+    @Test
+    public void setUpAgainShownWhenAnAppWithASettingIsOn() {
+        Prefs.setAppOn(context, SupportedApp.WHATSAPP, true);
+        FullMode.markSetUp(context, SupportedApp.WHATSAPP);
+
+        assertEquals(View.VISIBLE, open().findViewById(R.id.set_up_again).getVisibility());
+    }
+
+    @Test
+    public void confirmingSetUpAgainForgetsSetupAndAsksConsent() {
+        Prefs.setAppOn(context, SupportedApp.WHATSAPP, true);
+        FullMode.markSetUp(context, SupportedApp.WHATSAPP);
+        VoiceActivity activity = open();
+
+        activity.findViewById(R.id.set_up_again).performClick();
+        shadowOf(Looper.getMainLooper()).idle();
+        ShadowAlertDialog.getLatestAlertDialog().getButton(DialogInterface.BUTTON_POSITIVE).performClick();
+        shadowOf(Looper.getMainLooper()).idle();
+
+        assertTrue(!Prefs.fullModeOn(context, SupportedApp.WHATSAPP));
+        AlertDialog dialog = ShadowAlertDialog.getLatestAlertDialog();
+        String message = ((TextView) dialog.findViewById(android.R.id.message)).getText().toString();
+        assertTrue(message, message.contains("WhatsApp"));
+        assertTrue(dialog.getButton(DialogInterface.BUTTON_POSITIVE).getText().toString()
+                .equals(activity.getString(R.string.agree)));
+    }
+
+    @Test
+    public void forgetSetUpClearsStateWithoutTouchingTheSetting() {
+        FullMode.markSetUp(context, SupportedApp.WHATSAPP);
+        Prefs.setBroken(context, SupportedApp.WHATSAPP, true);
+
+        FullMode.forgetSetUp(context, Collections.singletonList(SupportedApp.WHATSAPP));
+
+        assertTrue(!Prefs.fullModeOn(context, SupportedApp.WHATSAPP));
+        assertTrue(!Prefs.broken(context, SupportedApp.WHATSAPP));
+    }
+
+    @Test
     public void forgetKeyHiddenWithoutKey() {
         assertEquals(View.GONE, open().findViewById(R.id.forget_key).getVisibility());
     }

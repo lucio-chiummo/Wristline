@@ -229,6 +229,10 @@
     <string name="setup_running">Configurazione in corso. Controlla la notifica.</string>
     <string name="set_up_on_phone">Configura su questo telefono</string>
     <string name="set_up_with_computer">Configura con un computer</string>
+    <string name="set_up_again">Configura di nuovo</string>
+    <string name="set_up_again_title">Configurare di nuovo la voce?</string>
+    <string name="set_up_again_message">Usalo se le chiamate di %1$s non usano più l\'orologio. Wristline dimentica di averle configurate e ti guida di nuovo nella configurazione.</string>
+    <string name="set_up_again_confirm">Configura di nuovo</string>
     <string name="forget_key">Dimentica la chiave di questo telefono</string>
     <string name="forget_key_title">Dimenticare la chiave di questo telefono?</string>
     <string name="forget_key_message">La voce sull\'orologio resta attiva per le app già configurate. Wristline non potrà più cambiare o riparare da sola quell\'impostazione; per configurarla di nuovo dovrai rifare l\'abbinamento. Per disattivare la voce usa Disattiva. Puoi anche rimuovere \"wristline@…\" in Debug wireless › Dispositivi accoppiati.</string>
