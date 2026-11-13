@@ -145,12 +145,35 @@ public class FullModeRepairTest {
             }
         };
         FullMode.markSetUp(context, WHATSAPP);
+        Prefs.setConsent(context, WHATSAPP, true);
         Prefs.setBroken(context, WHATSAPP, true);
         StatusNotifications.showRepairNeeded(context, WHATSAPP);
 
         FullMode.disable(context, List.of(WHATSAPP));
 
         assertFalse(Prefs.broken(context, WHATSAPP));
+        assertFalse("turning off withdraws consent", Prefs.consent(context, WHATSAPP));
         assertNull(shadowOf(nm).getNotification(StatusNotifications.ID_REPAIR));
+    }
+
+    @Test
+    public void forgettingTheKeyWithdrawsEveryAppsConsent() {
+        boolean[] forgot = {false};
+        FullMode.adb = new FakeAdb() {
+            @Override
+            public void forgetKey(android.content.Context c) {
+                forgot[0] = true;
+            }
+        };
+        for (SupportedApp app : SupportedApp.ALL) {
+            Prefs.setConsent(context, app, true);
+        }
+
+        FullMode.forgetKey(context);
+
+        assertTrue(forgot[0]);
+        for (SupportedApp app : SupportedApp.ALL) {
+            assertFalse(app.packageName, Prefs.consent(context, app));
+        }
     }
 }

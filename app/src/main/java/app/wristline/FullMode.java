@@ -202,11 +202,23 @@ final class FullMode {
         return allBack;
     }
 
-    /** These apps have their normal setting: nothing left to repair, and no repair notification to show. */
+    /**
+     * These apps have their normal setting: nothing left to repair, no repair notification to show,
+     * and the user's go-ahead for changing their setting is withdrawn with it.
+     */
     private static void finishTurnOff(Context context, List<SupportedApp> apps) {
         markTurnedOff(context, apps);
         for (SupportedApp app : apps) {
             Prefs.setBroken(context, app, false);
+            Prefs.setConsent(context, app, false);
+        }
+    }
+
+    /** "Forget this phone's key": deletes the adb key and withdraws every app's go-ahead with it. */
+    static void forgetKey(Context context) {
+        adb.forgetKey(context);
+        for (SupportedApp app : SupportedApp.ALL) {
+            Prefs.setConsent(context, app, false);
         }
     }
 

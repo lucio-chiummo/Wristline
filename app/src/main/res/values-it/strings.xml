@@ -220,10 +220,10 @@
     <string name="open_wifi_settings">Apri impostazioni Wi-Fi</string>
     <string name="open_wireless_debugging">Apri Debug wireless</string>
     <string name="consent_title">Cambiare un\'impostazione di %1$s?</string>
-    <string name="consent_app">Impedisce a %1$s di sapere se il telefono è in chiamata. %1$s continua a funzionare; semplicemente non riaggancia quando l\'orologio prende l\'audio. Puoi annullarlo da qui.</string>
+    <string name="consent_app">Impedisce a %1$s di sapere se il telefono è in chiamata. %1$s continua a funzionare; semplicemente non riaggancia quando l\'orologio prende l\'audio. Se un aggiornamento di %1$s annulla questa modifica, Wristline la ripete da sola quando il Debug wireless è attivo. Puoi annullarlo da qui.</string>
     <string name="agree">Accetto</string>
     <string name="on_this_phone">Su questo telefono</string>
-    <string name="on_this_phone_desc">Usa una volta il Debug wireless per cambiare un\'impostazione in ogni app. Serve il Wi-Fi. Circa un minuto.</string>
+    <string name="on_this_phone_desc">Usa il Debug wireless per cambiare un\'impostazione in ogni app; poi puoi disattivarlo. Serve il Wi-Fi. Circa un minuto.</string>
     <string name="recommended">Consigliato</string>
     <string name="setup_running">Configurazione in corso. Controlla la notifica.</string>
     <string name="set_up_on_phone">Configura su questo telefono</string>

@@ -233,7 +233,7 @@ public class VoiceActivity extends Activity {
                 .setTitle(R.string.forget_key_title)
                 .setMessage(R.string.forget_key_message)
                 .setPositiveButton(R.string.forget_key_confirm, (d, w) -> {
-                    AdbShell.forgetKey(this);
+                    FullMode.forgetKey(this);
                     refresh();
                 })
                 .setNegativeButton(android.R.string.cancel, null)

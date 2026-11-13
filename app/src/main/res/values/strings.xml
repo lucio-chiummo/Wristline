@@ -228,10 +228,10 @@
     <string name="open_wifi_settings">Open Wi-Fi settings</string>
     <string name="open_wireless_debugging">Open Wireless debugging</string>
     <string name="consent_title">Change a setting in %1$s?</string>
-    <string name="consent_app">Stop %1$s from reading whether the phone is in a call. %1$s keeps working; it just won\'t hang up when the watch takes the audio. You can undo this here.</string>
+    <string name="consent_app">Stop %1$s from reading whether the phone is in a call. %1$s keeps working; it just won\'t hang up when the watch takes the audio. If an update to %1$s resets this, Wristline redoes it by itself when Wireless debugging is on. You can undo this here.</string>
     <string name="agree">Agree</string>
     <string name="on_this_phone">On this phone</string>
-    <string name="on_this_phone_desc">Uses Wireless debugging once to change one setting in each app. Needs Wi-Fi. About a minute.</string>
+    <string name="on_this_phone_desc">Uses Wireless debugging to change one setting in each app; you can turn it off afterwards. Needs Wi-Fi. About a minute.</string>
     <string name="recommended">Recommended</string>
     <string name="setup_running">Setup is running. Check the notification.</string>
     <string name="set_up_on_phone">Set up on this phone</string>
