@@ -39,6 +39,18 @@ final class AppUi {
         }
     }
 
+    /**
+     * Developer options, scrolled to Wireless debugging where Settings supports highlighting a row
+     * (the same extras Settings search uses); otherwise just Developer options.
+     */
+    static Intent wirelessDebuggingSettings() {
+        Bundle args = new Bundle();
+        args.putString(":settings:fragment_args_key", "toggle_adb_wireless");
+        return new Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)
+                .putExtra(":settings:fragment_args_key", "toggle_adb_wireless")
+                .putExtra(":settings:show_fragment_args", args);
+    }
+
     /** "WhatsApp, Telegram". */
     static String labels(Context context, List<SupportedApp> apps) {
         StringBuilder out = new StringBuilder();

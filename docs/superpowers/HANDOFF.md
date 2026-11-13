@@ -16,6 +16,8 @@ code (Opus/Sonnet) and research.
   account (owner's decision). Enrol Play App Signing with the existing release key ("Change key" +
   PEPK, before open testing) so Play and GitHub installs share a signature. 12 testers for 14 days
   before production. Notes with sources: `docs/superpowers/specs/2026-11-10-play-requirements.md`.
+  Data-safety form: no data collected or shared. The internet permission (added with on-phone setup)
+  is for configuring the phone itself, over its own Wi-Fi address.
 - **Voice through the watch for WhatsApp needs shell, proven.** Two spikes on the owner's vivo
   X300 Pro (Android 17) with a Pixel Watch 5:
   - Denying WhatsApp's Phone permission: WhatsApp blocks Answer with its own "needs to know
@@ -23,7 +25,7 @@ code (Opus/Sonnet) and research.
   - Forcing call audio to the watch from a second app without a Telecom call: the watch is
     HFP-connected but never the *active* headset device, and only Telecom (system API) can make
     it active. Dead.
-  - So the computer-free path is **Shizuku** (phone-only shell). Planned as Phase 3, not started.
+  - So the computer-free path is Wristline's own adb client over Wireless debugging (in-house, no third-party app; Shizuku is out). Built on branch `on-phone-setup`.
 - **Xiaomi/HyperOS kills the listener** without `onListenerDisconnected` and never rebinds it;
   the status card still says Ready. This is the code work in progress (Phase 1 plan).
 
@@ -32,6 +34,7 @@ All of it is in `docs/superpowers/specs/2026-11-10-no-computer-setup-design.md` 
 
 ## Work in progress
 
+- Branch `on-phone-setup`: voice setup on the phone alone (own adb client over Wireless debugging). Tasks 1-9 done; device check pending.
 - Branch `listener-rebind` off `main`. **Phase 1 code is done**: Tasks 1-5 implemented, task-reviewed,
   final whole-branch review clean after one fix wave (head `1f91fa7`). CI line green at that head.
   Task 7 skipped (gate not met). Deferred minors (none blocking) are listed in the final review of

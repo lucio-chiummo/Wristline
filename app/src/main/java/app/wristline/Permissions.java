@@ -37,6 +37,16 @@ final class Permissions {
     private Permissions() {
     }
 
+    /** The pairing code is typed into a notification: without one, pairing can't be finished. */
+    static boolean canShowCodePopUp(Context context) {
+        NotificationManager manager = context.getSystemService(NotificationManager.class);
+        if (!manager.areNotificationsEnabled()) {
+            return false;
+        }
+        NotificationChannel channel = manager.getNotificationChannel(StatusNotifications.CHANNEL_SETUP);
+        return channel == null || channel.getImportance() != NotificationManager.IMPORTANCE_NONE;
+    }
+
     static boolean isDone(Context context, Step step) {
         switch (step) {
             case NOTIFICATION_ACCESS:

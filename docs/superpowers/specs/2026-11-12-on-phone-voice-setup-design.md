@@ -258,10 +258,12 @@ the phone itself.
 - Discovery and connections have hard timeouts (discovery 3 s per step, connect 4 s, socket
   read 15 s, pairing 20 s, whole setup 165 s inside shortService's limit).
 - Accept adbd's TLS certificate without verification at pairing (the protocol's design: trust
-  comes from the SPAKE2 code). At connect time, also no CA check (adbd is self-signed), but the
-  socket is only ever opened to an own address found through mDNS, and adbd proves itself by
-  completing the adb handshake after TLS. State this in code comments and in the security
-  section of the docs.
+  comes from the SPAKE2 code). At connect time, also no CA check (adbd is self-signed) and no
+  pinning, so the connection is unauthenticated at TLS level: an app on the same phone could
+  impersonate adbd on the phone's own address and fake command output. It gains no secret or
+  privilege that way, because adbd's trust in Wristline comes from the pairing code, and
+  Wristline sends only fixed commands. State this in code comments and in the security section
+  of the docs.
 - One connection at a time, closed in `finally`.
 
 ## Security review items for the final whole-branch review
@@ -272,7 +274,8 @@ the phone itself.
 - Pairing code, keys, SPAKE2 messages and shell output are never logged (`Log.*`) or recorded.
 - Shell commands are exactly `AppOpsCommands` strings; no concatenation of user input.
 - All sockets go to own addresses; no DNS names anywhere.
-- Keystore key not exportable; software fallback (if used) lives in `filesDir`, wrapped.
+- Keystore key not exportable; software fallback lives in `filesDir`, wrapped with a Keystore AES
+  key when the Keystore can make one.
 - Foreground service stops itself on every path (`finish`, `onTimeout`, `onDestroy`).
 
 ## Left to the builder

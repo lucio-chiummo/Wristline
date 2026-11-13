@@ -65,6 +65,60 @@
                 android:orientation="vertical"
                 android:padding="18dp">
 
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        style="@style/Text.RowTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/on_this_phone" />
+
+                    <TextView
+                        style="@style/Text.Chip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:backgroundTint="@color/chip"
+                        android:text="@string/recommended"
+                        android:textColor="@color/chip_text" />
+                </LinearLayout>
+
+                <TextView
+                    style="@style/Text.Body.Muted"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/on_this_phone_desc" />
+
+                <Button
+                    android:id="@+id/set_up_on_phone"
+                    style="@style/Button.Primary"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/set_up_on_phone" />
+
+                <TextView
+                    android:id="@+id/set_up_note"
+                    style="@style/Text.Caption"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/setup_running"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_card"
+                android:orientation="vertical"
+                android:padding="18dp">
+
                 <TextView
                     style="@style/Text.RowTitle"
                     android:layout_width="wrap_content"
@@ -80,10 +134,11 @@
 
                 <Button
                     android:id="@+id/set_up"
-                    style="@style/Button.Primary"
+                    style="@style/Button.Outline"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp" />
+                    android:layout_marginTop="12dp"
+                    android:text="@string/set_up_with_computer" />
             </LinearLayout>
         </LinearLayout>
 
@@ -94,6 +149,24 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/section_gap"
             android:text="@string/turn_off_voice" />
+
+        <Button
+            android:id="@+id/set_up_again"
+            style="@style/Button.Outline"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/set_up_again"
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/forget_key"
+            style="@style/Button.Outline"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/forget_key"
+            android:visibility="gone" />
 
         <LinearLayout
             android:layout_width="match_parent"

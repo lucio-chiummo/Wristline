@@ -21,6 +21,11 @@ this repository are:
 Phone app only:
 - Figtree font: SIL Open Font License 1.1 (assets/licenses/Figtree-OFL.txt)
 - Icons in the style of Lucide: ISC License
+- SPAKE2 in app/src/main/java/app/wristline/adb/Spake2.java is ported from BoringSSL
+  crypto/curve25519/spake25519.cc. Copyright 2016 The BoringSSL Authors. Licensed under
+  the Apache License, Version 2.0.
+- The adb public-key encoding in app/src/main/java/app/wristline/adb/AndroidPubkey.java
+  follows dadb's AdbKeyPair.kt (mobile.dev) as its reference: Apache License 2.0
 
 Watch app only:
 - Material icons: Apache License 2.0
@@ -33,3 +38,5 @@ Both apps:
 
 Repository:
 - Gradle wrapper (gradlew, gradlew.bat, gradle/wrapper): Apache License 2.0
+
+The Apache License 2.0 is at https://www.apache.org/licenses/LICENSE-2.0
