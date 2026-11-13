@@ -193,7 +193,8 @@
     <string name="guide_done_text">Ora puoi disattivare di nuovo il Debug wireless. Le chiamate %1$s useranno altoparlante e microfono dell\'orologio.</string>
     <string name="guide_done_title">La voce dall\'orologio è attiva</string>
     <string name="guide_failed_keep">I passaggi da 1 a 3 restano fatti. Riprova quando vuoi.</string>
-    <string name="guide_intro">Tre passaggi, circa due minuti. Wristline li spunta da solo. Serve una volta sola.</string>
+    <string name="guide_nothing">Niente da configurare per ora.</string>
+    <string name="guide_intro">Quattro passaggi, circa due minuti. Wristline li spunta da solo. Serve una volta sola.</string>
     <string name="guide_pair_arrow">Te lo sei perso? Abbassa le notifiche, trova \"Inserisci il codice di 6 cifre\" di Wristline e tocca la piccola freccia: lì c\'è il pulsante \"Associa\".</string>
     <string name="guide_pair_example">Esempio della notifica di Wristline con il codice di accoppiamento inserito</string>
     <string name="guide_pair_how">Tutto in una volta, senza tornare qui:\n1. Tocca \"Apri Debug wireless\" qui sotto.\n2. Tocca la scritta \"Debug wireless\" (non l\'interruttore).\n3. Attiva \"Usa debug wireless\" e tocca Consenti.\n4. Tocca \"Associa dispositivo con codice di accoppiamento\". Compare un codice di 6 cifre.\n5. Dall\'alto scende un messaggio di Wristline: tocca \"Associa\", scrivi il codice e invialo.</string>

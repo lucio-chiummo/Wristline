@@ -13,6 +13,7 @@
         <include layout="@layout/header" />
 
         <TextView
+            android:id="@+id/guide_intro"
             style="@style/Text.Body.Muted"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -20,6 +21,18 @@
             android:paddingStart="8dp"
             android:paddingEnd="8dp"
             android:text="@string/guide_intro" />
+
+        <TextView
+            android:id="@+id/guide_nothing"
+            style="@style/Text.Body"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:accessibilityLiveRegion="polite"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:text="@string/guide_nothing"
+            android:visibility="gone" />
 
         <LinearLayout
             android:id="@+id/guide_done"

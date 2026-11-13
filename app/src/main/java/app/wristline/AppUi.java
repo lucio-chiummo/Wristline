@@ -39,7 +39,6 @@ final class AppUi {
         }
     }
 
-    /** "WhatsApp, Telegram". */
     /**
      * Developer options, scrolled to Wireless debugging where Settings supports highlighting a row
      * (the same extras Settings search uses); otherwise just Developer options.
@@ -52,6 +51,7 @@ final class AppUi {
                 .putExtra(":settings:show_fragment_args", args);
     }
 
+    /** "WhatsApp, Telegram". */
     static String labels(Context context, List<SupportedApp> apps) {
         StringBuilder out = new StringBuilder();
         for (SupportedApp app : apps) {

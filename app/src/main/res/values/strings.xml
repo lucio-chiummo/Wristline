@@ -201,7 +201,8 @@
     <string name="guide_done_text">You can turn Wireless debugging off again now. Calls from %1$s will use the watch\'s speaker and microphone.</string>
     <string name="guide_done_title">Voice through the watch is on</string>
     <string name="guide_failed_keep">Steps 1 to 3 stay done. Try again whenever you\'re ready.</string>
-    <string name="guide_intro">Three steps, about two minutes. Wristline ticks each one off by itself. You only need this once.</string>
+    <string name="guide_nothing">Nothing to set up right now.</string>
+    <string name="guide_intro">Four steps, about two minutes. Wristline ticks each one off by itself. You only need this once.</string>
     <string name="guide_pair_arrow">Missed it? Pull down your notifications, find Wristline\'s \"Enter the 6-digit pairing code\" and tap its small arrow: the \"Pair\" button is there.</string>
     <string name="guide_pair_example">Example of Wristline\'s notification with the pairing code typed in</string>
     <string name="guide_pair_how">All in one go, without coming back here:\n1. Tap \"Open Wireless debugging\" below.\n2. Tap the words \"Wireless debugging\" (not the switch).\n3. Turn on \"Use wireless debugging\" and tap Allow.\n4. Tap \"Pair device with pairing code\". A 6-digit code appears.\n5. A Wristline message drops down from the top: tap \"Pair\", type the code and send it.</string>

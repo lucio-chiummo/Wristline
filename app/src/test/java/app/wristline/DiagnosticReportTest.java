@@ -38,11 +38,11 @@ public class DiagnosticReportTest {
     }
 
     @Test
-    public void saysWhetherSetUpOnThisPhone() {
+    public void saysWhetherTheAdbKeyIsPresent() {
         DiagnosticReport.Facts f = facts();
-        assertTrue(DiagnosticReport.build(f).contains("Set up on this phone: no\n"));
+        assertTrue(DiagnosticReport.build(f).contains("adb key present: no\n"));
         f.keyPresent = true;
-        assertTrue(DiagnosticReport.build(f).contains("Set up on this phone: yes\n"));
+        assertTrue(DiagnosticReport.build(f).contains("adb key present: yes\n"));
     }
 
     @Test

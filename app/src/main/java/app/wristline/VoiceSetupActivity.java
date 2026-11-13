@@ -185,7 +185,39 @@ public class VoiceSetupActivity extends Activity {
         return apps;
     }
 
+    /**
+     * Opened from a notification with nothing left that may be set up (and no run going): the done
+     * card when every app is already on, else a plain "nothing to set up", never a guide that waits.
+     */
+    private void showNothingLeft() {
+        List<SupportedApp> on = new ArrayList<>();
+        boolean allOn = true;
+        for (SupportedApp app : AppUi.installedApps(this)) {
+            if (!Prefs.appOn(this, app)) {
+                continue;
+            }
+            if (FullMode.state(this, app) == VoiceState.ON) {
+                on.add(app);
+            } else {
+                allOn = false;
+            }
+        }
+        boolean done = allOn && !on.isEmpty();
+        stepsList.setVisibility(View.GONE);
+        findViewById(R.id.guide_intro).setVisibility(View.GONE);
+        findViewById(R.id.guide_use_computer).setVisibility(View.GONE);
+        findViewById(R.id.guide_nothing).setVisibility(done ? View.GONE : View.VISIBLE);
+        doneCard.setVisibility(done ? View.VISIBLE : View.GONE);
+        if (done) {
+            doneText.setText(getString(R.string.guide_done_text, AppUi.labels(this, on)));
+        }
+    }
+
     private void refresh() {
+        if (packages.isEmpty() && !SetupProgress.running()) {
+            showNothingLeft();
+            return;
+        }
         startIfReady();
         boolean notifications = Permissions.canShowCodePopUp(this);
         boolean wifi = AdbDiscovery.onWifi(this);

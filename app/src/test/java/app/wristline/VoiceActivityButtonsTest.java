@@ -109,4 +109,35 @@ public class VoiceActivityButtonsTest {
 
         assertEquals(Collections.singletonList("com.whatsapp"), guidePackages());
     }
+
+    private VoiceSetupActivity guideFromNotification() {
+        SetupProgress.set(SetupProgress.Phase.IDLE);
+        return Robolectric.buildActivity(VoiceSetupActivity.class,
+                new Intent(context, VoiceSetupActivity.class)).setup().get();
+    }
+
+    @Test
+    public void guideWithNothingToSetUpSaysSoInsteadOfWaiting() {
+        Prefs.setAppOn(context, SupportedApp.WHATSAPP, true); // needs setup, but no consent
+
+        VoiceSetupActivity guide = guideFromNotification();
+
+        assertEquals(View.VISIBLE, guide.findViewById(R.id.guide_nothing).getVisibility());
+        assertEquals(View.GONE, guide.findViewById(R.id.guide_steps).getVisibility());
+        assertEquals(View.GONE, guide.findViewById(R.id.guide_done).getVisibility());
+    }
+
+    @Test
+    public void guideWithEveryAppOnShowsTheDoneCard() {
+        Prefs.setAppOn(context, SupportedApp.WHATSAPP, true);
+        FullMode.markSetUp(context, SupportedApp.WHATSAPP);
+
+        VoiceSetupActivity guide = guideFromNotification();
+
+        assertEquals(View.VISIBLE, guide.findViewById(R.id.guide_done).getVisibility());
+        assertEquals(View.GONE, guide.findViewById(R.id.guide_nothing).getVisibility());
+        assertEquals(View.GONE, guide.findViewById(R.id.guide_steps).getVisibility());
+        String text = ((TextView) guide.findViewById(R.id.guide_done_text)).getText().toString();
+        assertTrue(text, text.contains("WhatsApp"));
+    }
 }

@@ -9,8 +9,9 @@ import java.math.BigInteger;
  *
  * <p>Not constant time: {@link #mul} is double-and-add and {@code modInverse}/{@code modPow}
  * branch on their inputs. That is acceptable here because every secret scalar is drawn fresh for
- * one pairing attempt, used once, and the exchange runs locally on the phone (to its own adbd
- * over loopback/LAN), so there is no repeated-query timing oracle for an attacker to measure.
+ * one pairing attempt, used once, and the exchange runs on the phone itself (to its own adbd, at
+ * the phone's own Wi-Fi address), so there is no repeated-query timing oracle for an attacker to
+ * measure.
  */
 final class Ed25519 {
     /** Field prime 2^255 - 19. */
