@@ -139,4 +139,41 @@ public class DiagnosticReportTest {
         assertEquals("sdk", WatchProtocol.KEY_SDK);
         assertEquals("version", WatchProtocol.KEY_VERSION);
     }
+
+    /** A report line carrying something that reads like a phone number (event timestamps aside). */
+    private static boolean looksPersonal(String line) {
+        // Dates (event times, security patch) aside; dots stay, so versions like 2.26.45.12 don't fuse.
+        String body = line.replaceAll("\\d{4}-\\d{2}-\\d{2}( \\d{2}:\\d{2}:\\d{2})?", "");
+        return body.replaceAll("[\\s()-]", "").matches(".*\\d{7,}.*");
+    }
+
+    private static DiagnosticReport.Facts everyFact() {
+        DiagnosticReport.Facts f = facts();
+        f.watch = new WatchSync.WatchFacts("OPPO", "OPPO Watch X3", 35, "1.4");
+        f.connectedWatches = 1;
+        f.defaultDialer = "com.android.dialer";
+        f.bridges = List.of(new CallBridges.Bridge("com.example.bridge", "2.26.45.12", true, false));
+        f.companions = List.of("com.heytap.health.international 4.2.0");
+        f.events = List.of(
+                new EventLog.Entry(1763136000000L, EventLog.AUDIO_ROUTE, "", "route=earpiece supported=earpiece,bluetooth"),
+                new EventLog.Entry(1763136000000L, EventLog.CALL_STATE, "com.whatsapp", "active"),
+                new EventLog.Entry(1763136000000L, EventLog.APP_STARTED, "com.whatsapp", "watch"));
+        return f;
+    }
+
+    @Test
+    public void guardCatchesANumber() {
+        assertTrue(looksPersonal("2026-11-13 17:31:15 incoming com.whatsapp +39 333 123 4567"));
+        assertFalse(looksPersonal("2026-11-13 17:31:15 incoming com.whatsapp full mode"));
+        assertTrue(looksPersonal("Watch: OPPO 0612345678"));
+        assertFalse(looksPersonal("- com.whatsapp: 2.26.45.12, switch on, voice ON"));
+        assertFalse(looksPersonal("Device: Acme (Acme), Android 17, SDK 36, patch 2026-01-01, locale it-IT"));
+    }
+
+    @Test
+    public void reportHoldsNoNumbers() {
+        for (String line : DiagnosticReport.build(everyFact()).split("\n")) {
+            assertFalse(line, looksPersonal(line));
+        }
+    }
 }
