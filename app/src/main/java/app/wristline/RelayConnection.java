@@ -179,6 +179,30 @@ public class RelayConnection extends Connection {
         }, ANSWER_DELAY_MS);
     }
 
+    /**
+     * Already answered on our ringing notification: no Answer to wait for from the watch. Goes
+     * active so Telecom opens the watch's audio link, then answers the app into it.
+     */
+    void startAnswered() {
+        awaitingAppAnswer = true;
+        // Once Telecom has the connection: it is still being created here.
+        handler.post(() -> {
+            CallActions call = RelayListener.incomingCall;
+            if (call == null) {
+                end(new DisconnectCause(DisconnectCause.CANCELED));
+                return;
+            }
+            Log.i(RelayListener.TAG, "answered on the notification (full mode)");
+            setActive();
+            routeToWatch(null);
+            VoiceControls.update(context);
+            handler.postDelayed(() -> {
+                awaitingAppAnswer = false;
+                RelayListener.send(context, call.answer);
+            }, ANSWER_DELAY_MS);
+        });
+    }
+
     @Override
     public void onAnswer() {
         if (testCall) {

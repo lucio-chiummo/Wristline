@@ -65,6 +65,72 @@ public class CallDiagnosticsTest {
         return new ConnectionRequest(null, null, extras);
     }
 
+    private ConnectionRequest answeredRequest() {
+        Bundle extras = new Bundle();
+        extras.putString(RelayListener.EXTRA_CALLER, "WhatsApp · Annaly");
+        extras.putBoolean(RelayListener.EXTRA_ANSWERED, true);
+        return new ConnectionRequest(null, null, extras);
+    }
+
+    private android.app.PendingIntent appAnswer() {
+        return android.app.PendingIntent.getBroadcast(context, 7, new android.content.Intent("test.answer"),
+                android.app.PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    private CallActions ringingCall() {
+        android.app.PendingIntent other = android.app.PendingIntent.getBroadcast(context, 8,
+                new android.content.Intent("test.other"), android.app.PendingIntent.FLAG_IMMUTABLE);
+        android.app.Notification n = new android.app.Notification.Builder(context, "calls")
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentTitle("Annaly")
+                .setCategory(android.app.Notification.CATEGORY_CALL)
+                .setFullScreenIntent(other, true)
+                .addAction(new android.app.Notification.Action.Builder(null, "Decline", other).build())
+                .addAction(new android.app.Notification.Action.Builder(null, "Answer", appAnswer()).build())
+                .build();
+        return CallActions.from(n, false);
+    }
+
+    private boolean appAnswered() {
+        for (android.content.Intent sent : org.robolectric.Shadows.shadowOf((android.app.Application) context).getBroadcastIntents()) {
+            if ("test.answer".equals(sent.getAction())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Test
+    public void anAnsweredCallGoesActiveThenAnswersTheApp() {
+        RelayListener.currentApp = SupportedApp.WHATSAPP;
+        RelayListener.incomingCall = ringingCall();
+        RelayConnectionService service = Robolectric.buildService(RelayConnectionService.class).create().get();
+
+        android.telecom.Connection connection = service.onCreateIncomingConnection(null, answeredRequest());
+        org.robolectric.shadows.ShadowLooper.idleMainLooper();
+
+        assertEquals(android.telecom.Connection.STATE_ACTIVE, connection.getState());
+        assertTrue(RelayConnection.isAwaitingAppAnswer());
+        assertTrue("app answered before the watch's audio link", !appAnswered());
+
+        org.robolectric.shadows.ShadowLooper.idleMainLooper(RelayConnection.ANSWER_DELAY_MS, java.util.concurrent.TimeUnit.MILLISECONDS);
+
+        assertTrue("app never answered", appAnswered());
+        assertTrue(!RelayConnection.isAwaitingAppAnswer());
+        RelayConnection.current.onAbort();
+    }
+
+    @Test
+    public void anAnsweredCallTelecomCannotCreateStillAnswersTheApp() {
+        RelayListener.currentApp = SupportedApp.WHATSAPP;
+        RelayListener.incomingCall = ringingCall();
+        RelayConnectionService service = Robolectric.buildService(RelayConnectionService.class).create().get();
+
+        service.onCreateIncomingConnectionFailed(null, answeredRequest());
+
+        assertTrue("call lost", appAnswered());
+    }
+
     @Test
     public void recordsTheMirroredCallBeingCreated() {
         RelayListener.currentApp = SupportedApp.WHATSAPP;

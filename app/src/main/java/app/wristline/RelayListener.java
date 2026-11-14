@@ -34,6 +34,8 @@ public class RelayListener extends NotificationListenerService {
     static final String TAG = "Wristline";
     static final String EXTRA_CALLER = "app.wristline.CALLER";
     static final String EXTRA_FULL_MODE = "app.wristline.FULL_MODE";
+    /** A call answered on our ringing notification: it goes active at once, to carry the voice. */
+    static final String EXTRA_ANSWERED = "app.wristline.ANSWERED";
 
     static volatile CallActions incomingCall;
     static volatile CallActions ongoingCall;
@@ -282,8 +284,7 @@ public class RelayListener extends NotificationListenerService {
         WatchSync.recordCall(this, false, app, -1, caller, incomingStartedAt);
         if (Prefs.ringByNotification(this)) {
             // The watch's companion loses Answer on a call screen: ring with our own notification.
-            // The app answers on the phone, so no voice through the watch for this call.
-            useFullModeForCall = false;
+            // Answered there, the voice still goes through the watch (see answerWithVoiceOnWatch).
             Log.i(TAG, "incoming call (" + app.packageName + ", ringing by notification)");
             Diagnostics.record(this, EventLog.INCOMING, app, "notification");
             WatchRing.start(this, caller, getString(R.string.incoming_call, app.label), WatchRing.MAX_MS);
@@ -329,6 +330,40 @@ public class RelayListener extends NotificationListenerService {
     }
 
     /** The watch answered or declined the ringing call: it isn't a missed call. */
+    /**
+     * Answer was tapped on our ringing notification. With voice through the watch set up for the
+     * app and a watch that carries call audio, opens a Telecom call that is already answered: it
+     * goes active, Telecom opens the watch's audio link, and only then the app is answered.
+     * Returns false when the caller should answer the app directly (voice on the phone).
+     */
+    @SuppressLint("MissingPermission") // Telecom refusing is caught below
+    static boolean answerWithVoiceOnWatch(Context context) {
+        SupportedApp app = currentApp;
+        CallActions call = incomingCall;
+        if (app == null || call == null || !useFullModeForCall) {
+            return false;
+        }
+        // An active call with no watch to carry it leaves the app's microphone silent.
+        if (!Boolean.TRUE.equals(Diagnostics.bluetoothCallAudio(context.getSystemService(android.media.AudioManager.class)))) {
+            Log.w(TAG, "no watch connected for call audio: answering on the phone");
+            Diagnostics.record(context, EventLog.AUDIO_NO_WATCH, app, "before answer");
+            return false;
+        }
+        Bundle extras = new Bundle();
+        String caller = incomingCaller == null ? app.label : incomingCaller;
+        extras.putString(EXTRA_CALLER, context.getString(R.string.caller_with_app, app.label, caller));
+        extras.putBoolean(EXTRA_ANSWERED, true);
+        try {
+            registerAccount(context);
+            context.getSystemService(TelecomManager.class).addNewIncomingCall(accountHandle(context), extras);
+            return true;
+        } catch (RuntimeException e) {
+            Log.w(TAG, "Telecom refused the answered call; answering on the phone", e);
+            Diagnostics.record(context, EventLog.TELECOM_REFUSED, app, "answered " + e.getClass().getSimpleName());
+            return false;
+        }
+    }
+
     static void incomingHandledOnWatch() {
         incomingHandled = true;
     }
