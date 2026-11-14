@@ -225,4 +225,66 @@ public class CallDiagnosticsTest {
         assertEquals(0, withCode(EventLog.AUDIO_NO_WATCH).size());
         connection.onAbort();
     }
+
+    @Test
+    public void otherTelecomSignalsAreRecorded() {
+        RelayConnection connection = new RelayConnection(context);
+
+        connection.onSilence();
+        connection.onHold();
+        connection.onUnhold();
+        connection.onCallEvent("com.example.ANSWERED_ON_WATCH", new Bundle());
+
+        List<EventLog.Entry> signals = withCode(EventLog.CALL_SIGNAL);
+        assertEquals(4, signals.size());
+        assertEquals("event com.example.ANSWERED_ON_WATCH", signals.get(0).detail);
+        assertEquals("unhold", signals.get(1).detail);
+        assertEquals("hold", signals.get(2).detail);
+        assertEquals("silence", signals.get(3).detail);
+    }
+
+    @Test
+    public void holdIsOnlyObserved() {
+        RelayConnection connection = new RelayConnection(context);
+        connection.setActive();
+
+        connection.onHold();
+
+        assertTrue("observing must not put the call on hold", connection.isActive());
+        connection.onAbort();
+    }
+
+    @Test
+    public void dtmfIsRecordedWithoutItsDigit() {
+        RelayConnection connection = new RelayConnection(context);
+
+        connection.onPlayDtmfTone('7');
+
+        assertEquals("dtmf", withCode(EventLog.CALL_SIGNAL).get(0).detail);
+    }
+
+    @Test
+    public void changedExtrasAreRecordedByKeyOnly() {
+        RelayConnection connection = new RelayConnection(context);
+        Bundle extras = new Bundle();
+        extras.putString("zeta", "+39 333 123 4567");
+        extras.putString("alpha", "Corvan");
+
+        connection.onExtrasChanged(extras);
+        connection.onExtrasChanged(null);
+
+        assertEquals("extras none", withCode(EventLog.CALL_SIGNAL).get(0).detail);
+        assertEquals("extras alpha,zeta", withCode(EventLog.CALL_SIGNAL).get(1).detail);
+    }
+
+    @Test
+    public void answerWithVideoStateIsRecordedAsItArrives() {
+        RelayConnection connection = new RelayConnection(context);
+        connection.setRinging();
+        RelayConnection.current = connection;
+
+        connection.onAnswer(0);   // no incoming call known: Wristline drops it, the report still shows it came
+
+        assertEquals("answer video=0", withCode(EventLog.CALL_SIGNAL).get(0).detail);
+    }
 }

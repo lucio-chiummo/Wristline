@@ -212,6 +212,7 @@ public class RelayConnection extends Connection {
 
     @Override
     public void onAnswer(int videoState) {
+        signal("answer video=" + videoState);
         onAnswer();
     }
 
@@ -258,6 +259,47 @@ public class RelayConnection extends Connection {
     @Override
     public void onShowIncomingCallUi() {
         // The app already shows its own incoming-call screen on the phone.
+    }
+
+    /** For the report only: what else Telecom (so, a watch's companion app) sends this call. Changes nothing. */
+    private void signal(String detail) {
+        Diagnostics.record(context, EventLog.CALL_SIGNAL, testCall ? null : RelayListener.currentApp, detail);
+    }
+
+    @Override
+    public void onSilence() {
+        signal("silence");
+    }
+
+    @Override
+    public void onHold() {
+        signal("hold");
+    }
+
+    @Override
+    public void onUnhold() {
+        signal("unhold");
+    }
+
+    @Override
+    public void onCallEvent(String event, android.os.Bundle extras) {
+        signal("event " + event);
+    }
+
+    /** The digit stays out: one typed into a call can be a PIN. */
+    @Override
+    public void onPlayDtmfTone(char c) {
+        signal("dtmf");
+    }
+
+    /** Key names only: the values can hold a caller's name or number. */
+    @Override
+    public void onExtrasChanged(android.os.Bundle extras) {
+        if (extras == null || extras.isEmpty()) {
+            signal("extras none");
+            return;
+        }
+        signal("extras " + String.join(",", new java.util.TreeSet<>(extras.keySet())));
     }
 
     /** For the report: whether Telecom ever took the watch's Answer shows up as ringing → active. */
