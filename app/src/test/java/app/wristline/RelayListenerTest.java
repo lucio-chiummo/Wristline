@@ -395,6 +395,50 @@ public class RelayListenerTest {
         return shadowOf(nm).getNotification(StatusNotifications.ID_INCOMING_FALLBACK);
     }
 
+    private void watchCarriesCallAudio() {
+        android.media.AudioManager am = context.getSystemService(android.media.AudioManager.class);
+        shadowOf(am).addOutputDevice(org.robolectric.shadows.AudioDeviceInfoBuilder.newBuilder()
+                .setType(android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO).build(), false);
+    }
+
+    @Test
+    public void answerOnTheNotificationOpensAnAnsweredWatchCall() {
+        Prefs.setRingByNotification(context, true);
+        watchCarriesCallAudio();
+        listener.onNotificationPosted(ringing("com.whatsapp", "k1", "Corvan"));
+
+        new ActionReceiver().onReceive(context, new Intent(ActionReceiver.ANSWER));
+
+        assertEquals(1, telecom.getAllIncomingCalls().size());
+        assertTrue(telecom.getAllIncomingCalls().get(0).extras.getBoolean(RelayListener.EXTRA_ANSWERED));
+        assertEquals("notification, voice on watch", withCode(EventLog.ANSWERED_ON_WATCH).get(0).detail);
+        assertFalse(WatchRing.ringing());
+        assertTrue(RelayListener.isIncomingHandled());
+    }
+
+    @Test
+    public void answerOnTheNotificationStaysOnThePhoneWithoutCallAudioOnTheWatch() {
+        Prefs.setRingByNotification(context, true);
+        listener.onNotificationPosted(ringing("com.whatsapp", "k1", "Corvan"));
+
+        new ActionReceiver().onReceive(context, new Intent(ActionReceiver.ANSWER));
+
+        assertEquals(0, telecom.getAllIncomingCalls().size());
+        assertEquals("notification", withCode(EventLog.ANSWERED_ON_WATCH).get(0).detail);
+        assertEquals("before answer", withCode(EventLog.AUDIO_NO_WATCH).get(0).detail);
+    }
+
+    @Test
+    public void declineOnTheNotificationNeverOpensAWatchCall() {
+        Prefs.setRingByNotification(context, true);
+        watchCarriesCallAudio();
+        listener.onNotificationPosted(ringing("com.whatsapp", "k1", "Corvan"));
+
+        new ActionReceiver().onReceive(context, new Intent(ActionReceiver.DECLINE));
+
+        assertEquals(0, telecom.getAllIncomingCalls().size());
+    }
+
     @Test
     public void notificationModeMakesNoTelecomCall() {
         Prefs.setRingByNotification(context, true);
@@ -407,7 +451,6 @@ public class RelayListenerTest {
         assertEquals("Incoming WhatsApp call", ring().extras.getCharSequence(Notification.EXTRA_TEXT).toString());
         EventLog.Entry incoming = withCode(EventLog.INCOMING).get(0);
         assertEquals("notification", incoming.detail);
-        assertFalse("no voice through the watch in this mode", RelayListener.useFullModeForCall);
     }
 
     @Test
