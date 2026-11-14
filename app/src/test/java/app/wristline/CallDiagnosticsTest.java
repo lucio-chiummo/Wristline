@@ -6,6 +6,7 @@ import static org.junit.Assert.assertTrue;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.telecom.CallAudioState;
 import android.telecom.ConnectionRequest;
 
 import org.junit.After;
@@ -177,6 +178,51 @@ public class CallDiagnosticsTest {
         assertEquals("active", states.get(0).detail);
         assertEquals("ringing", states.get(1).detail);
         assertEquals("com.whatsapp", states.get(0).app);
+        connection.onAbort();
+    }
+
+    @Test
+    public void audioStateIsRecordedOncePerChange() {
+        RelayConnection connection = new RelayConnection(context);
+        CallAudioState earpiece = new CallAudioState(false, CallAudioState.ROUTE_EARPIECE,
+                CallAudioState.ROUTE_EARPIECE | CallAudioState.ROUTE_SPEAKER);
+
+        connection.onCallAudioStateChanged(earpiece);
+        connection.onCallAudioStateChanged(earpiece);
+        connection.onCallAudioStateChanged(new CallAudioState(false, CallAudioState.ROUTE_SPEAKER,
+                CallAudioState.ROUTE_EARPIECE | CallAudioState.ROUTE_SPEAKER));
+
+        List<EventLog.Entry> routes = withCode(EventLog.AUDIO_ROUTE);
+        assertEquals(2, routes.size());
+        assertEquals("route=speaker supported=earpiece,speaker", routes.get(0).detail);
+        assertEquals("route=earpiece supported=earpiece,speaker", routes.get(1).detail);
+    }
+
+    @Test
+    public void missingBluetoothRouteWhileActiveIsRecordedOnce() {
+        RelayConnection connection = new RelayConnection(context);
+        connection.setActive();
+        CallAudioState noBluetooth = new CallAudioState(false, CallAudioState.ROUTE_EARPIECE,
+                CallAudioState.ROUTE_EARPIECE | CallAudioState.ROUTE_SPEAKER);
+
+        connection.onCallAudioStateChanged(noBluetooth);
+        connection.onCallAudioStateChanged(noBluetooth);
+
+        List<EventLog.Entry> missing = withCode(EventLog.AUDIO_NO_WATCH);
+        assertEquals(1, missing.size());
+        assertEquals("supported=earpiece,speaker", missing.get(0).detail);
+        connection.onAbort();
+    }
+
+    @Test
+    public void bluetoothRouteAvailableIsNotReportedMissing() {
+        RelayConnection connection = new RelayConnection(context);
+        connection.setActive();
+
+        connection.onCallAudioStateChanged(new CallAudioState(false, CallAudioState.ROUTE_BLUETOOTH,
+                CallAudioState.ROUTE_EARPIECE | CallAudioState.ROUTE_BLUETOOTH));
+
+        assertEquals(0, withCode(EventLog.AUDIO_NO_WATCH).size());
         connection.onAbort();
     }
 }
