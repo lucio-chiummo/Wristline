@@ -43,6 +43,10 @@ final class DiagnosticReport {
         List<String> missingPermissions = new ArrayList<>();
         List<AppState> apps = new ArrayList<>();
         List<EventLog.Entry> events = new ArrayList<>();
+        /** Null when the watch app hasn't published its facts. */
+        WatchSync.WatchFacts watch;
+        /** Null when it can't be told (no Play services). */
+        Integer connectedWatches;
         String defaultDialer = "unknown";
         List<CallBridges.Bridge> bridges = new ArrayList<>();
         List<String> companions = new ArrayList<>();
@@ -58,6 +62,14 @@ final class DiagnosticReport {
         out.append("Device: ").append(f.device).append(" (").append(f.brand).append("), Android ")
                 .append(f.release).append(" (").append(f.display).append("), SDK ").append(f.sdk)
                 .append(", patch ").append(f.securityPatch).append(", locale ").append(f.locale).append('\n');
+        out.append("Watch: ");
+        if (f.watch == null) {
+            out.append("watch app not reporting");
+        } else {
+            out.append(f.watch.manufacturer).append(' ').append(f.watch.model).append(", SDK ").append(f.watch.sdk)
+                    .append(", Wristline watch app ").append(f.watch.version);
+        }
+        out.append(" · connected watches: ").append(f.connectedWatches == null ? "unknown" : f.connectedWatches).append('\n');
         out.append("Relaying: ").append(f.relayOn ? "on" : "paused")
                 .append(" · Notification listener: ").append(f.listenerConnected ? "connected" : "NOT connected")
                 .append(" · Calling from the watch: ").append(f.watchCalling ? "on" : "off").append('\n');
