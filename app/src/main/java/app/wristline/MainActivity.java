@@ -111,7 +111,7 @@ public class MainActivity extends Activity {
         super.onResume();
         ListenerRebind.ifNeeded(this, ListenerRebind.HOME, null);
         ListenerCheckJob.sync(this);
-        TestCall.onResult = this::refresh;
+        TestCall.onResult = this::onTestResult;
         ListenerRebind.onChange = this::refresh;
         Relaying.onChange = this::refresh;
         refresh();
@@ -280,9 +280,17 @@ public class MainActivity extends Activity {
                 statusTitle.setText(R.string.status_try_title);
                 statusSub.setText(R.string.status_try_sub);
                 boolean missed = Prefs.testCallResult(this) == TestCall.Result.MISSED;
+                boolean byNotification = Prefs.ringByNotification(this);
                 showAttention(getString(missed ? R.string.try_missed_title : R.string.try_title),
-                        getString(missed ? R.string.try_missed_desc : R.string.try_desc),
-                        getString(R.string.row_test_call), v -> ringWatch());
+                        getString(!missed ? R.string.try_desc
+                                : byNotification ? R.string.try_missed_notification_desc : R.string.try_missed_desc),
+                        getString(R.string.row_test_call), v -> {
+                            if (missed && !byNotification) {
+                                ringQuestion();
+                            } else {
+                                ringWatch();
+                            }
+                        });
                 break;
             default:
                 paintStatus(R.color.ready_card, R.color.green, R.color.ground, R.drawable.ic_watch);
@@ -424,16 +432,47 @@ public class MainActivity extends Activity {
                 .show();
     }
 
-    /** "When the watch rings": follow Do Not Disturb, and not while the phone is in use. */
+    /** A test call's result is in: show it, and if nobody answered, ask why. */
+    private void onTestResult() {
+        refresh();
+        if (Prefs.testCallResult(this) == TestCall.Result.MISSED && !Prefs.ringByNotification(this)) {
+            ringQuestion();
+        }
+    }
+
+    /**
+     * The test call went unanswered. On some watches it rings but Answer does nothing (the watch's
+     * companion app loses it): offer to ring with a notification instead.
+     */
+    void ringQuestion() {
+        if (isFinishing() || isDestroyed()) {
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.ring_question_title)
+                .setMessage(R.string.ring_question_text)
+                .setPositiveButton(R.string.ring_question_switch, (d, w) -> {
+                    Prefs.setRingByNotification(this, true);
+                    refresh();
+                    ringWatch();
+                })
+                .setNeutralButton(R.string.ring_question_again, (d, w) -> ringWatch())
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    /** "When the watch rings": follow Do Not Disturb, not while the phone is in use, ring by notification. */
     private void dndDialog() {
-        boolean[] checked = {Prefs.followDnd(this), Prefs.notWhileInUse(this)};
+        boolean[] checked = {Prefs.followDnd(this), Prefs.notWhileInUse(this), Prefs.ringByNotification(this)};
         new AlertDialog.Builder(this)
                 .setTitle(R.string.row_dnd)
-                .setMultiChoiceItems(new CharSequence[] {getString(R.string.dnd_follow), getString(R.string.in_use_rule)},
+                .setMultiChoiceItems(new CharSequence[] {getString(R.string.dnd_follow), getString(R.string.in_use_rule),
+                                getString(R.string.ring_by_notification)},
                         checked, (d, which, isChecked) -> checked[which] = isChecked)
                 .setPositiveButton(android.R.string.ok, (d, w) -> {
                     Prefs.setFollowDnd(this, checked[0]);
                     Prefs.setNotWhileInUse(this, checked[1]);
+                    Prefs.setRingByNotification(this, checked[2]);
                     refresh();
                 })
                 .setNeutralButton(R.string.rules_explain, (d, w) -> new AlertDialog.Builder(this)

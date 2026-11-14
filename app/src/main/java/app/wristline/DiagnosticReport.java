@@ -37,6 +37,8 @@ final class DiagnosticReport {
         /** A Bluetooth call-audio output (SCO or LE headset) exists; null when it can't be told. */
         Boolean bluetoothCallAudio;
         boolean relayOn;
+        /** The watch is rung with Wristline's own notification instead of a phone call. */
+        boolean ringByNotification;
         boolean watchCalling;
         boolean listenerConnected;
         boolean keyPresent;
@@ -73,6 +75,7 @@ final class DiagnosticReport {
         out.append("Relaying: ").append(f.relayOn ? "on" : "paused")
                 .append(" · Notification listener: ").append(f.listenerConnected ? "connected" : "NOT connected")
                 .append(" · Calling from the watch: ").append(f.watchCalling ? "on" : "off").append('\n');
+        out.append("Ring by notification: ").append(f.ringByNotification ? "on" : "off").append('\n');
         out.append("adb key present: ").append(f.keyPresent ? "yes" : "no").append('\n');
         out.append("Bluetooth call audio device: ").append(f.bluetoothCallAudio == null ? "unknown"
                 : f.bluetoothCallAudio ? "yes" : "no").append('\n');
