@@ -360,4 +360,16 @@ public class CallDiagnosticsTest {
         assertEquals(0, withCode(EventLog.RECORDING).size());
         connection.onAbort();
     }
+
+    /** The watch can still show the buttons of a call that is over. */
+    @Test
+    public void staleAnswerAfterTheCallEndedDoesNothing() {
+        RelayListener.currentApp = null;
+        RelayListener.incomingCall = null;
+        int before = Prefs.events(context).size();
+
+        new ActionReceiver().onReceive(context, new Intent(ActionReceiver.ANSWER));
+
+        assertEquals(before, Prefs.events(context).size());
+    }
 }

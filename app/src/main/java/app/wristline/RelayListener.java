@@ -239,9 +239,16 @@ public class RelayListener extends NotificationListenerService {
      * on or Telecom refuses; works without notification access.
      */
     static boolean startTestCall(Context context) {
-        if (TestCall.check(currentApp != null, RelayConnection.current != null) != TestCall.Start.OK) {
+        if (TestCall.check(currentApp != null, RelayConnection.current != null) != TestCall.Start.OK
+                || TestCall.notificationRinging) {
             Log.i(TAG, "not starting a test call: a call is on");
             return false;
+        }
+        if (Prefs.ringByNotification(context)) {
+            Log.i(TAG, "test call started (by notification)");
+            Diagnostics.record(context, EventLog.TEST_CALL, "", "started notification");
+            TestCall.startNotificationTest(context);
+            return true;
         }
         Bundle extras = new Bundle();
         extras.putString(EXTRA_CALLER, context.getString(R.string.test_call_caller));
@@ -261,6 +268,7 @@ public class RelayListener extends NotificationListenerService {
     private void startCall(SupportedApp app, CallActions call) {
         // A real call replaces a test call that is still ringing.
         RelayConnection.endTestCall();
+        TestCall.endNotificationTest(this);
         currentApp = app;
         ongoingCall = null;
         shownOngoingLabels = null;
@@ -272,6 +280,15 @@ public class RelayListener extends NotificationListenerService {
         incomingCaller = caller;
         incomingHandled = false;
         WatchSync.recordCall(this, false, app, -1, caller, incomingStartedAt);
+        if (Prefs.ringByNotification(this)) {
+            // The watch's companion loses Answer on a call screen: ring with our own notification.
+            // The app answers on the phone, so no voice through the watch for this call.
+            useFullModeForCall = false;
+            Log.i(TAG, "incoming call (" + app.packageName + ", ringing by notification)");
+            Diagnostics.record(this, EventLog.INCOMING, app, "notification");
+            WatchRing.start(this, caller, getString(R.string.incoming_call, app.label), WatchRing.MAX_MS);
+            return;
+        }
         Log.i(TAG, "incoming call (" + app.packageName
                 + (useFullModeForCall ? ", full mode)" : ", basic mode)"));
         Diagnostics.record(this, EventLog.INCOMING, app, useFullModeForCall ? "full mode" : "basic mode");
@@ -284,7 +301,7 @@ public class RelayListener extends NotificationListenerService {
         } catch (RuntimeException e) {
             Log.w(TAG, "Telecom refused the mirrored call; falling back to a notification", e);
             Diagnostics.record(this, EventLog.TELECOM_REFUSED, app, e.getClass().getSimpleName());
-            postFallbackNotification(app, caller);
+            WatchRing.start(this, caller, getString(R.string.incoming_call, app.label), WatchRing.MAX_MS);
         }
     }
 
@@ -443,6 +460,7 @@ public class RelayListener extends NotificationListenerService {
         incomingHandled = true;
         ongoingCall = call;
         RelayConnection.answeredOnPhone();
+        WatchRing.stop(this);
         RelayConnection connection = RelayConnection.current;
         boolean watchShowsCall = connection != null && connection.isShownOnWatch();
         StringBuilder labels = new StringBuilder();
@@ -512,7 +530,7 @@ public class RelayListener extends NotificationListenerService {
         incomingCall = null;
         ongoingCall = null;
         shownOngoingLabels = null;
-        StatusNotifications.cancel(context, StatusNotifications.ID_INCOMING_FALLBACK);
+        WatchRing.stop(context);
         StatusNotifications.cancel(context, StatusNotifications.ID_ONGOING);
     }
 
@@ -531,20 +549,6 @@ public class RelayListener extends NotificationListenerService {
         } catch (PendingIntent.CanceledException e) {
             Log.w(TAG, "app action no longer valid", e);
         }
-    }
-
-    private void postFallbackNotification(SupportedApp app, String caller) {
-        Notification relay = new Notification.Builder(this, StatusNotifications.CHANNEL_INCOMING)
-                .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle(caller)
-                .setContentText(getString(R.string.incoming_call, app.label))
-                .setCategory(Notification.CATEGORY_CALL)
-                .setAutoCancel(true)
-                .setTimeoutAfter(60000)
-                .addAction(action(getString(R.string.answer), ActionReceiver.ANSWER, 0, 1))
-                .addAction(action(getString(R.string.decline), ActionReceiver.DECLINE, 0, 2))
-                .build();
-        getSystemService(NotificationManager.class).notify(StatusNotifications.ID_INCOMING_FALLBACK, relay);
     }
 
     /** Watch-visible card with the app's own in-call buttons (Hang up, Mute, ...). */

@@ -76,7 +76,13 @@
     <string name="rules_explain">Come funziona</string>
     <string name="dnd_on">Segue il telefono: le chiamate che silenzia non fanno squillare l\'orologio</string>
     <string name="dnd_off">Ignorato: le chiamate fanno squillare l\'orologio anche in Non disturbare</string>
-    <string name="dnd_message">Quando il telefono è in Non disturbare (o Riposo), Wristline può seguirlo: una chiamata che il telefono silenzierebbe non fa squillare nemmeno l\'orologio, e una che lascia passare (contatti preferiti, chiamate ripetute) sì. Scegli chi può passare nelle impostazioni Non disturbare del telefono.\n\n\"Non mentre uso il telefono\": quando il telefono è sbloccato con lo schermo acceso, la chiamata squilla solo sul telefono, non sull\'orologio.</string>
+    <string name="dnd_message">Quando il telefono è in Non disturbare (o Riposo), Wristline può seguirlo: una chiamata che il telefono silenzierebbe non fa squillare nemmeno l\'orologio, e una che lascia passare (contatti preferiti, chiamate ripetute) sì. Scegli chi può passare nelle impostazioni Non disturbare del telefono.\n\n\"Non mentre uso il telefono\": quando il telefono è sbloccato con lo schermo acceso, la chiamata squilla solo sul telefono, non sull\'orologio.\n\n\"Squilla con una notifica\": per gli orologi dove Rispondi sulla schermata di chiamata non fa nulla. L\'orologio vibra ogni pochi secondi con Rispondi e Rifiuta; parli al telefono.</string>
+    <string name="ring_by_notification">Squilla con una notifica</string>
+    <string name="ring_question_title">L\'orologio ha squillato?</string>
+    <string name="ring_question_text">Se ha squillato ma Rispondi non ha fatto nulla, Wristline può far squillare l\'orologio con una notifica. Vibra ogni pochi secondi, con Rispondi e Rifiuta.</string>
+    <string name="ring_question_switch">Cambia e riprova</string>
+    <string name="ring_question_again">Riprova</string>
+    <string name="try_missed_notification_desc">Controlla che l\'orologio sia connesso e che mostri le notifiche di Wristline. Poi riprova.</string>
     <string name="dnd_follow">Segui Non disturbare</string>
     <string name="channel_missed">Chiamate perse</string>
     <string name="missed_title">Chiamata %1$s persa</string>
@@ -98,6 +104,8 @@
     <string name="test_call_sub">Una chiamata di prova: controlla che le chiamate arrivino all\'orologio</string>
     <string name="test_call_caller">Wristline · Prova</string>
     <string name="test_call_started">L\'orologio dovrebbe squillare ora. Rispondi per sentire qualche bip sull\'orologio.</string>
+    <string name="test_call_started_notification">L\'orologio dovrebbe vibrare ora. Tocca Rispondi o Rifiuta lì.</string>
+    <string name="test_call_text">Tocca Rispondi o Rifiuta</string>
     <string name="test_call_busy">Non ora: c\'è una chiamata in corso.</string>
     <string name="test_call_failed">Android non ha accettato la chiamata di prova. Riavvia il telefono e riprova.</string>
     <string name="turn_on">Attiva</string>
@@ -139,6 +147,7 @@
     <string name="allow">Consenti</string>
 
     <string name="channel_incoming">Chiamate in arrivo (riserva)</string>
+    <string name="channel_ring">Chiamate che squillano con una notifica</string>
     <string name="channel_ongoing">Controlli chiamata sull\'orologio</string>
     <string name="channel_status">Stato</string>
     <string name="incoming_call">Chiamata %1$s in arrivo</string>

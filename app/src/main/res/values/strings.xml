@@ -81,7 +81,13 @@
     <string name="rules_explain">How it works</string>
     <string name="dnd_on">Follows your phone: calls it silences don\'t ring the watch</string>
     <string name="dnd_off">Ignored: calls ring the watch even in Do Not Disturb</string>
-    <string name="dnd_message">When your phone is in Do Not Disturb (or Bedtime), Wristline can follow it: a call your phone would silence doesn\'t ring the watch either, and one it lets through (favourite contacts, repeat callers) still does. Change who gets through in your phone\'s Do Not Disturb settings.\n\n\"Not while I\'m using the phone\": when the phone is unlocked with the screen on, a call rings only the phone, not the watch.</string>
+    <string name="dnd_message">When your phone is in Do Not Disturb (or Bedtime), Wristline can follow it: a call your phone would silence doesn\'t ring the watch either, and one it lets through (favourite contacts, repeat callers) still does. Change who gets through in your phone\'s Do Not Disturb settings.\n\n\"Not while I\'m using the phone\": when the phone is unlocked with the screen on, a call rings only the phone, not the watch.\n\n\"Ring with a notification\": for watches where Answer on the call screen does nothing. The watch buzzes every few seconds with Answer and Decline; you talk on the phone.</string>
+    <string name="ring_by_notification">Ring with a notification</string>
+    <string name="ring_question_title">Did the watch ring?</string>
+    <string name="ring_question_text">If it rang but Answer did nothing, Wristline can ring your watch with a notification instead. It buzzes every few seconds, with Answer and Decline.</string>
+    <string name="ring_question_switch">Switch and ring again</string>
+    <string name="ring_question_again">Ring again</string>
+    <string name="try_missed_notification_desc">Check that the watch is connected and that it shows Wristline\'s notifications. Then try again.</string>
     <string name="dnd_follow">Follow Do Not Disturb</string>
     <string name="channel_missed">Missed calls</string>
     <string name="missed_title">Missed %1$s call</string>
@@ -104,6 +110,8 @@
     <string name="test_call_sub">A test call: check that calls reach the watch</string>
     <string name="test_call_caller">Wristline · Test</string>
     <string name="test_call_started">Your watch should ring now. Answer to hear a few beeps on the watch.</string>
+    <string name="test_call_started_notification">Your watch should buzz now. Tap Answer or Decline there.</string>
+    <string name="test_call_text">Tap Answer or Decline</string>
     <string name="test_call_busy">Not now: a call is in progress.</string>
     <string name="test_call_failed">Android didn\'t accept the test call. Restart the phone and try again.</string>
     <string name="turn_on">Turn on</string>
@@ -146,6 +154,7 @@
     <string name="allow">Allow</string>
 
     <string name="channel_incoming">Incoming calls (fallback)</string>
+    <string name="channel_ring">Calls ringing by notification</string>
     <string name="channel_ongoing">Call controls on the watch</string>
     <string name="channel_status">Status</string>
     <string name="incoming_call">Incoming %1$s call</string>

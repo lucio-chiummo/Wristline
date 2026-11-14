@@ -81,6 +81,18 @@ final class Prefs {
         prefs(context).edit().putBoolean("follow_dnd", on).apply();
     }
 
+    /**
+     * Ring the watch with Wristline's own Answer/Decline notification instead of a phone call: for
+     * watches whose companion app loses the Answer of the call screen.
+     */
+    static boolean ringByNotification(Context context) {
+        return prefs(context).getBoolean("ring_by_notification", false);
+    }
+
+    static void setRingByNotification(Context context, boolean on) {
+        prefs(context).edit().putBoolean("ring_by_notification", on).apply();
+    }
+
     /** Off unless asked: don't ring the watch while the phone is unlocked and in use. */
     static boolean notWhileInUse(Context context) {
         return prefs(context).getBoolean("not_while_in_use", false);

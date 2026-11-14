@@ -24,8 +24,16 @@ public class ActionReceiver extends BroadcastReceiver {
             }
             return;
         }
-        StatusNotifications.cancel(context, StatusNotifications.ID_INCOMING_FALLBACK);
         boolean answer = ANSWER.equals(action);
+        if (TestCall.notificationRinging) {
+            TestCall.notificationTestTapped(context, answer);
+            return;
+        }
+        WatchRing.stop(context);
+        if (RelayListener.currentApp == null) {
+            // The watch can still show the buttons of a call that is over.
+            return;
+        }
         // Answered or declined here: not a missed call.
         RelayListener.incomingHandledOnWatch();
         Diagnostics.record(context, answer ? EventLog.ANSWERED_ON_WATCH : EventLog.DECLINED_ON_WATCH,
