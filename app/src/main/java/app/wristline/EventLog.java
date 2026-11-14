@@ -39,6 +39,11 @@ final class EventLog {
     static final String CALL_NOT_CREATED = "call_not_created";
     /** Telecom moved Wristline's call to a new state (detail: ringing, dialing, active, disconnected...). */
     static final String CALL_STATE = "call_state";
+    /**
+     * Something else Telecom sent Wristline's call: silence, hold, unhold, "event <name>", dtmf
+     * (never the digit), "extras <key names>". Shows what a companion makes of a tap on the watch.
+     */
+    static final String CALL_SIGNAL = "call_signal";
     /** The call's audio route changed (detail "route=<x> supported=<a,b>"). */
     static final String AUDIO_ROUTE = "audio_route";
     /** Wristline's call went active with no Bluetooth route to move the voice to: no watch connected for calls. */
