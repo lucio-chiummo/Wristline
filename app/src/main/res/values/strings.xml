@@ -146,6 +146,7 @@
     <string name="allow">Allow</string>
 
     <string name="channel_incoming">Incoming calls (fallback)</string>
+    <string name="channel_ring">Calls ringing by notification</string>
     <string name="channel_ongoing">Call controls on the watch</string>
     <string name="channel_status">Status</string>
     <string name="incoming_call">Incoming %1$s call</string>

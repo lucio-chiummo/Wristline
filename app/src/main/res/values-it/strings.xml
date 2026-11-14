@@ -139,6 +139,7 @@
     <string name="allow">Consenti</string>
 
     <string name="channel_incoming">Chiamate in arrivo (riserva)</string>
+    <string name="channel_ring">Chiamate che squillano con una notifica</string>
     <string name="channel_ongoing">Controlli chiamata sull\'orologio</string>
     <string name="channel_status">Stato</string>
     <string name="incoming_call">Chiamata %1$s in arrivo</string>
