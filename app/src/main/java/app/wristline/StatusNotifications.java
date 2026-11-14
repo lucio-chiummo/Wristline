@@ -10,6 +10,8 @@ import android.content.Intent;
 /** Notification channels and the app's own status notifications. */
 final class StatusNotifications {
     static final String CHANNEL_INCOMING = "incoming_calls";
+    /** Calls ringing the watch by notification: see {@link WatchRing}. */
+    static final String CHANNEL_RING = "watch_ring";
     static final String CHANNEL_ONGOING = "ongoing_call_controls";
     static final String CHANNEL_SETUP = "voice_setup";
     static final String CHANNEL_STATUS = "status";
@@ -37,6 +39,13 @@ final class StatusNotifications {
                 context.getString(R.string.channel_incoming), NotificationManager.IMPORTANCE_HIGH);
         incoming.enableVibration(true);
         manager.createNotificationChannel(incoming);
+
+        // No sound: the calling app is already playing its ringtone on the phone. The watch buzzes.
+        NotificationChannel ring = new NotificationChannel(CHANNEL_RING,
+                context.getString(R.string.channel_ring), NotificationManager.IMPORTANCE_HIGH);
+        ring.setSound(null, null);
+        ring.enableVibration(true);
+        manager.createNotificationChannel(ring);
 
         NotificationChannel ongoing = new NotificationChannel(CHANNEL_ONGOING,
                 context.getString(R.string.channel_ongoing), NotificationManager.IMPORTANCE_DEFAULT);
