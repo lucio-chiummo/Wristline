@@ -8,6 +8,8 @@
 
 **Tech Stack:** Java 21, Android SDK, Telecom `Connection`/`CallAudioState`, Wear OS Data Layer (`DataClient`), JUnit 4 + Robolectric 4.17 (`./gradlew :app:testDebugUnitTest`, `./gradlew :wear:testDebugUnitTest`).
 
+**Status (2026-11-14):** Tasks 1–7 are done on branch `report-facts` (commits `d82197a`..`7999c6e`; 498 tests green, both APKs build, lint clean; not yet run on a device). Tasks 8–11 were added after review and are open: start there.
+
 **Spec:** none as a separate document. Requirements come from the 2026-11-14 analysis of the field report (this plan's "Requirements" section). Analysis summary: companion delivered Decline but never Answer to Wristline's Telecom call; full-mode outgoing call never routed audio to the watch; a WhatsApp call started with no visible trigger and no `outgoing` event; HyperOS unbound the listener within minutes.
 
 ## Requirements
@@ -20,6 +22,10 @@ R5. The report says whether a Bluetooth call-audio output device (`TYPE_BLUETOOT
 R6. Each change of Telecom audio state on Wristline's connection is logged once (`audio_route`, detail `route=<x> supported=<a,b,c>`); when `routeToWatch` finds no Bluetooth route while active, that is logged once per connection (`audio_no_watch`).
 R7. Each Telecom state change on Wristline's connection is logged (`call_state`, detail = `Connection.stateToString`).
 R8. Every start of a calling app's call by Wristline is logged (`app_started`, detail = trigger: `watch`, `call back`), including when the notification listener is unbound (`outgoing_unmirrored`, detail `listener off`).
+R10. Everything else Telecom sends to Wristline's connection is logged (`call_signal`): silence, hold, unhold, a call event's name, a DTMF press (never the digit), changed extras (key names only). A companion that turns the watch's Answer into something other than an answer becomes visible.
+R11. While Wristline's call is active, each change in the phone's active recordings is logged (`recording`, detail `source=<name> silenced=<true|false>` per recording, `none` when there are none). Shows whether Android is muting the calling app's microphone.
+R12. A supported app's in-call notification appearing while Wristline tracks no call is logged once per notification (`untracked_call`, app package): a call Wristline did not start and is not relaying.
+R13. The event log holds 250 entries. The report is ready within about 3 s (watch reads run in parallel, 3 s each) and the user sees "Preparing report…" at once; a second tap while one is being built does nothing.
 R9. Privacy: no caller names, numbers, contact ids, Bluetooth or Wear node names, account identifiers. Only the vocabularies above. `EventLog`'s class comment and `DiagnosticReport`'s header line stay true.
 
 ## Global Constraints
@@ -38,6 +44,11 @@ R9. Privacy: no caller names, numbers, contact ids, Bluetooth or Wear node names
 3. A phone with no watch app installed and no Wear nodes (Play services missing) must still produce a report, with "not reporting" and "connected watches: unknown". Test in Task 3 (null/exception paths).
 4. `OutgoingCalls.start` with the listener unbound still logs `app_started` and `outgoing_unmirrored` — the exact blind spot from the field report. Test in Task 6.
 5. Many `InCallService` entries (OEM dialer, Bluetooth, companion, Android Auto) must not push the events section out of the share sheet's practical length: cap the list at 12 entries with a trailing "… and N more". Test in Task 2.
+
+6. A DTMF press must never put its digit in the log (a digit typed into a call can be a PIN). Test in Task 8.
+7. Changed extras are logged by key name only; values can hold a caller's name or number. Test in Task 8.
+8. Recording changes arrive in bursts while a call sets up; identical consecutive summaries are logged once. Test in Task 9.
+9. Two taps on Share while the report is being built must open one share sheet. Test in Task 11.
 
 ---
 
@@ -497,12 +508,280 @@ git commit -m "Guard the report against personal data; document the new facts"
 
 ---
 
+### Task 8: Everything else Telecom tells the connection (R10)
+
+**Files:**
+- Modify: `app/src/main/java/app/wristline/EventLog.java`, `app/src/main/java/app/wristline/RelayConnection.java`
+- Test: `app/src/test/java/app/wristline/CallDiagnosticsTest.java`
+
+**Interfaces:**
+- Produces: `EventLog.CALL_SIGNAL = "call_signal"`.
+- `RelayConnection` overrides, each recording `CALL_SIGNAL` with app = `testCall ? null : RelayListener.currentApp` and the detail shown, and nothing else (no behaviour change):
+  - `onSilence()` → `"silence"`
+  - `onHold()` → `"hold"`; `onUnhold()` → `"unhold"`
+  - `onCallEvent(String event, Bundle extras)` → `"event " + event` (the event name is a Telecom/companion constant; extras are not logged)
+  - `onPlayDtmfTone(char c)` → `"dtmf"` (never `c`)
+  - `onExtrasChanged(Bundle extras)` → `"extras " + <sorted key names joined by ','>`, `"extras none"` when null or empty
+- `onAnswer(int videoState)` additionally records `CALL_SIGNAL` `"answer video=" + videoState` before delegating to `onAnswer()`, so an answer that arrives but is then dropped by Wristline's own early returns is still visible.
+
+- [ ] **Step 1: Write the failing tests** (in `CallDiagnosticsTest`, using its `withCode` helper)
+
+```java
+@Test
+public void otherTelecomSignalsAreRecorded() {
+    RelayConnection connection = new RelayConnection(context);
+    connection.onSilence();
+    connection.onHold();
+    connection.onUnhold();
+    connection.onCallEvent("com.example.ANSWERED_ON_WATCH", new Bundle());
+    List<EventLog.Entry> signals = withCode(EventLog.CALL_SIGNAL);   // newest first
+    assertEquals("event com.example.ANSWERED_ON_WATCH", signals.get(0).detail);
+    assertEquals("unhold", signals.get(1).detail);
+    assertEquals("hold", signals.get(2).detail);
+    assertEquals("silence", signals.get(3).detail);
+}
+
+@Test
+public void dtmfIsRecordedWithoutItsDigit() {
+    RelayConnection connection = new RelayConnection(context);
+    connection.onPlayDtmfTone('7');
+    assertEquals("dtmf", withCode(EventLog.CALL_SIGNAL).get(0).detail);
+}
+
+@Test
+public void changedExtrasAreRecordedByKeyOnly() {
+    RelayConnection connection = new RelayConnection(context);
+    Bundle extras = new Bundle();
+    extras.putString("zeta", "+39 333 123 4567");
+    extras.putString("alpha", "Corvan");
+    connection.onExtrasChanged(extras);
+    assertEquals("extras alpha,zeta", withCode(EventLog.CALL_SIGNAL).get(0).detail);
+}
+```
+
+- [ ] **Step 2: Run to verify they fail**
+
+Run: `JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ./gradlew :app:testDebugUnitTest --tests 'app.wristline.CallDiagnosticsTest'`
+Expected: compilation failure on `EventLog.CALL_SIGNAL`; after adding only the constant, three assertion failures (no `call_signal` entries).
+
+- [ ] **Step 3: Implement** the constant and the overrides. `onHold`/`onUnhold` must not call `setOnHold()`/`setActive()`: observing only.
+
+- [ ] **Step 4: Run the app suite** — `./gradlew :app:testDebugUnitTest`, expected BUILD SUCCESSFUL.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add app/src/main/java/app/wristline/EventLog.java app/src/main/java/app/wristline/RelayConnection.java app/src/test/java/app/wristline/CallDiagnosticsTest.java
+git commit -m "Record every other signal Telecom sends the mirrored call"
+```
+
+---
+
+### Task 9: Is the calling app's microphone being muted (R11)
+
+**Files:**
+- Create: `app/src/main/java/app/wristline/Recordings.java`
+- Modify: `app/src/main/java/app/wristline/EventLog.java`, `app/src/main/java/app/wristline/RelayConnection.java` (register when the call goes active, unregister in `end`)
+- Test: `app/src/test/java/app/wristline/RecordingsTest.java` (create), `app/src/test/java/app/wristline/CallDiagnosticsTest.java`
+
+**Interfaces:**
+- Produces: `EventLog.RECORDING = "recording"`.
+- `static String Recordings.source(int audioSource)` → `mic` (1), `voice_recognition` (6), `voice_communication` (7), `unprocessed` (9), `voice_performance` (10), otherwise `source<n>`.
+- `static String Recordings.describe(int audioSource, boolean silenced)` → `"source=<name> silenced=<true|false>"`.
+- `static String Recordings.summary(List<String> described)` → the entries joined by `"; "`, `"none"` when empty.
+- `RelayConnection`: a private `AudioManager.AudioRecordingCallback`; `onRecordingConfigChanged(List<AudioRecordingConfiguration> configs)` builds the summary from `config.getClientAudioSource()` and `config.isClientSilenced()` and records `RECORDING` only when the summary differs from the last one recorded for this connection. Registered with `AudioManager.registerAudioRecordingCallback(callback, handler)` in `onStateChanged` when the state becomes `STATE_ACTIVE` (once), unregistered in `end()`. Not registered for test calls.
+- Nothing else from the configuration is read: no package, no device, no session id.
+
+- [ ] **Step 1: Write the failing tests**
+
+`RecordingsTest`:
+
+```java
+@Test
+public void describesSourceAndSilence() {
+    assertEquals("source=voice_communication silenced=true", Recordings.describe(MediaRecorder.AudioSource.VOICE_COMMUNICATION, true));
+    assertEquals("source=mic silenced=false", Recordings.describe(MediaRecorder.AudioSource.MIC, false));
+    assertEquals("source=source1999 silenced=false", Recordings.describe(1999, false));
+}
+
+@Test
+public void summaryJoinsOrSaysNone() {
+    assertEquals("none", Recordings.summary(List.of()));
+    assertEquals("source=mic silenced=false; source=voice_communication silenced=true",
+        Recordings.summary(List.of("source=mic silenced=false", "source=voice_communication silenced=true")));
+}
+```
+
+`CallDiagnosticsTest`:
+
+```java
+@Test
+public void recordingChangesAreRecordedOncePerChangeWhileActive() {
+    RelayConnection connection = new RelayConnection(context);
+    connection.setActive();
+    AudioManager am = context.getSystemService(AudioManager.class);
+    // Robolectric: shadowOf(am).setActiveRecordingConfigurations(configs, true) notifies registered callbacks.
+    // Build one configuration with VOICE_COMMUNICATION via ShadowAudioManager.createActiveRecordingConfiguration(sessionId, audioSource, clientPackage).
+    shadowOf(am).setActiveRecordingConfigurations(oneVoiceCommunication, true);
+    shadowOf(am).setActiveRecordingConfigurations(oneVoiceCommunication, true);
+    shadowOf(am).setActiveRecordingConfigurations(List.of(), true);
+    List<EventLog.Entry> recordings = withCode(EventLog.RECORDING);
+    assertEquals(2, recordings.size());
+    assertEquals("none", recordings.get(0).detail);
+    assertTrue(recordings.get(1).detail.startsWith("source=voice_communication silenced="));
+    connection.onAbort();
+}
+
+@Test
+public void recordingsAreNotWatchedBeforeTheCallIsActive() {
+    RelayConnection connection = new RelayConnection(context);
+    connection.setRinging();
+    shadowOf(context.getSystemService(AudioManager.class)).setActiveRecordingConfigurations(oneVoiceCommunication, true);
+    assertEquals(0, withCode(EventLog.RECORDING).size());
+    connection.onAbort();
+}
+```
+
+Check the two shadow methods exist in Robolectric 4.17 with `javap` on `ShadowAudioManager` before writing the test (as done for `addOutputDevice` in Task 1). If the shadow can't notify callbacks, make the callback's handling a package-private method `void recordingsChanged(List<String> described)` on `RelayConnection` and call that from the test; the registration itself then gets checked on the device.
+
+- [ ] **Step 2: Run to verify they fail** — `./gradlew :app:testDebugUnitTest --tests 'app.wristline.RecordingsTest' --tests 'app.wristline.CallDiagnosticsTest'`; expected compilation failure (`Recordings`, `EventLog.RECORDING`).
+
+- [ ] **Step 3: Implement.** Wrap register/unregister in try/catch `RuntimeException`.
+
+- [ ] **Step 4: Run the app suite** — expected BUILD SUCCESSFUL.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add app/src/main/java/app/wristline/Recordings.java app/src/main/java/app/wristline/EventLog.java app/src/main/java/app/wristline/RelayConnection.java app/src/test/java/app/wristline/RecordingsTest.java app/src/test/java/app/wristline/CallDiagnosticsTest.java
+git commit -m "Record whether the phone mutes a recording during the mirrored call"
+```
+
+**Device check for this task (owner's phone, before the field build goes out):** on a WhatsApp call answered from the watch, the report must show a `recording` line with `source=voice_communication` (or `mic`). Android hands other apps' recordings to a callback in an anonymised form; this check is what proves the `silenced` flag survives that. If the line never appears or always reads `silenced=false` while the other side can't hear, say so in the hand-back: the mic question then needs a different probe.
+
+---
+
+### Task 10: Calls Wristline isn't following (R12)
+
+**Files:**
+- Modify: `app/src/main/java/app/wristline/EventLog.java`, `app/src/main/java/app/wristline/RelayListener.java:174-179` (the `!call.incoming` branch of `onNotificationPosted`) and `onNotificationRemoved`
+- Test: `app/src/test/java/app/wristline/RelayListenerTest.java` (reuse its `ongoing(pkg, key)` helper)
+
+**Interfaces:**
+- Produces: `EventLog.UNTRACKED_CALL = "untracked_call"`.
+- `RelayListener`: private `String untrackedKey`. In the `!call.incoming` branch, when `tracker.ongoing(...)` is not `ONGOING` and `!tracker.isTracking()` and the notification's key differs from `untrackedKey`: record `UNTRACKED_CALL` (app, `""`) and remember the key. `onNotificationRemoved` clears `untrackedKey` when that key goes.
+
+- [ ] **Step 1: Write the failing tests**
+
+```java
+@Test
+public void inCallNotificationWithNoTrackedCallIsRecordedOnce() {
+    listener.onNotificationPosted(ongoing("com.whatsapp", "k9"));
+    listener.onNotificationPosted(ongoing("com.whatsapp", "k9"));   // the call timer refreshes it constantly
+    assertEquals(1, withCode(EventLog.UNTRACKED_CALL).size());
+    assertEquals("com.whatsapp", withCode(EventLog.UNTRACKED_CALL).get(0).app);
+}
+
+@Test
+public void relayedCallIsNotUntracked() {
+    listener.onNotificationPosted(ringing("com.whatsapp", "k1", "Corvan"));
+    listener.onNotificationPosted(ongoing("com.whatsapp", "k1"));
+    assertEquals(0, withCode(EventLog.UNTRACKED_CALL).size());
+}
+
+@Test
+public void aSecondUntrackedCallIsRecordedAfterTheFirstEnds() {
+    listener.onNotificationPosted(ongoing("com.whatsapp", "k9"));
+    listener.onNotificationRemoved(ongoing("com.whatsapp", "k9"));
+    listener.onNotificationPosted(ongoing("com.whatsapp", "k9"));
+    assertEquals(2, withCode(EventLog.UNTRACKED_CALL).size());
+}
+```
+
+Add a `withCode` helper to `RelayListenerTest` as in `CallDiagnosticsTest` (filter `Prefs.events(context)` by code).
+
+- [ ] **Step 2: Run to verify they fail** — `./gradlew :app:testDebugUnitTest --tests 'app.wristline.RelayListenerTest'`.
+
+- [ ] **Step 3: Implement.**
+
+- [ ] **Step 4: Run the app suite** — expected BUILD SUCCESSFUL.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add app/src/main/java/app/wristline/EventLog.java app/src/main/java/app/wristline/RelayListener.java app/src/test/java/app/wristline/RelayListenerTest.java
+git commit -m "Record a calling app's call that Wristline isn't following"
+```
+
+---
+
+### Task 11: Bigger log, quicker report (R13)
+
+**Files:**
+- Modify: `app/src/main/java/app/wristline/EventLog.java:17` (`MAX`), `app/src/main/java/app/wristline/Diagnostics.java` (`collect`), `app/src/main/java/app/wristline/WatchSync.java` (`watchFacts`, `connectedNodeCount` timeouts), `app/src/main/java/app/wristline/MainActivity.java` (`shareReport`), `app/src/main/res/values/strings.xml`
+- Test: `app/src/test/java/app/wristline/EventLogTest.java`, `app/src/test/java/app/wristline/ReportShareTest.java` (create, Robolectric)
+
+**Interfaces:**
+- `EventLog.MAX = 250`.
+- `WatchSync.REPORT_TIMEOUT_S = 3`, used by `watchFacts` and `connectedNodeCount`.
+- `Diagnostics.collect` runs the two watch reads on two threads and joins both (worst case about 3 s, not 6).
+- `MainActivity.shareReport()`: shows a `Toast` with `R.string.report_preparing` = `Preparing report…` at once; a private `boolean preparingReport` makes a second tap a no-op until the share sheet has been started (reset on the UI thread, also when the activity is finishing).
+
+- [ ] **Step 1: Write the failing tests**
+
+`EventLogTest`:
+
+```java
+@Test
+public void keepsTwoHundredAndFiftyEvents() {
+    assertEquals(250, EventLog.MAX);
+}
+```
+
+`ReportShareTest` — build `MainActivity` with Robolectric, click `R.id.row_report` twice, then drain background work (`shadowOf(Looper.getMainLooper()).idle()` after joining the `diagnostic-report` thread; if the thread can't be reached from the test, give `MainActivity` a package-private `Thread reportThread` field):
+
+```java
+@Test
+public void twoTapsOpenOneShareSheet() {
+    // after both taps and the idle:
+    assertNotNull(shadowOf(activity).getNextStartedActivity());   // the chooser
+    assertNull(shadowOf(activity).getNextStartedActivity());      // and only one
+}
+
+@Test
+public void saysItIsPreparing() {
+    // after one tap, before the idle:
+    assertEquals("Preparing report…", ShadowToast.getTextOfLatestToast());
+}
+```
+
+- [ ] **Step 2: Run to verify they fail** — `./gradlew :app:testDebugUnitTest --tests 'app.wristline.EventLogTest' --tests 'app.wristline.ReportShareTest'`.
+
+- [ ] **Step 3: Implement.**
+
+- [ ] **Step 4: Run both suites, build and lint** — `./gradlew :app:testDebugUnitTest :wear:testDebugUnitTest :app:assembleDebug :wear:assembleDebug :app:lintDebug`, expected BUILD SUCCESSFUL.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add app/src/main/java/app/wristline/EventLog.java app/src/main/java/app/wristline/Diagnostics.java app/src/main/java/app/wristline/WatchSync.java app/src/main/java/app/wristline/MainActivity.java app/src/main/res/values/strings.xml app/src/test/java/app/wristline/EventLogTest.java app/src/test/java/app/wristline/ReportShareTest.java
+git commit -m "Keep 250 events; build the report faster and say so"
+```
+
+Other languages' `strings.xml` files, if the app has any, get the new string too.
+
+---
+
 ## Out of scope (separate plans)
 
-- HyperOS/Xiaomi setup-card hint (Autostart, background pop-ups).
-- A companion-independent ring/answer path through Wristline's own watch app ([[all-wear-os-watches]]).
-- Any change to how calls are answered, routed or started: this plan only observes.
+This plan only observes. Three follow-ups change behaviour and each gets its own plan:
+
+1. **Ring by notification** (next; does not wait for a new field report). Two field reports show OHealth passing Decline but not Answer for Wristline's Telecom call. Wristline already rings with its own Answer/Decline notification when Telecom refuses a call (`RelayListener.postFallbackNotification`, `ActionReceiver`), and that path presses the calling app's Answer itself, with no companion call handling involved. The follow-up makes it a mode: offered when Ring my watch ends unanswered ("Did you tap Answer on the watch?"), switchable on Home. Open design points for that plan: whether the Telecom call is still made alongside (needed for voice through the watch), how the watch rings (a notification buzzes once; a call rings on), and what the test call does in this mode.
+2. **HyperOS/Xiaomi setup step** (Autostart, background pop-ups), shown when `Build.MANUFACTURER` is Xiaomi. Needs no new evidence either.
+3. **Ring and answer through Wristline's own watch app** ([[all-wear-os-watches]]): the complete answer for every companion, gated on the watch app being installable without a computer (Google Play).
+
+After the next field report: a "watch isn't connected for call audio" setup check if `audio_no_watch` confirms it; a change to how the calling app is launched if `untracked_call` appears with no `app_started` before it.
 
 ## Device check after merge
 
-Build and install on the owner's phone and watch ([[build-and-install]]), run **Ring my watch**, answer on the watch, then **Share diagnostic report** and confirm: a `Watch:` line with the Pixel Watch model; `com.google.android.apps.wear.companion` under Call bridges with `self-managed yes`; `call_state ringing` → `call_state active`; one `audio_route … bluetooth` line; no personal data. Then send the field APK to the POCO/OPPO reporter.
+Build and install on the owner's phone and watch ([[build-and-install]]), run **Ring my watch**, answer on the watch, then **Share diagnostic report** and confirm: a `Watch:` line with the Pixel Watch model; a `recording` line during a real WhatsApp call (Task 9's device check); `com.google.android.apps.wear.companion` under Call bridges with `self-managed yes`; `call_state ringing` → `call_state active`; one `audio_route … bluetooth` line; no personal data. Then send the field APK to the POCO/OPPO reporter.
