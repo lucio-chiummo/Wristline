@@ -12,7 +12,11 @@ final class OutgoingCalls {
     private OutgoingCalls() {
     }
 
-    static void start(Context context, long contactId, SupportedApp app) {
+    /** What asked for the call, as the diagnostic report says it. */
+    static final String TRIGGER_WATCH = "watch";
+    static final String TRIGGER_CALL_BACK = "call back";
+
+    static void start(Context context, long contactId, SupportedApp app, String trigger) {
         CallableContacts.Contact contact = ContactsReader.find(context, contactId);
         Long row = contact == null ? null : contact.callRows.get(app.packageName);
         if (row == null) {
@@ -30,19 +34,21 @@ final class OutgoingCalls {
         // Same order as an incoming call: the watch's call (and its audio link) first, the app's
         // call after. An app already in a call hangs up when our call takes the audio mid-call.
         boolean mirrored = RelayListener.startOutgoing(context, app, contact.name, () -> {
-            if (!startApp(appContext, intent, app)) {
+            if (!startApp(appContext, intent, app, trigger)) {
                 RelayConnection.endFromApp();
                 RelayListener.outgoingFailed(app);
             }
         });
-        if (!mirrored && !startApp(appContext, intent, app)) {
+        if (!mirrored && !startApp(appContext, intent, app, trigger)) {
             return;
         }
         Prefs.addRecentCall(context, contactId);
         WatchSync.recordCall(context, true, app, contactId, contact.name, System.currentTimeMillis());
     }
 
-    private static boolean startApp(Context context, Intent intent, SupportedApp app) {
+    /** Every start is recorded, mirrored or not: a call nobody remembers asking for must show its trigger. */
+    private static boolean startApp(Context context, Intent intent, SupportedApp app, String trigger) {
+        Diagnostics.record(context, EventLog.APP_STARTED, app, trigger);
         ActivityOptions options = ActivityOptions.makeBasic();
         if (android.os.Build.VERSION.SDK_INT >= 34) {
             options.setPendingIntentBackgroundActivityStartMode(ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED);

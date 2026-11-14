@@ -290,6 +290,7 @@ public class RelayListener extends NotificationListenerService {
         RelayListener listener = instance;
         if (listener == null) {
             Log.w(TAG, "notification access is off: can't follow the call");
+            Diagnostics.record(context, EventLog.OUTGOING_UNMIRRORED, app, "listener off");
             return false;
         }
         if (Looper.myLooper() == Looper.getMainLooper()) {
