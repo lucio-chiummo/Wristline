@@ -287,4 +287,77 @@ public class CallDiagnosticsTest {
 
         assertEquals("answer video=0", withCode(EventLog.CALL_SIGNAL).get(0).detail);
     }
+
+    private List<android.media.AudioRecordingConfiguration> oneVoiceCommunication(android.media.AudioManager am) {
+        return List.of(org.robolectric.Shadows.shadowOf(am).createActiveRecordingConfiguration(
+                1, android.media.MediaRecorder.AudioSource.VOICE_COMMUNICATION, "com.whatsapp"));
+    }
+
+    private void idle() {
+        org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
+    }
+
+    @Test
+    public void recordingChangesAreRecordedOncePerChangeWhileActive() {
+        RelayListener.currentApp = SupportedApp.WHATSAPP;
+        RelayConnection connection = new RelayConnection(context);
+        connection.setActive();
+        android.media.AudioManager am = context.getSystemService(android.media.AudioManager.class);
+
+        org.robolectric.Shadows.shadowOf(am).setActiveRecordingConfigurations(oneVoiceCommunication(am), true);
+        idle();
+        org.robolectric.Shadows.shadowOf(am).setActiveRecordingConfigurations(oneVoiceCommunication(am), true);
+        idle();
+        org.robolectric.Shadows.shadowOf(am).setActiveRecordingConfigurations(List.of(), true);
+        idle();
+
+        List<EventLog.Entry> recordings = withCode(EventLog.RECORDING);
+        assertEquals(2, recordings.size());
+        assertEquals("none", recordings.get(0).detail);
+        assertEquals("source=voice_communication silenced=false", recordings.get(1).detail);
+        assertEquals("com.whatsapp", recordings.get(1).app);
+        connection.onAbort();
+    }
+
+    @Test
+    public void recordingsAreNotWatchedBeforeTheCallIsActive() {
+        RelayConnection connection = new RelayConnection(context);
+        connection.setRinging();
+        android.media.AudioManager am = context.getSystemService(android.media.AudioManager.class);
+
+        org.robolectric.Shadows.shadowOf(am).setActiveRecordingConfigurations(oneVoiceCommunication(am), true);
+        idle();
+
+        assertEquals(0, withCode(EventLog.RECORDING).size());
+        connection.onAbort();
+    }
+
+    @Test
+    public void recordingsAreNotWatchedAfterTheCallEnds() {
+        RelayConnection connection = new RelayConnection(context);
+        connection.setActive();
+        connection.onAbort();
+        android.media.AudioManager am = context.getSystemService(android.media.AudioManager.class);
+
+        org.robolectric.Shadows.shadowOf(am).setActiveRecordingConfigurations(oneVoiceCommunication(am), true);
+        idle();
+
+        assertEquals(0, withCode(EventLog.RECORDING).size());
+    }
+
+    @Test
+    public void testCallsDoNotWatchRecordings() {
+        RelayConnection connection = new RelayConnection(context);
+        connection.setRinging();
+        connection.markTestCall();
+        RelayConnection.current = connection;
+        connection.onAnswer();
+        android.media.AudioManager am = context.getSystemService(android.media.AudioManager.class);
+
+        org.robolectric.Shadows.shadowOf(am).setActiveRecordingConfigurations(oneVoiceCommunication(am), true);
+        idle();
+
+        assertEquals(0, withCode(EventLog.RECORDING).size());
+        connection.onAbort();
+    }
 }

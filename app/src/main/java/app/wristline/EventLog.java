@@ -44,6 +44,11 @@ final class EventLog {
      * (never the digit), "extras <key names>". Shows what a companion makes of a tap on the watch.
      */
     static final String CALL_SIGNAL = "call_signal";
+    /**
+     * The phone's active recordings changed while Wristline's call was active (detail
+     * "source=<x> silenced=<bool>" each, or "none"): whether Android mutes the calling app's microphone.
+     */
+    static final String RECORDING = "recording";
     /** The call's audio route changed (detail "route=<x> supported=<a,b>"). */
     static final String AUDIO_ROUTE = "audio_route";
     /** Wristline's call went active with no Bluetooth route to move the voice to: no watch connected for calls. */
