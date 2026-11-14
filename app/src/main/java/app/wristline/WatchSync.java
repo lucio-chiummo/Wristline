@@ -129,6 +129,9 @@ final class WatchSync {
         return WatchStatus.of(connected, withApp);
     }
 
+    /** The diagnostic report waits this long for the watch, no longer. */
+    static final int REPORT_TIMEOUT_S = 3;
+
     /** What the watch app published about its watch (Build facts only). */
     static final class WatchFacts {
         final String manufacturer;
@@ -144,12 +147,12 @@ final class WatchSync {
         }
     }
 
-    /** Blocking (Play services, up to 5 s): the watch app's facts, or null when it hasn't published any. */
+    /** Blocking (Play services, up to {@link #REPORT_TIMEOUT_S} s): the watch app's facts, or null when it hasn't published any. */
     static WatchFacts watchFacts(Context context) {
         try {
             android.net.Uri uri = new android.net.Uri.Builder().scheme("wear").path(WatchProtocol.PATH_WATCH_INFO).build();
             com.google.android.gms.wearable.DataItemBuffer items = Tasks.await(
-                    Wearable.getDataClient(context).getDataItems(uri), 5, TimeUnit.SECONDS);
+                    Wearable.getDataClient(context).getDataItems(uri), REPORT_TIMEOUT_S, TimeUnit.SECONDS);
             try {
                 for (com.google.android.gms.wearable.DataItem item : items) {
                     DataMap map = com.google.android.gms.wearable.DataMapItem.fromDataItem(item).getDataMap();
@@ -166,10 +169,10 @@ final class WatchSync {
         return null;
     }
 
-    /** Blocking (up to 5 s): how many Wear devices are connected; never their names. Null when it can't be told. */
+    /** Blocking (up to {@link #REPORT_TIMEOUT_S} s): how many Wear devices are connected; never their names. Null when it can't be told. */
     static Integer connectedNodeCount(Context context) {
         try {
-            return Tasks.await(Wearable.getNodeClient(context).getConnectedNodes(), 5, TimeUnit.SECONDS).size();
+            return Tasks.await(Wearable.getNodeClient(context).getConnectedNodes(), REPORT_TIMEOUT_S, TimeUnit.SECONDS).size();
         } catch (Exception e) {
             return null;
         }

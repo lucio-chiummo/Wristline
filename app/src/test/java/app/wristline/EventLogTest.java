@@ -58,4 +58,15 @@ public class EventLogTest {
         assertEquals("2h 14m", EventLog.duration((2 * 60 + 14) * 60_000L));
         assertEquals("3d 4h", EventLog.duration(((3 * 24 + 4) * 60 + 5) * 60_000L));
     }
+
+    /** The report's extra events (states, routes, recordings) take several lines per call. */
+    @Test
+    public void keepsTwoHundredAndFiftyEvents() {
+        org.junit.Assert.assertEquals(250, EventLog.MAX);
+    }
+
+    @Test
+    public void reportReadsOfTheWatchAreShort() {
+        org.junit.Assert.assertEquals(3, WatchSync.REPORT_TIMEOUT_S);
+    }
 }

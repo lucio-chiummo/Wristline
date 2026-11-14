@@ -46,7 +46,7 @@ final class DiagnosticReport {
         /** Null when the watch app hasn't published its facts. */
         WatchSync.WatchFacts watch;
         /** Null when it can't be told (no Play services). */
-        Integer connectedWatches;
+        volatile Integer connectedWatches;
         String defaultDialer = "unknown";
         List<CallBridges.Bridge> bridges = new ArrayList<>();
         List<String> companions = new ArrayList<>();

@@ -460,16 +460,28 @@ public class MainActivity extends Activity {
         ((TextView) row.findViewById(R.id.row_title)).setText(title);
     }
 
-    /** The report reads the watch over the Data Layer (up to seconds): build it off the main thread. */
+    /** The report being built, if any (tests wait on it). */
+    Thread reportThread;
+
+    /**
+     * The report asks the watch over the Data Layer (seconds): it's built off the main thread, says
+     * so at once, and a second tap meanwhile does nothing.
+     */
     private void shareReport() {
+        if (reportThread != null) {
+            return;
+        }
+        android.widget.Toast.makeText(this, R.string.report_preparing, android.widget.Toast.LENGTH_SHORT).show();
         android.content.Context app = getApplicationContext();
-        new Thread(() -> {
+        reportThread = new Thread(() -> {
             android.content.Intent share = Diagnostics.shareIntent(app);
             runOnUiThread(() -> {
+                reportThread = null;
                 if (!isFinishing() && !isDestroyed()) {
                     startActivity(share);
                 }
             });
-        }, "diagnostic-report").start();
+        }, "diagnostic-report");
+        reportThread.start();
     }
 }
