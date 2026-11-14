@@ -53,6 +53,8 @@ final class EventLog {
     static final String AUDIO_ROUTE = "audio_route";
     /** Wristline's call went active with no Bluetooth route to move the voice to: no watch connected for calls. */
     static final String AUDIO_NO_WATCH = "audio_no_watch";
+    /** A calling app shows a call in progress that Wristline neither relayed nor started. */
+    static final String UNTRACKED_CALL = "untracked_call";
     static final String OUTGOING = "outgoing";
     static final String OUTGOING_NOT_STARTED = "outgoing_not_started";
     /** Wristline started a calling app's call (detail: what asked for it, "watch" or "call back"). */

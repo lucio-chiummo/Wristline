@@ -49,6 +49,8 @@ public class RelayListener extends NotificationListenerService {
     private static String shownOngoingLabels;
 
     private final CallTracker tracker = new CallTracker();
+    /** The in-call notification of a call Wristline isn't following, already written to the report. */
+    private String untrackedKey;
     /** The running listener, for calls started from the watch. */
     private static volatile RelayListener instance;
     /** If the app hasn't shown its in-call notification by then, the call didn't start. */
@@ -174,6 +176,10 @@ public class RelayListener extends NotificationListenerService {
         if (!call.incoming) {
             if (tracker.ongoing(app.packageName, sbn.getKey()) == CallTracker.Result.ONGOING) {
                 onOngoingCall(call);
+            } else if (!tracker.isTracking() && !sbn.getKey().equals(untrackedKey)) {
+                // A call Wristline neither relayed nor started: for the report, once per call.
+                untrackedKey = sbn.getKey();
+                Diagnostics.record(this, EventLog.UNTRACKED_CALL, app, "");
             }
             return;
         }
@@ -455,6 +461,9 @@ public class RelayListener extends NotificationListenerService {
         SupportedApp app = SupportedApp.forPackage(sbn.getPackageName());
         if (app == null) {
             return;
+        }
+        if (sbn.getKey().equals(untrackedKey)) {
+            untrackedKey = null;
         }
         // Read now: by the end of the grace period the watch has finished taking the audio.
         boolean takingAudio = RelayConnection.isAwaitingAppAnswer();
