@@ -26,6 +26,12 @@ public class RelayConnection extends Connection {
     private volatile boolean voiceOnPhone;
     /** Last audio state written to the report, so repeats aren't logged again. */
     private String lastRouteDetail;
+    /** How often the voice may fall back from the watch before Wristline stops moving it there. */
+    static final int MAX_BOUNCES = 3;
+    /** Last audio state Telecom reported for this call. */
+    private CallAudioState audioState;
+    /** Times the voice fell back from the watch to the phone by itself in this call. */
+    private int bounces;
     /** "No Bluetooth route" is logged once per call. */
     private boolean noWatchLogged;
     /** Last recordings summary written to the report, so repeats aren't logged again. */
@@ -84,6 +90,7 @@ public class RelayConnection extends Connection {
             return false;
         }
         connection.voiceOnPhone = toPhone;
+        connection.bounces = 0;
         Log.i(RelayListener.TAG, toPhone ? "voice moved to the phone" : "voice moved back to the watch");
         Diagnostics.record(connection.context, EventLog.VOICE_MOVED, RelayListener.currentApp, toPhone ? "phone" : "watch");
         if (toPhone) {
@@ -196,11 +203,25 @@ public class RelayConnection extends Connection {
             setActive();
             routeToWatch(null);
             VoiceControls.update(context);
-            handler.postDelayed(() -> {
-                awaitingAppAnswer = false;
-                RelayListener.send(context, call.answer);
-            }, ANSWER_DELAY_MS);
+            handler.postDelayed(() -> answerApp(call), ANSWER_DELAY_MS);
         });
+    }
+
+    /**
+     * Answers the app into the watch's audio link. When Telecom offers no Bluetooth route there is
+     * no such link, and an active call with no watch to carry it leaves the app's microphone
+     * silent: the app is answered on the phone and this call steps aside.
+     */
+    private void answerApp(CallActions call) {
+        awaitingAppAnswer = false;
+        CallAudioState state = audioState;
+        boolean noWatch = state != null && (state.getSupportedRouteMask() & CallAudioState.ROUTE_BLUETOOTH) == 0;
+        RelayListener.send(context, call.answer);
+        if (noWatch) {
+            Log.w(RelayListener.TAG, "no Bluetooth route: the call is answered on the phone");
+            Diagnostics.record(context, EventLog.AUDIO_NO_WATCH, RelayListener.currentApp, "answered on the phone");
+            end(new DisconnectCause(DisconnectCause.ANSWERED_ELSEWHERE));
+        }
     }
 
     @Override
@@ -223,10 +244,7 @@ public class RelayConnection extends Connection {
             awaitingAppAnswer = true;
             setActive();
             VoiceControls.update(context);
-            handler.postDelayed(() -> {
-                awaitingAppAnswer = false;
-                RelayListener.send(context, call.answer);
-            }, ANSWER_DELAY_MS);
+            handler.postDelayed(() -> answerApp(call), ANSWER_DELAY_MS);
         } else {
             Log.i(RelayListener.TAG, "answered from the watch (basic mode)");
             Diagnostics.record(context, EventLog.ANSWERED_ON_WATCH, RelayListener.currentApp, "basic mode");
@@ -379,6 +397,18 @@ public class RelayConnection extends Connection {
     @Override
     public void onCallAudioStateChanged(CallAudioState state) {
         if (state != null) {
+            CallAudioState before = audioState;
+            audioState = state;
+            if (before != null && before.getRoute() == CallAudioState.ROUTE_BLUETOOTH
+                    && state.getRoute() != CallAudioState.ROUTE_BLUETOOTH && !voiceOnPhone && isActive()
+                    && ++bounces >= MAX_BOUNCES) {
+                // The watch (or the app) keeps refusing the voice: fighting over it breaks the sound.
+                voiceOnPhone = true;
+                Log.w(RelayListener.TAG, "the voice keeps leaving the watch: staying on the phone");
+                Diagnostics.record(context, EventLog.AUDIO_GAVE_UP, testCall ? null : RelayListener.currentApp,
+                        "left the watch " + bounces + " times");
+                VoiceControls.update(context);
+            }
             String detail = AudioRoute.describe(state.getRoute(), state.getSupportedRouteMask());
             if (!detail.equals(lastRouteDetail)) {
                 lastRouteDetail = detail;
