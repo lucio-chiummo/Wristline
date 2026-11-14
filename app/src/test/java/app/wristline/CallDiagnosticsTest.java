@@ -152,4 +152,31 @@ public class CallDiagnosticsTest {
         assertEquals("notification", e.detail);
         assertTrue(RelayListener.isIncomingHandled());
     }
+
+    /** Codes in the log, newest first, with only this code. */
+    private List<EventLog.Entry> withCode(String code) {
+        List<EventLog.Entry> out = new java.util.ArrayList<>();
+        for (EventLog.Entry e : Prefs.events(context)) {
+            if (e.code.equals(code)) {
+                out.add(e);
+            }
+        }
+        return out;
+    }
+
+    @Test
+    public void telecomStateChangesAreRecorded() {
+        RelayListener.currentApp = SupportedApp.WHATSAPP;
+        RelayConnection connection = new RelayConnection(context);
+
+        connection.setRinging();
+        connection.setActive();
+
+        List<EventLog.Entry> states = withCode(EventLog.CALL_STATE);
+        assertEquals(2, states.size());
+        assertEquals("active", states.get(0).detail);
+        assertEquals("ringing", states.get(1).detail);
+        assertEquals("com.whatsapp", states.get(0).app);
+        connection.onAbort();
+    }
 }

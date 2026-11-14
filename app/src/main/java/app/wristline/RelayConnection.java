@@ -256,6 +256,13 @@ public class RelayConnection extends Connection {
         // The app already shows its own incoming-call screen on the phone.
     }
 
+    /** For the report: whether Telecom ever took the watch's Answer shows up as ringing → active. */
+    @Override
+    public void onStateChanged(int state) {
+        Diagnostics.record(context, EventLog.CALL_STATE, testCall ? null : RelayListener.currentApp,
+                Connection.stateToString(state).toLowerCase(java.util.Locale.ROOT));
+    }
+
     @Override
     public void onCallAudioStateChanged(CallAudioState state) {
         routeToWatch(state);
