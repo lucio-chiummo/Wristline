@@ -21,6 +21,11 @@ public class DiagnosticReportTest {
                 new DiagnosticReport.AppState("com.whatsapp", "1.2.3", true, "ON"),
                 new DiagnosticReport.AppState("org.telegram.messenger", null, true, ""));
         f.events = List.of(new EventLog.Entry(0, EventLog.INCOMING, "com.whatsapp", "full mode"));
+        f.brand = "Acme";
+        f.release = "17";
+        f.display = "ACME.1";
+        f.locale = "it-IT";
+        f.bluetoothCallAudio = true;
         return f;
     }
 
@@ -29,7 +34,7 @@ public class DiagnosticReportTest {
         String report = DiagnosticReport.build(facts());
 
         assertTrue(report.startsWith("Wristline 1.2\n"));
-        assertTrue(report.contains("Acme Phone 1, Android SDK 36, patch 2026-01-01"));
+        assertTrue(report.contains("Acme Phone 1 (Acme), Android 17 (ACME.1), SDK 36, patch 2026-01-01"));
         assertTrue(report.contains("Notification listener: NOT connected"));
         assertTrue(report.contains("Missing permissions: BATTERY"));
         assertTrue(report.contains("- com.whatsapp: 1.2.3, switch on, voice ON"));
@@ -59,5 +64,19 @@ public class DiagnosticReportTest {
         assertEquals("category=call ongoing=true callType=1 fullScreen=false actions=[Decline, Answer]", shape);
         assertEquals("category=none ongoing=false callType=none fullScreen=true actions=[]",
                 NotificationShape.describe(null, false, null, true, List.of()));
+    }
+
+    @Test
+    public void phoneLineNamesBrandReleaseAndLocale() {
+        String report = DiagnosticReport.build(facts());
+        assertTrue(report.contains("Device: Acme Phone 1 (Acme), Android 17 (ACME.1), SDK 36, patch 2026-01-01, locale it-IT\n"));
+        assertTrue(report.contains("Bluetooth call audio device: yes\n"));
+    }
+
+    @Test
+    public void unknownBluetoothSaysUnknown() {
+        DiagnosticReport.Facts f = facts();
+        f.bluetoothCallAudio = null;
+        assertTrue(DiagnosticReport.build(f).contains("Bluetooth call audio device: unknown\n"));
     }
 }

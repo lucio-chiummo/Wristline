@@ -27,6 +27,15 @@ final class DiagnosticReport {
         String device = "";
         int sdk;
         String securityPatch = "";
+        String brand = "";
+        /** Android version name, e.g. "17". */
+        String release = "";
+        /** The OEM's build name (HyperOS, OriginOS, ...). */
+        String display = "";
+        /** Language tag: button-label matching depends on it. */
+        String locale = "";
+        /** A Bluetooth call-audio output (SCO or LE headset) exists; null when it can't be told. */
+        Boolean bluetoothCallAudio;
         boolean relayOn;
         boolean watchCalling;
         boolean listenerConnected;
@@ -43,12 +52,15 @@ final class DiagnosticReport {
         StringBuilder out = new StringBuilder();
         out.append("Wristline ").append(f.appVersion).append('\n');
         out.append("Check before posting publicly: this report shows when recent calls happened.").append('\n');
-        out.append("Device: ").append(f.device).append(", Android SDK ").append(f.sdk)
-                .append(", patch ").append(f.securityPatch).append('\n');
+        out.append("Device: ").append(f.device).append(" (").append(f.brand).append("), Android ")
+                .append(f.release).append(" (").append(f.display).append("), SDK ").append(f.sdk)
+                .append(", patch ").append(f.securityPatch).append(", locale ").append(f.locale).append('\n');
         out.append("Relaying: ").append(f.relayOn ? "on" : "paused")
                 .append(" · Notification listener: ").append(f.listenerConnected ? "connected" : "NOT connected")
                 .append(" · Calling from the watch: ").append(f.watchCalling ? "on" : "off").append('\n');
         out.append("adb key present: ").append(f.keyPresent ? "yes" : "no").append('\n');
+        out.append("Bluetooth call audio device: ").append(f.bluetoothCallAudio == null ? "unknown"
+                : f.bluetoothCallAudio ? "yes" : "no").append('\n');
         out.append("Missing permissions: ")
                 .append(f.missingPermissions.isEmpty() ? "none" : String.join(", ", f.missingPermissions)).append('\n');
         out.append('\n').append("Apps:").append('\n');
