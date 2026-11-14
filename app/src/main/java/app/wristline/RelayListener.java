@@ -343,12 +343,8 @@ public class RelayListener extends NotificationListenerService {
         if (app == null || call == null || !useFullModeForCall) {
             return false;
         }
-        // An active call with no watch to carry it leaves the app's microphone silent.
-        if (!Boolean.TRUE.equals(Diagnostics.bluetoothCallAudio(context.getSystemService(android.media.AudioManager.class)))) {
-            Log.w(TAG, "no watch connected for call audio: answering on the phone");
-            Diagnostics.record(context, EventLog.AUDIO_NO_WATCH, app, "before answer");
-            return false;
-        }
+        // Whether the watch can carry the call is only known once Telecom offers its routes:
+        // the connection checks before it answers the app (RelayConnection.answerApp).
         Bundle extras = new Bundle();
         String caller = incomingCaller == null ? app.label : incomingCaller;
         extras.putString(EXTRA_CALLER, context.getString(R.string.caller_with_app, app.label, caller));
@@ -448,6 +444,8 @@ public class RelayListener extends NotificationListenerService {
             Log.i(TAG, "not starting a watch call: another call is being relayed");
             return false;
         }
+        // A call from the watch replaces a test ring that is still on.
+        TestCall.endNotificationTest(this);
         currentApp = app;
         incomingCall = null;
         ongoingCall = null;

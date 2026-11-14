@@ -52,6 +52,7 @@ public class RelayListenerTest {
         Prefs.setRingByNotification(context, false);
         TestCall.endNotificationTest(context);
         WatchRing.stop(context);
+        listener.onListenerDisconnected();
     }
 
     private PendingIntent intent(int requestCode) {
@@ -395,16 +396,9 @@ public class RelayListenerTest {
         return shadowOf(nm).getNotification(StatusNotifications.ID_INCOMING_FALLBACK);
     }
 
-    private void watchCarriesCallAudio() {
-        android.media.AudioManager am = context.getSystemService(android.media.AudioManager.class);
-        shadowOf(am).addOutputDevice(org.robolectric.shadows.AudioDeviceInfoBuilder.newBuilder()
-                .setType(android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO).build(), false);
-    }
-
     @Test
     public void answerOnTheNotificationOpensAnAnsweredWatchCall() {
         Prefs.setRingByNotification(context, true);
-        watchCarriesCallAudio();
         listener.onNotificationPosted(ringing("com.whatsapp", "k1", "Corvan"));
 
         new ActionReceiver().onReceive(context, new Intent(ActionReceiver.ANSWER));
@@ -417,21 +411,21 @@ public class RelayListenerTest {
     }
 
     @Test
-    public void answerOnTheNotificationStaysOnThePhoneWithoutCallAudioOnTheWatch() {
+    public void aCallFromTheWatchEndsTheNotificationTest() {
         Prefs.setRingByNotification(context, true);
-        listener.onNotificationPosted(ringing("com.whatsapp", "k1", "Corvan"));
+        listener.onListenerConnected();
+        TestCall.startNotificationTest(context);
+        ShadowLooper.idleMainLooper();
 
-        new ActionReceiver().onReceive(context, new Intent(ActionReceiver.ANSWER));
+        RelayListener.startOutgoing(context, SupportedApp.WHATSAPP, "Corvan", () -> { });
 
-        assertEquals(0, telecom.getAllIncomingCalls().size());
-        assertEquals("notification", withCode(EventLog.ANSWERED_ON_WATCH).get(0).detail);
-        assertEquals("before answer", withCode(EventLog.AUDIO_NO_WATCH).get(0).detail);
+        assertFalse(TestCall.notificationRinging);
+        assertFalse(WatchRing.ringing());
     }
 
     @Test
     public void declineOnTheNotificationNeverOpensAWatchCall() {
         Prefs.setRingByNotification(context, true);
-        watchCarriesCallAudio();
         listener.onNotificationPosted(ringing("com.whatsapp", "k1", "Corvan"));
 
         new ActionReceiver().onReceive(context, new Intent(ActionReceiver.DECLINE));
@@ -507,7 +501,7 @@ public class RelayListenerTest {
         assertTrue(WatchRing.ringing());
         new ActionReceiver().onReceive(context, new Intent(ActionReceiver.ANSWER));
 
-        assertEquals("notification", withCode(EventLog.ANSWERED_ON_WATCH).get(0).detail);
+        assertEquals("notification, voice on watch", withCode(EventLog.ANSWERED_ON_WATCH).get(0).detail);
         assertFalse(WatchRing.ringing());
     }
 

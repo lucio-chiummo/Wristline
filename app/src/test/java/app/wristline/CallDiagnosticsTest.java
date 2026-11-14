@@ -120,6 +120,76 @@ public class CallDiagnosticsTest {
         RelayConnection.current.onAbort();
     }
 
+    private static android.telecom.CallAudioState audio(int route, int supported) {
+        return new android.telecom.CallAudioState(false, route, supported);
+    }
+
+    private static final int EARPIECE = android.telecom.CallAudioState.ROUTE_EARPIECE;
+    private static final int BLUETOOTH = android.telecom.CallAudioState.ROUTE_BLUETOOTH;
+    private static final int SPEAKER = android.telecom.CallAudioState.ROUTE_SPEAKER;
+
+    private RelayConnection answeredCall() {
+        RelayListener.currentApp = SupportedApp.WHATSAPP;
+        RelayListener.incomingCall = ringingCall();
+        RelayConnectionService service = Robolectric.buildService(RelayConnectionService.class).create().get();
+        RelayConnection connection = (RelayConnection) service.onCreateIncomingConnection(null, answeredRequest());
+        org.robolectric.shadows.ShadowLooper.idleMainLooper();
+        return connection;
+    }
+
+    @Test
+    public void anAnsweredCallWithNoWatchRouteIsAnsweredOnThePhone() {
+        RelayConnection connection = answeredCall();
+        connection.onCallAudioStateChanged(audio(EARPIECE, EARPIECE | SPEAKER));
+
+        org.robolectric.shadows.ShadowLooper.idleMainLooper(RelayConnection.ANSWER_DELAY_MS, java.util.concurrent.TimeUnit.MILLISECONDS);
+
+        assertTrue("app never answered", appAnswered());
+        assertEquals("our call must step aside or the app's microphone stays silent",
+                android.telecom.Connection.STATE_DISCONNECTED, connection.getState());
+        assertEquals("answered on the phone", latest(EventLog.AUDIO_NO_WATCH).detail);
+    }
+
+    @Test
+    public void anAnsweredCallWithAWatchRouteStaysActive() {
+        RelayConnection connection = answeredCall();
+        connection.onCallAudioStateChanged(audio(BLUETOOTH, EARPIECE | BLUETOOTH | SPEAKER));
+
+        org.robolectric.shadows.ShadowLooper.idleMainLooper(RelayConnection.ANSWER_DELAY_MS, java.util.concurrent.TimeUnit.MILLISECONDS);
+
+        assertTrue(appAnswered());
+        assertEquals(android.telecom.Connection.STATE_ACTIVE, connection.getState());
+        connection.onAbort();
+    }
+
+    @Test
+    public void stopsMovingTheVoiceWhenItKeepsLeavingTheWatch() {
+        RelayConnection connection = answeredCall();
+        int all = EARPIECE | BLUETOOTH | SPEAKER;
+
+        for (int i = 0; i < RelayConnection.MAX_BOUNCES; i++) {
+            connection.onCallAudioStateChanged(audio(BLUETOOTH, all));
+            connection.onCallAudioStateChanged(audio(EARPIECE, all));
+        }
+
+        assertEquals("left the watch 3 times", latest(EventLog.AUDIO_GAVE_UP).detail);
+        assertEquals(Boolean.FALSE, RelayConnection.voiceOnWatch());
+        connection.onAbort();
+    }
+
+    @Test
+    public void oneFallBackToThePhoneIsNotGivingUp() {
+        RelayConnection connection = answeredCall();
+        int all = EARPIECE | BLUETOOTH | SPEAKER;
+
+        connection.onCallAudioStateChanged(audio(BLUETOOTH, all));
+        connection.onCallAudioStateChanged(audio(EARPIECE, all));
+        connection.onCallAudioStateChanged(audio(BLUETOOTH, all));
+
+        assertEquals(Boolean.TRUE, RelayConnection.voiceOnWatch());
+        connection.onAbort();
+    }
+
     @Test
     public void anAnsweredCallTelecomCannotCreateStillAnswersTheApp() {
         RelayListener.currentApp = SupportedApp.WHATSAPP;
