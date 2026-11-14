@@ -16,7 +16,7 @@ import java.util.Locale;
  * trigger of a call Wristline started ("watch", "call back"), and the like.
  */
 final class EventLog {
-    static final int MAX = 100;
+    static final int MAX = 250;
 
     // Event codes, as they appear in the report.
     static final String LISTENER_CONNECTED = "listener_connected";

@@ -8,7 +8,7 @@
 
 **Tech Stack:** Java 21, Android SDK, Telecom `Connection`/`CallAudioState`, Wear OS Data Layer (`DataClient`), JUnit 4 + Robolectric 4.17 (`./gradlew :app:testDebugUnitTest`, `./gradlew :wear:testDebugUnitTest`).
 
-**Status (2026-11-14):** Tasks 1–7 are done on branch `report-facts` (commits `d82197a`..`7999c6e`; 498 tests green, both APKs build, lint clean; not yet run on a device). Tasks 8–11 were added after review and are open: start there.
+**Status (2026-11-14):** all 11 tasks are done on branch `report-facts` (519 tests green, both APKs build, lint clean). Not yet run on a device: the device check at the end of this plan, including Task 9's, is what remains before merge.
 
 **Spec:** none as a separate document. Requirements come from the 2026-11-14 analysis of the field report (this plan's "Requirements" section). Analysis summary: companion delivered Decline but never Answer to Wristline's Telecom call; full-mode outgoing call never routed audio to the watch; a WhatsApp call started with no visible trigger and no `outgoing` event; HyperOS unbound the listener within minutes.
 

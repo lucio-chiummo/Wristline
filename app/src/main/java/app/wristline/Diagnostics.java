@@ -55,8 +55,15 @@ final class Diagnostics {
             f.apps.add(new DiagnosticReport.AppState(app.packageName, version, Prefs.appOn(context, app),
                     version == null ? "" : FullMode.state(context, app).name()));
         }
+        // Both ask Play services and can each take seconds: side by side, not one after the other.
+        Thread nodes = new Thread(() -> f.connectedWatches = WatchSync.connectedNodeCount(context), "report-nodes");
+        nodes.start();
         f.watch = WatchSync.watchFacts(context);
-        f.connectedWatches = WatchSync.connectedNodeCount(context);
+        try {
+            nodes.join((WatchSync.REPORT_TIMEOUT_S + 1) * 1000L);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
         PackageManager pm = context.getPackageManager();
         f.defaultDialer = CallBridges.defaultDialer(context);
         f.bridges = CallBridges.inCallServices(pm);
