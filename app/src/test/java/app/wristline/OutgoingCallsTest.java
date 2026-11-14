@@ -83,7 +83,7 @@ public class OutgoingCallsTest {
     public void startsTheAppsOwnVoiceCallEntry() {
         FakeContacts.rows.add(new Object[] {7L, "Corvan", SupportedApp.WHATSAPP.callMimeType, 42L});
 
-        OutgoingCalls.start(context, 7, SupportedApp.WHATSAPP);
+        OutgoingCalls.start(context, 7, SupportedApp.WHATSAPP, OutgoingCalls.TRIGGER_WATCH);
 
         Intent started = shadowOf(context).getNextStartedActivity();
         assertNotNull(started);
@@ -99,7 +99,7 @@ public class OutgoingCallsTest {
         FakeContacts.rows.add(new Object[] {7L, "Corvan", SupportedApp.WHATSAPP.callMimeType, 42L});
         FakeContacts.rows.add(new Object[] {7L, "Corvan", SupportedApp.TELEGRAM.callMimeType, 43L});
 
-        OutgoingCalls.start(context, 7, SupportedApp.TELEGRAM);
+        OutgoingCalls.start(context, 7, SupportedApp.TELEGRAM, OutgoingCalls.TRIGGER_WATCH);
 
         Intent started = shadowOf(context).getNextStartedActivity();
         assertEquals(Uri.withAppendedPath(ContactsContract.Data.CONTENT_URI, "43"), started.getData());
@@ -110,7 +110,7 @@ public class OutgoingCallsTest {
     public void contactWithoutARowForThatAppStartsNothing() {
         FakeContacts.rows.add(new Object[] {7L, "Corvan", SupportedApp.TELEGRAM.callMimeType, 43L});
 
-        OutgoingCalls.start(context, 7, SupportedApp.WHATSAPP);
+        OutgoingCalls.start(context, 7, SupportedApp.WHATSAPP, OutgoingCalls.TRIGGER_WATCH);
 
         assertNull(shadowOf(context).getNextStartedActivity());
         assertArrayEquals(new long[0], Prefs.recentCalls(context));
@@ -118,9 +118,49 @@ public class OutgoingCallsTest {
 
     @Test
     public void unknownContactStartsNothing() {
-        OutgoingCalls.start(context, 99, SupportedApp.WHATSAPP);
+        OutgoingCalls.start(context, 99, SupportedApp.WHATSAPP, OutgoingCalls.TRIGGER_WATCH);
 
         assertNull(shadowOf(context).getNextStartedActivity());
         assertArrayEquals(new long[0], Prefs.recentCalls(context));
+    }
+
+    private EventLog.Entry latest(String code) {
+        for (EventLog.Entry e : Prefs.events(context)) {
+            if (e.code.equals(code)) {
+                return e;
+            }
+        }
+        return null;
+    }
+
+    @Test
+    public void phoneOnlyStartIsStillRecorded() {
+        // No notification listener in tests: the call can't be mirrored, the app starts anyway.
+        FakeContacts.rows.add(new Object[] {7L, "Corvan", SupportedApp.WHATSAPP.callMimeType, 42L});
+
+        OutgoingCalls.start(context, 7, SupportedApp.WHATSAPP, OutgoingCalls.TRIGGER_WATCH);
+
+        assertNotNull(latest(EventLog.OUTGOING_UNMIRRORED));
+        assertEquals("listener off", latest(EventLog.OUTGOING_UNMIRRORED).detail);
+        EventLog.Entry started = latest(EventLog.APP_STARTED);
+        assertNotNull("app start not recorded", started);
+        assertEquals("com.whatsapp", started.app);
+        assertEquals("watch", started.detail);
+    }
+
+    @Test
+    public void callBackTriggerIsRecorded() {
+        FakeContacts.rows.add(new Object[] {7L, "Corvan", SupportedApp.TELEGRAM.callMimeType, 43L});
+
+        OutgoingCalls.start(context, 7, SupportedApp.TELEGRAM, OutgoingCalls.TRIGGER_CALL_BACK);
+
+        assertEquals("call back", latest(EventLog.APP_STARTED).detail);
+    }
+
+    @Test
+    public void nothingStartedRecordsNoStart() {
+        OutgoingCalls.start(context, 99, SupportedApp.WHATSAPP, OutgoingCalls.TRIGGER_WATCH);
+
+        assertNull(latest(EventLog.APP_STARTED));
     }
 }

@@ -43,6 +43,10 @@ final class EventLog {
     static final String AUDIO_NO_WATCH = "audio_no_watch";
     static final String OUTGOING = "outgoing";
     static final String OUTGOING_NOT_STARTED = "outgoing_not_started";
+    /** Wristline started a calling app's call (detail: what asked for it, "watch" or "call back"). */
+    static final String APP_STARTED = "app_started";
+    /** A call from the watch started on the phone only: the notification listener wasn't bound. */
+    static final String OUTGOING_UNMIRRORED = "outgoing_unmirrored";
     static final String ANSWERED_ON_WATCH = "answered_on_watch";
     static final String DECLINED_ON_WATCH = "declined_on_watch";
     static final String HUNG_UP_ON_WATCH = "hung_up_on_watch";

@@ -112,7 +112,7 @@ final class MissedCalls {
             Context appContext = context.getApplicationContext();
             new Thread(() -> {
                 try {
-                    OutgoingCalls.start(appContext, contactId, app);
+                    OutgoingCalls.start(appContext, contactId, app, OutgoingCalls.TRIGGER_CALL_BACK);
                 } finally {
                     pending.finish();
                 }

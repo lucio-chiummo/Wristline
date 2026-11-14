@@ -35,6 +35,6 @@ public class WatchCallService extends WearableListenerService {
             Log.w(RelayListener.TAG, "ignoring call request from the watch");
             return;
         }
-        OutgoingCalls.start(this, request.contactId, request.app);
+        OutgoingCalls.start(this, request.contactId, request.app, OutgoingCalls.TRIGGER_WATCH);
     }
 }
