@@ -42,8 +42,13 @@ public class RelayConnection extends Connection {
      */
     private android.media.AudioManager.AudioRecordingCallback recordingCallback;
 
+    /** While the call is active: the phone's audio link, for the report. */
+    private final AudioLink.Watcher audioLink;
+
     RelayConnection(Context context) {
         this.context = context.getApplicationContext();
+        audioLink = new AudioLink.Watcher(this.context, handler, detail ->
+                Diagnostics.record(this.context, EventLog.AUDIO_LINK, testCall ? null : RelayListener.currentApp, detail));
         setConnectionProperties(PROPERTY_SELF_MANAGED);
         setConnectionCapabilities(CAPABILITY_MUTE | CAPABILITY_SUPPORT_HOLD);
         setAudioModeIsVoip(true);
@@ -389,6 +394,9 @@ public class RelayConnection extends Connection {
     public void onStateChanged(int state) {
         Diagnostics.record(context, EventLog.CALL_STATE, testCall ? null : RelayListener.currentApp,
                 Connection.stateToString(state).toLowerCase(java.util.Locale.ROOT));
+        if (state == STATE_ACTIVE) {
+            audioLink.start();
+        }
         if (state == STATE_ACTIVE && !testCall) {
             watchRecordings();
         }
@@ -409,7 +417,8 @@ public class RelayConnection extends Connection {
                         "left the watch " + bounces + " times");
                 VoiceControls.update(context);
             }
-            String detail = AudioRoute.describe(state.getRoute(), state.getSupportedRouteMask());
+            String detail = AudioRoute.describe(state.getRoute(), state.getSupportedRouteMask())
+                    + (state.getActiveBluetoothDevice() != null ? " bt=active" : "");
             if (!detail.equals(lastRouteDetail)) {
                 lastRouteDetail = detail;
                 Diagnostics.record(context, EventLog.AUDIO_ROUTE, testCall ? null : RelayListener.currentApp, detail);
@@ -452,6 +461,7 @@ public class RelayConnection extends Connection {
         }
         awaitingAppAnswer = false;
         stopWatchingRecordings();
+        audioLink.stop();
         handler.removeCallbacksAndMessages(null);
         setDisconnected(cause);
         destroy();
