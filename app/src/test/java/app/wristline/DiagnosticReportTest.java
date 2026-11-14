@@ -114,4 +114,29 @@ public class DiagnosticReportTest {
         assertTrue(report.contains("Call bridges (InCallService): none\n"));
         assertTrue(report.contains("Watch companion apps: none\n"));
     }
+
+    @Test
+    public void namesTheWatchWhenItReports() {
+        DiagnosticReport.Facts f = facts();
+        f.watch = new WatchSync.WatchFacts("OPPO", "OPPO Watch X3", 35, "1.4");
+        f.connectedWatches = 1;
+        String report = DiagnosticReport.build(f);
+        assertTrue(report.contains("Watch: OPPO OPPO Watch X3, SDK 35, Wristline watch app 1.4 · connected watches: 1\n"));
+        assertTrue("watch line follows the device line",
+                report.indexOf("Watch: ") > report.indexOf("Device: ") && report.indexOf("Watch: ") < report.indexOf("Relaying: "));
+    }
+
+    @Test
+    public void watchUnknownWhenNothingReports() {
+        assertTrue(DiagnosticReport.build(facts()).contains("Watch: watch app not reporting · connected watches: unknown\n"));
+    }
+
+    @Test
+    public void protocolKeysMatchTheWatch() {
+        assertEquals("/wristline/watchinfo", WatchProtocol.PATH_WATCH_INFO);
+        assertEquals("manufacturer", WatchProtocol.KEY_MANUFACTURER);
+        assertEquals("model", WatchProtocol.KEY_MODEL);
+        assertEquals("sdk", WatchProtocol.KEY_SDK);
+        assertEquals("version", WatchProtocol.KEY_VERSION);
+    }
 }

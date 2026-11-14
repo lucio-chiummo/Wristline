@@ -24,6 +24,7 @@ public class RecentTileService extends TileService {
 
     @Override
     protected ListenableFuture<TileBuilders.Tile> onTileRequest(RequestBuilders.TileRequest request) {
+        WatchInfo.publish(this);
         return CallbackToFutureAdapter.getFuture(completer -> {
             new Thread(() -> {
                 try {

@@ -55,6 +55,8 @@ final class Diagnostics {
             f.apps.add(new DiagnosticReport.AppState(app.packageName, version, Prefs.appOn(context, app),
                     version == null ? "" : FullMode.state(context, app).name()));
         }
+        f.watch = WatchSync.watchFacts(context);
+        f.connectedWatches = WatchSync.connectedNodeCount(context);
         PackageManager pm = context.getPackageManager();
         f.defaultDialer = CallBridges.defaultDialer(context);
         f.bridges = CallBridges.inCallServices(pm);
@@ -91,7 +93,7 @@ final class Diagnostics {
         }
     }
 
-    /** The share sheet with the report as plain text. */
+    /** The share sheet with the report as plain text. Blocking (reads the watch): call off the main thread. */
     static Intent shareIntent(Context context) {
         Intent send = new Intent(Intent.ACTION_SEND)
                 .setType("text/plain")

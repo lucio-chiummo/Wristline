@@ -92,7 +92,7 @@ public class MainActivity extends Activity {
         View rowReport = findViewById(R.id.row_report);
         bindRow(rowReport, R.drawable.ic_help, R.string.row_report);
         ((TextView) rowReport.findViewById(R.id.row_sub)).setText(R.string.report_sub);
-        rowReport.setOnClickListener(v -> startActivity(Diagnostics.shareIntent(this)));
+        rowReport.setOnClickListener(v -> shareReport());
         View rowLicence = findViewById(R.id.row_licence);
         bindRow(rowLicence, R.drawable.ic_info, R.string.row_licence);
         ((TextView) rowLicence.findViewById(R.id.row_sub)).setText(R.string.licence_sub);
@@ -458,5 +458,18 @@ public class MainActivity extends Activity {
     private static void bindRow(View row, int icon, int title) {
         ((ImageView) row.findViewById(R.id.row_icon)).setImageResource(icon);
         ((TextView) row.findViewById(R.id.row_title)).setText(title);
+    }
+
+    /** The report reads the watch over the Data Layer (up to seconds): build it off the main thread. */
+    private void shareReport() {
+        android.content.Context app = getApplicationContext();
+        new Thread(() -> {
+            android.content.Intent share = Diagnostics.shareIntent(app);
+            runOnUiThread(() -> {
+                if (!isFinishing() && !isDestroyed()) {
+                    startActivity(share);
+                }
+            });
+        }, "diagnostic-report").start();
     }
 }

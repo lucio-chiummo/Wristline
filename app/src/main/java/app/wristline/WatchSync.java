@@ -129,6 +129,52 @@ final class WatchSync {
         return WatchStatus.of(connected, withApp);
     }
 
+    /** What the watch app published about its watch (Build facts only). */
+    static final class WatchFacts {
+        final String manufacturer;
+        final String model;
+        final int sdk;
+        final String version;
+
+        WatchFacts(String manufacturer, String model, int sdk, String version) {
+            this.manufacturer = manufacturer;
+            this.model = model;
+            this.sdk = sdk;
+            this.version = version;
+        }
+    }
+
+    /** Blocking (Play services, up to 5 s): the watch app's facts, or null when it hasn't published any. */
+    static WatchFacts watchFacts(Context context) {
+        try {
+            android.net.Uri uri = new android.net.Uri.Builder().scheme("wear").path(WatchProtocol.PATH_WATCH_INFO).build();
+            com.google.android.gms.wearable.DataItemBuffer items = Tasks.await(
+                    Wearable.getDataClient(context).getDataItems(uri), 5, TimeUnit.SECONDS);
+            try {
+                for (com.google.android.gms.wearable.DataItem item : items) {
+                    DataMap map = com.google.android.gms.wearable.DataMapItem.fromDataItem(item).getDataMap();
+                    return new WatchFacts(map.getString(WatchProtocol.KEY_MANUFACTURER, "?"),
+                            map.getString(WatchProtocol.KEY_MODEL, "?"), map.getInt(WatchProtocol.KEY_SDK),
+                            map.getString(WatchProtocol.KEY_VERSION, "?"));
+                }
+            } finally {
+                items.release();
+            }
+        } catch (Exception e) {
+            Log.w(RelayListener.TAG, "could not read the watch's facts", e);
+        }
+        return null;
+    }
+
+    /** Blocking (up to 5 s): how many Wear devices are connected; never their names. Null when it can't be told. */
+    static Integer connectedNodeCount(Context context) {
+        try {
+            return Tasks.await(Wearable.getNodeClient(context).getConnectedNodes(), 5, TimeUnit.SECONDS).size();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     static int count(Context context) {
         List<CallableContacts.Contact> contacts = ContactsReader.callable(context);
         return contacts.size();

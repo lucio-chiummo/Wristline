@@ -73,6 +73,7 @@ public class MainActivity extends Activity {
         list.requestFocus(); // rotary crown scrolls the list
         askForNotificationsOnce();
         load(false);
+        WatchInfo.publish(this);
     }
 
     /** For the call indicator on the watch face; asked once, the app works without it. */

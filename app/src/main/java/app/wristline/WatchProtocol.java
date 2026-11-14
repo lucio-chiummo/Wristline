@@ -46,6 +46,12 @@ final class WatchProtocol {
     static final String KEY_ID = "id";
     static final String KEY_NAME = "name";
     static final String KEY_APPS = "apps";
+    /** Data item the watch publishes about itself, for the phone's diagnostic report: Build facts only. */
+    static final String PATH_WATCH_INFO = "/wristline/watchinfo";
+    static final String KEY_MANUFACTURER = "manufacturer";
+    static final String KEY_MODEL = "model";
+    static final String KEY_SDK = "sdk";
+    static final String KEY_VERSION = "version";
     static final int RECENT_MAX = 5;
 
     /** No mute action on the app's in-call notification. */
