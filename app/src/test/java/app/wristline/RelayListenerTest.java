@@ -16,6 +16,8 @@ import android.os.Process;
 import android.service.notification.StatusBarNotification;
 import android.telecom.TelecomManager;
 
+import java.util.List;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -336,5 +338,52 @@ public class RelayListenerTest {
         ShadowLooper.idleMainLooper(CallTracker.GRACE_MS + 1, java.util.concurrent.TimeUnit.MILLISECONDS);
 
         assertNull(missedNotification());
+    }
+
+    private List<EventLog.Entry> withCode(String code) {
+        List<EventLog.Entry> out = new java.util.ArrayList<>();
+        for (EventLog.Entry e : Prefs.events(context)) {
+            if (e.code.equals(code)) {
+                out.add(e);
+            }
+        }
+        return out;
+    }
+
+    @Test
+    public void inCallNotificationWithNoTrackedCallIsRecordedOnce() {
+        listener.onNotificationPosted(ongoing("com.whatsapp", "k9"));
+        listener.onNotificationPosted(ongoing("com.whatsapp", "k9"));   // the call timer refreshes it constantly
+
+        List<EventLog.Entry> untracked = withCode(EventLog.UNTRACKED_CALL);
+        assertEquals(1, untracked.size());
+        assertEquals("com.whatsapp", untracked.get(0).app);
+        assertEquals("", untracked.get(0).detail);
+    }
+
+    @Test
+    public void relayedCallIsNotUntracked() {
+        listener.onNotificationPosted(ringing("com.whatsapp", "k1", "Corvan"));
+        listener.onNotificationPosted(ongoing("com.whatsapp", "k1"));
+
+        assertEquals(0, withCode(EventLog.UNTRACKED_CALL).size());
+    }
+
+    @Test
+    public void aSecondUntrackedCallIsRecordedAfterTheFirstEnds() {
+        listener.onNotificationPosted(ongoing("com.whatsapp", "k9"));
+        listener.onNotificationRemoved(ongoing("com.whatsapp", "k9"));
+        listener.onNotificationPosted(ongoing("com.whatsapp", "k9"));
+
+        assertEquals(2, withCode(EventLog.UNTRACKED_CALL).size());
+    }
+
+    @Test
+    public void anotherAppsCallDuringARelayedOneIsNotUntracked() {
+        // Busy with WhatsApp: Telegram's call is a different story, already logged as busy when it rang.
+        listener.onNotificationPosted(ringing("com.whatsapp", "k1", "Corvan"));
+        listener.onNotificationPosted(ongoing("org.telegram.messenger", "t1"));
+
+        assertEquals(0, withCode(EventLog.UNTRACKED_CALL).size());
     }
 }
