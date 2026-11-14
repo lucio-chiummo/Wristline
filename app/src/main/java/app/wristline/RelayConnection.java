@@ -24,6 +24,10 @@ public class RelayConnection extends Connection {
     private boolean testCall;
     /** The user moved the voice to the phone mid-call: stop pulling it back to the watch. */
     private volatile boolean voiceOnPhone;
+    /** Last audio state written to the report, so repeats aren't logged again. */
+    private String lastRouteDetail;
+    /** "No Bluetooth route" is logged once per call. */
+    private boolean noWatchLogged;
 
     RelayConnection(Context context) {
         this.context = context.getApplicationContext();
@@ -265,6 +269,13 @@ public class RelayConnection extends Connection {
 
     @Override
     public void onCallAudioStateChanged(CallAudioState state) {
+        if (state != null) {
+            String detail = AudioRoute.describe(state.getRoute(), state.getSupportedRouteMask());
+            if (!detail.equals(lastRouteDetail)) {
+                lastRouteDetail = detail;
+                Diagnostics.record(context, EventLog.AUDIO_ROUTE, testCall ? null : RelayListener.currentApp, detail);
+            }
+        }
         routeToWatch(state);
     }
 
@@ -280,6 +291,13 @@ public class RelayConnection extends Connection {
         }
         if (state == null) {
             state = getCallAudioState();
+        }
+        if (isActive() && state != null && (state.getSupportedRouteMask() & CallAudioState.ROUTE_BLUETOOTH) == 0
+                && !noWatchLogged) {
+            noWatchLogged = true;
+            Log.w(RelayListener.TAG, "no Bluetooth route for the call: the watch isn't connected for calls");
+            Diagnostics.record(context, EventLog.AUDIO_NO_WATCH, testCall ? null : RelayListener.currentApp,
+                    "supported=" + AudioRoute.names(state.getSupportedRouteMask()));
         }
         if (isActive() && state != null
                 && (state.getSupportedRouteMask() & CallAudioState.ROUTE_BLUETOOTH) != 0

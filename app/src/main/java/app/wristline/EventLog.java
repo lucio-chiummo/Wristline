@@ -37,6 +37,10 @@ final class EventLog {
     static final String CALL_NOT_CREATED = "call_not_created";
     /** Telecom moved Wristline's call to a new state (detail: ringing, dialing, active, disconnected...). */
     static final String CALL_STATE = "call_state";
+    /** The call's audio route changed (detail "route=<x> supported=<a,b>"). */
+    static final String AUDIO_ROUTE = "audio_route";
+    /** Wristline's call went active with no Bluetooth route to move the voice to: no watch connected for calls. */
+    static final String AUDIO_NO_WATCH = "audio_no_watch";
     static final String OUTGOING = "outgoing";
     static final String OUTGOING_NOT_STARTED = "outgoing_not_started";
     static final String ANSWERED_ON_WATCH = "answered_on_watch";
