@@ -40,6 +40,8 @@ public class TestCallFlowTest {
     public void tearDown() {
         RelayListener.currentApp = null;
         RelayConnection.current = null;
+        Prefs.setRingByNotification(context, false);
+        TestCall.endNotificationTest(context);
     }
 
     private RelayConnection ringingTestCall() {
@@ -125,5 +127,93 @@ public class TestCallFlowTest {
 
         assertEquals(Connection.STATE_DISCONNECTED, connection.getState());
         assertNull(RelayConnection.current);
+    }
+
+    private EventLog.Entry latest(String code) {
+        for (EventLog.Entry e : Prefs.events(context)) {
+            if (e.code.equals(code)) {
+                return e;
+            }
+        }
+        throw new AssertionError("no " + code + " recorded");
+    }
+
+    private void tap(String action) {
+        new ActionReceiver().onReceive(context, new android.content.Intent(action));
+        ShadowLooper.idleMainLooper();
+    }
+
+    @Test
+    public void notificationTestRingsWithoutTelecom() {
+        Prefs.setRingByNotification(context, true);
+
+        assertTrue(RelayListener.startTestCall(context));
+
+        assertEquals(0, telecom.getAllIncomingCalls().size());
+        assertTrue(WatchRing.ringing());
+        assertTrue(TestCall.notificationRinging);
+        assertEquals("started notification", latest(EventLog.TEST_CALL).detail);
+        android.app.Notification n = shadowOf(context.getSystemService(android.app.NotificationManager.class))
+                .getNotification(StatusNotifications.ID_INCOMING_FALLBACK);
+        assertEquals(context.getString(R.string.test_call_caller),
+                n.extras.getCharSequence(android.app.Notification.EXTRA_TITLE).toString());
+    }
+
+    @Test
+    public void answeringTheNotificationTestReachesTheWatch() {
+        Prefs.setRingByNotification(context, true);
+        RelayListener.startTestCall(context);
+
+        tap(ActionReceiver.ANSWER);
+
+        assertEquals(TestCall.Result.REACHED, Prefs.testCallResult(context));
+        assertEquals("test call", latest(EventLog.ANSWERED_ON_WATCH).detail);
+        assertEquals("reached", latest(EventLog.TEST_CALL).detail);
+        assertFalse(WatchRing.ringing());
+        assertFalse(TestCall.notificationRinging);
+    }
+
+    @Test
+    public void decliningTheNotificationTestReachesTheWatch() {
+        Prefs.setRingByNotification(context, true);
+        RelayListener.startTestCall(context);
+
+        tap(ActionReceiver.DECLINE);
+
+        assertEquals(TestCall.Result.REACHED, Prefs.testCallResult(context));
+        assertEquals("test call", latest(EventLog.DECLINED_ON_WATCH).detail);
+        assertFalse(WatchRing.ringing());
+    }
+
+    @Test
+    public void unansweredNotificationTestIsMissed() {
+        Prefs.setRingByNotification(context, true);
+        RelayListener.startTestCall(context);
+
+        ShadowLooper.idleMainLooper(TestCall.RING_MS + 1, TimeUnit.MILLISECONDS);
+
+        assertEquals(TestCall.Result.MISSED, Prefs.testCallResult(context));
+        assertEquals("missed", latest(EventLog.TEST_CALL).detail);
+        assertFalse(WatchRing.ringing());
+        assertFalse(TestCall.notificationRinging);
+    }
+
+    @Test
+    public void answeredNotificationTestIsNotMissedLater() {
+        Prefs.setRingByNotification(context, true);
+        RelayListener.startTestCall(context);
+        tap(ActionReceiver.ANSWER);
+
+        ShadowLooper.idleMainLooper(TestCall.RING_MS + 1, TimeUnit.MILLISECONDS);
+
+        assertEquals(TestCall.Result.REACHED, Prefs.testCallResult(context));
+    }
+
+    @Test
+    public void noSecondTestWhileOneRings() {
+        Prefs.setRingByNotification(context, true);
+        assertTrue(RelayListener.startTestCall(context));
+
+        assertFalse(RelayListener.startTestCall(context));
     }
 }

@@ -98,6 +98,8 @@
     <string name="test_call_sub">Una chiamata di prova: controlla che le chiamate arrivino all\'orologio</string>
     <string name="test_call_caller">Wristline · Prova</string>
     <string name="test_call_started">L\'orologio dovrebbe squillare ora. Rispondi per sentire qualche bip sull\'orologio.</string>
+    <string name="test_call_started_notification">L\'orologio dovrebbe vibrare ora. Tocca Rispondi o Rifiuta lì.</string>
+    <string name="test_call_text">Tocca Rispondi o Rifiuta</string>
     <string name="test_call_busy">Non ora: c\'è una chiamata in corso.</string>
     <string name="test_call_failed">Android non ha accettato la chiamata di prova. Riavvia il telefono e riprova.</string>
     <string name="turn_on">Attiva</string>

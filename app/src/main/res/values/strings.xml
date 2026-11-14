@@ -104,6 +104,8 @@
     <string name="test_call_sub">A test call: check that calls reach the watch</string>
     <string name="test_call_caller">Wristline · Test</string>
     <string name="test_call_started">Your watch should ring now. Answer to hear a few beeps on the watch.</string>
+    <string name="test_call_started_notification">Your watch should buzz now. Tap Answer or Decline there.</string>
+    <string name="test_call_text">Tap Answer or Decline</string>
     <string name="test_call_busy">Not now: a call is in progress.</string>
     <string name="test_call_failed">Android didn\'t accept the test call. Restart the phone and try again.</string>
     <string name="turn_on">Turn on</string>

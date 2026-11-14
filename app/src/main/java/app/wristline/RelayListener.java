@@ -239,9 +239,16 @@ public class RelayListener extends NotificationListenerService {
      * on or Telecom refuses; works without notification access.
      */
     static boolean startTestCall(Context context) {
-        if (TestCall.check(currentApp != null, RelayConnection.current != null) != TestCall.Start.OK) {
+        if (TestCall.check(currentApp != null, RelayConnection.current != null) != TestCall.Start.OK
+                || TestCall.notificationRinging) {
             Log.i(TAG, "not starting a test call: a call is on");
             return false;
+        }
+        if (Prefs.ringByNotification(context)) {
+            Log.i(TAG, "test call started (by notification)");
+            Diagnostics.record(context, EventLog.TEST_CALL, "", "started notification");
+            TestCall.startNotificationTest(context);
+            return true;
         }
         Bundle extras = new Bundle();
         extras.putString(EXTRA_CALLER, context.getString(R.string.test_call_caller));
@@ -261,6 +268,7 @@ public class RelayListener extends NotificationListenerService {
     private void startCall(SupportedApp app, CallActions call) {
         // A real call replaces a test call that is still ringing.
         RelayConnection.endTestCall();
+        TestCall.endNotificationTest(this);
         currentApp = app;
         ongoingCall = null;
         shownOngoingLabels = null;
