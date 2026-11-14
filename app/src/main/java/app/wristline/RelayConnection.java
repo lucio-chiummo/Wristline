@@ -114,12 +114,7 @@ public class RelayConnection extends Connection {
 
     /** Remembers how the test call went and tells Home (posted apart: end() clears our handler). */
     private void testResult(TestCall.Result result) {
-        Prefs.setTestCallResult(context, result);
-        Diagnostics.record(context, EventLog.TEST_CALL, "", result.name().toLowerCase(java.util.Locale.ROOT));
-        Runnable listener = TestCall.onResult;
-        if (listener != null) {
-            new Handler(Looper.getMainLooper()).post(listener);
-        }
+        TestCall.report(context, result);
     }
 
     /** Answered test call: audio to the watch, a few beeps there, then hang up. */

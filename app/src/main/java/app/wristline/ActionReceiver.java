@@ -24,8 +24,12 @@ public class ActionReceiver extends BroadcastReceiver {
             }
             return;
         }
-        WatchRing.stop(context);
         boolean answer = ANSWER.equals(action);
+        if (TestCall.notificationRinging) {
+            TestCall.notificationTestTapped(context, answer);
+            return;
+        }
+        WatchRing.stop(context);
         if (RelayListener.currentApp == null) {
             // The watch can still show the buttons of a call that is over.
             return;

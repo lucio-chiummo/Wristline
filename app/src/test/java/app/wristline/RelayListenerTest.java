@@ -50,6 +50,7 @@ public class RelayListenerTest {
         RelayListener.clearCall(context);
         RelayConnection.current = null;
         Prefs.setRingByNotification(context, false);
+        TestCall.endNotificationTest(context);
         WatchRing.stop(context);
     }
 
@@ -477,5 +478,19 @@ public class RelayListenerTest {
         assertFalse(WatchRing.ringing());
         assertEquals("notification", withCode(EventLog.DECLINED_ON_WATCH).get(0).detail);
         assertTrue(RelayListener.isIncomingHandled());
+    }
+
+    @Test
+    public void aRealCallReplacesTheNotificationTest() {
+        Prefs.setRingByNotification(context, true);
+        Prefs.setTestCallResult(context, TestCall.Result.NONE);
+        RelayListener.startTestCall(context);
+
+        listener.onNotificationPosted(ringing("com.whatsapp", "k1", "Corvan"));
+        ShadowLooper.idleMainLooper(TestCall.RING_MS + 1, java.util.concurrent.TimeUnit.MILLISECONDS);
+
+        assertFalse(TestCall.notificationRinging);
+        assertEquals("the test was cut short: no verdict", TestCall.Result.NONE, Prefs.testCallResult(context));
+        assertEquals("Corvan", ring().extras.getCharSequence(Notification.EXTRA_TITLE).toString());
     }
 }

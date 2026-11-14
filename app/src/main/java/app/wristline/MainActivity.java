@@ -447,10 +447,12 @@ public class MainActivity extends Activity {
 
     private void ringWatch() {
         int result;
-        if (RelayConnection.current != null || RelayListener.currentApp != null) {
+        if (RelayConnection.current != null || RelayListener.currentApp != null || TestCall.notificationRinging) {
             result = R.string.test_call_busy;
+        } else if (!RelayListener.startTestCall(this)) {
+            result = R.string.test_call_failed;
         } else {
-            result = RelayListener.startTestCall(this) ? R.string.test_call_started : R.string.test_call_failed;
+            result = Prefs.ringByNotification(this) ? R.string.test_call_started_notification : R.string.test_call_started;
         }
         Toast.makeText(this, result, Toast.LENGTH_LONG).show();
     }
