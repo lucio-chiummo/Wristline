@@ -1,6 +1,7 @@
 package app.wristline;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
@@ -21,6 +22,11 @@ public class DiagnosticReportTest {
                 new DiagnosticReport.AppState("com.whatsapp", "1.2.3", true, "ON"),
                 new DiagnosticReport.AppState("org.telegram.messenger", null, true, ""));
         f.events = List.of(new EventLog.Entry(0, EventLog.INCOMING, "com.whatsapp", "full mode"));
+        f.brand = "Acme";
+        f.release = "17";
+        f.display = "ACME.1";
+        f.locale = "it-IT";
+        f.bluetoothCallAudio = true;
         return f;
     }
 
@@ -29,7 +35,7 @@ public class DiagnosticReportTest {
         String report = DiagnosticReport.build(facts());
 
         assertTrue(report.startsWith("Wristline 1.2\n"));
-        assertTrue(report.contains("Acme Phone 1, Android SDK 36, patch 2026-01-01"));
+        assertTrue(report.contains("Acme Phone 1 (Acme), Android 17 (ACME.1), SDK 36, patch 2026-01-01"));
         assertTrue(report.contains("Notification listener: NOT connected"));
         assertTrue(report.contains("Missing permissions: BATTERY"));
         assertTrue(report.contains("- com.whatsapp: 1.2.3, switch on, voice ON"));
@@ -59,5 +65,115 @@ public class DiagnosticReportTest {
         assertEquals("category=call ongoing=true callType=1 fullScreen=false actions=[Decline, Answer]", shape);
         assertEquals("category=none ongoing=false callType=none fullScreen=true actions=[]",
                 NotificationShape.describe(null, false, null, true, List.of()));
+    }
+
+    @Test
+    public void phoneLineNamesBrandReleaseAndLocale() {
+        String report = DiagnosticReport.build(facts());
+        assertTrue(report.contains("Device: Acme Phone 1 (Acme), Android 17 (ACME.1), SDK 36, patch 2026-01-01, locale it-IT\n"));
+        assertTrue(report.contains("Bluetooth call audio device: yes\n"));
+    }
+
+    @Test
+    public void unknownBluetoothSaysUnknown() {
+        DiagnosticReport.Facts f = facts();
+        f.bluetoothCallAudio = null;
+        assertTrue(DiagnosticReport.build(f).contains("Bluetooth call audio device: unknown\n"));
+    }
+
+    @Test
+    public void listsCallBridgesAndCompanions() {
+        DiagnosticReport.Facts f = facts();
+        f.defaultDialer = "com.android.dialer";
+        f.bridges = List.of(new CallBridges.Bridge("com.example.bridge", "2.0", true, false));
+        f.companions = List.of("com.heytap.health.international 4.2.0");
+        String report = DiagnosticReport.build(f);
+        assertTrue(report.contains("Default dialer: com.android.dialer\n"));
+        assertTrue(report.contains("Call bridges (InCallService):\n- com.example.bridge 2.0, self-managed yes, ui no\n"));
+        assertTrue(report.contains("Watch companion apps:\n- com.heytap.health.international 4.2.0\n"));
+        assertTrue("bridges come before the events",
+                report.indexOf("Call bridges") < report.indexOf("Recent events"));
+    }
+
+    @Test
+    public void capsLongBridgeLists() {
+        DiagnosticReport.Facts f = facts();
+        List<CallBridges.Bridge> many = new java.util.ArrayList<>();
+        for (int i = 0; i < 14; i++) {
+            many.add(new CallBridges.Bridge("com.example.b" + (char) ('a' + i), "1", false, false));
+        }
+        f.bridges = many;
+        String report = DiagnosticReport.build(f);
+        assertTrue(report.contains("- com.example.bl 1, self-managed no, ui no\n- … and 2 more\n"));
+        assertFalse(report.contains("com.example.bm"));
+    }
+
+    @Test
+    public void noBridgesOrCompanionsSaysNone() {
+        String report = DiagnosticReport.build(facts());
+        assertTrue(report.contains("Call bridges (InCallService): none\n"));
+        assertTrue(report.contains("Watch companion apps: none\n"));
+    }
+
+    @Test
+    public void namesTheWatchWhenItReports() {
+        DiagnosticReport.Facts f = facts();
+        f.watch = new WatchSync.WatchFacts("OPPO", "OPPO Watch X3", 35, "1.4");
+        f.connectedWatches = 1;
+        String report = DiagnosticReport.build(f);
+        assertTrue(report.contains("Watch: OPPO OPPO Watch X3, SDK 35, Wristline watch app 1.4 · connected watches: 1\n"));
+        assertTrue("watch line follows the device line",
+                report.indexOf("Watch: ") > report.indexOf("Device: ") && report.indexOf("Watch: ") < report.indexOf("Relaying: "));
+    }
+
+    @Test
+    public void watchUnknownWhenNothingReports() {
+        assertTrue(DiagnosticReport.build(facts()).contains("Watch: watch app not reporting · connected watches: unknown\n"));
+    }
+
+    @Test
+    public void protocolKeysMatchTheWatch() {
+        assertEquals("/wristline/watchinfo", WatchProtocol.PATH_WATCH_INFO);
+        assertEquals("manufacturer", WatchProtocol.KEY_MANUFACTURER);
+        assertEquals("model", WatchProtocol.KEY_MODEL);
+        assertEquals("sdk", WatchProtocol.KEY_SDK);
+        assertEquals("version", WatchProtocol.KEY_VERSION);
+    }
+
+    /** A report line carrying something that reads like a phone number (event timestamps aside). */
+    private static boolean looksPersonal(String line) {
+        // Dates (event times, security patch) aside; dots stay, so versions like 2.26.45.12 don't fuse.
+        String body = line.replaceAll("\\d{4}-\\d{2}-\\d{2}( \\d{2}:\\d{2}:\\d{2})?", "");
+        return body.replaceAll("[\\s()-]", "").matches(".*\\d{7,}.*");
+    }
+
+    private static DiagnosticReport.Facts everyFact() {
+        DiagnosticReport.Facts f = facts();
+        f.watch = new WatchSync.WatchFacts("OPPO", "OPPO Watch X3", 35, "1.4");
+        f.connectedWatches = 1;
+        f.defaultDialer = "com.android.dialer";
+        f.bridges = List.of(new CallBridges.Bridge("com.example.bridge", "2.26.45.12", true, false));
+        f.companions = List.of("com.heytap.health.international 4.2.0");
+        f.events = List.of(
+                new EventLog.Entry(1763136000000L, EventLog.AUDIO_ROUTE, "", "route=earpiece supported=earpiece,bluetooth"),
+                new EventLog.Entry(1763136000000L, EventLog.CALL_STATE, "com.whatsapp", "active"),
+                new EventLog.Entry(1763136000000L, EventLog.APP_STARTED, "com.whatsapp", "watch"));
+        return f;
+    }
+
+    @Test
+    public void guardCatchesANumber() {
+        assertTrue(looksPersonal("2026-11-13 17:31:15 incoming com.whatsapp +39 333 123 4567"));
+        assertFalse(looksPersonal("2026-11-13 17:31:15 incoming com.whatsapp full mode"));
+        assertTrue(looksPersonal("Watch: OPPO 0612345678"));
+        assertFalse(looksPersonal("- com.whatsapp: 2.26.45.12, switch on, voice ON"));
+        assertFalse(looksPersonal("Device: Acme (Acme), Android 17, SDK 36, patch 2026-01-01, locale it-IT"));
+    }
+
+    @Test
+    public void reportHoldsNoNumbers() {
+        for (String line : DiagnosticReport.build(everyFact()).split("\n")) {
+            assertFalse(line, looksPersonal(line));
+        }
     }
 }

@@ -24,6 +24,17 @@ public class RelayConnection extends Connection {
     private boolean testCall;
     /** The user moved the voice to the phone mid-call: stop pulling it back to the watch. */
     private volatile boolean voiceOnPhone;
+    /** Last audio state written to the report, so repeats aren't logged again. */
+    private String lastRouteDetail;
+    /** "No Bluetooth route" is logged once per call. */
+    private boolean noWatchLogged;
+    /** Last recordings summary written to the report, so repeats aren't logged again. */
+    private String lastRecordings;
+    /**
+     * While the call is active: is Android muting a recording (the calling app's microphone)?
+     * Reads the kind of input and the muted flag only.
+     */
+    private android.media.AudioManager.AudioRecordingCallback recordingCallback;
 
     RelayConnection(Context context) {
         this.context = context.getApplicationContext();
@@ -208,6 +219,7 @@ public class RelayConnection extends Connection {
 
     @Override
     public void onAnswer(int videoState) {
+        signal("answer video=" + videoState);
         onAnswer();
     }
 
@@ -256,8 +268,104 @@ public class RelayConnection extends Connection {
         // The app already shows its own incoming-call screen on the phone.
     }
 
+    private void watchRecordings() {
+        if (recordingCallback != null) {
+            return;
+        }
+        android.media.AudioManager.AudioRecordingCallback callback = new android.media.AudioManager.AudioRecordingCallback() {
+            @Override
+            public void onRecordingConfigChanged(java.util.List<android.media.AudioRecordingConfiguration> configs) {
+                java.util.List<String> described = new java.util.ArrayList<>();
+                for (android.media.AudioRecordingConfiguration config : configs) {
+                    described.add(Recordings.describe(config.getClientAudioSource(), config.isClientSilenced()));
+                }
+                String summary = Recordings.summary(described);
+                if (recordingCallback == this && !summary.equals(lastRecordings)) {
+                    lastRecordings = summary;
+                    Diagnostics.record(context, EventLog.RECORDING, RelayListener.currentApp, summary);
+                }
+            }
+        };
+        try {
+            context.getSystemService(android.media.AudioManager.class).registerAudioRecordingCallback(callback, handler);
+            recordingCallback = callback;
+        } catch (RuntimeException e) {
+            Log.w(RelayListener.TAG, "could not watch recordings", e);
+        }
+    }
+
+    private void stopWatchingRecordings() {
+        android.media.AudioManager.AudioRecordingCallback callback = recordingCallback;
+        recordingCallback = null;
+        if (callback != null) {
+            try {
+                context.getSystemService(android.media.AudioManager.class).unregisterAudioRecordingCallback(callback);
+            } catch (RuntimeException e) {
+                Log.w(RelayListener.TAG, "could not stop watching recordings", e);
+            }
+        }
+    }
+
+    /** For the report only: what else Telecom (so, a watch's companion app) sends this call. Changes nothing. */
+    private void signal(String detail) {
+        Diagnostics.record(context, EventLog.CALL_SIGNAL, testCall ? null : RelayListener.currentApp, detail);
+    }
+
+    @Override
+    public void onSilence() {
+        signal("silence");
+    }
+
+    @Override
+    public void onHold() {
+        signal("hold");
+    }
+
+    @Override
+    public void onUnhold() {
+        signal("unhold");
+    }
+
+    @Override
+    public void onCallEvent(String event, android.os.Bundle extras) {
+        signal("event " + event);
+    }
+
+    /** The digit stays out: one typed into a call can be a PIN. */
+    @Override
+    public void onPlayDtmfTone(char c) {
+        signal("dtmf");
+    }
+
+    /** Key names only: the values can hold a caller's name or number. */
+    @Override
+    public void onExtrasChanged(android.os.Bundle extras) {
+        if (extras == null || extras.isEmpty()) {
+            signal("extras none");
+            return;
+        }
+        signal("extras " + String.join(",", new java.util.TreeSet<>(extras.keySet())));
+    }
+
+    /** For the report: whether Telecom ever took the watch's Answer shows up as ringing → active. */
+    @Override
+    public void onStateChanged(int state) {
+        Diagnostics.record(context, EventLog.CALL_STATE, testCall ? null : RelayListener.currentApp,
+                Connection.stateToString(state).toLowerCase(java.util.Locale.ROOT));
+        if (state == STATE_ACTIVE && !testCall) {
+            watchRecordings();
+        }
+    }
+
     @Override
     public void onCallAudioStateChanged(CallAudioState state) {
+        if (state != null) {
+            String detail = AudioRoute.describe(state.getRoute(), state.getSupportedRouteMask());
+            if (!detail.equals(lastRouteDetail)) {
+                lastRouteDetail = detail;
+                Diagnostics.record(context, EventLog.AUDIO_ROUTE, testCall ? null : RelayListener.currentApp, detail);
+            }
+        }
         routeToWatch(state);
     }
 
@@ -274,6 +382,13 @@ public class RelayConnection extends Connection {
         if (state == null) {
             state = getCallAudioState();
         }
+        if (isActive() && state != null && (state.getSupportedRouteMask() & CallAudioState.ROUTE_BLUETOOTH) == 0
+                && !noWatchLogged) {
+            noWatchLogged = true;
+            Log.w(RelayListener.TAG, "no Bluetooth route for the call: the watch isn't connected for calls");
+            Diagnostics.record(context, EventLog.AUDIO_NO_WATCH, testCall ? null : RelayListener.currentApp,
+                    "supported=" + AudioRoute.names(state.getSupportedRouteMask()));
+        }
         if (isActive() && state != null
                 && (state.getSupportedRouteMask() & CallAudioState.ROUTE_BLUETOOTH) != 0
                 && state.getRoute() != CallAudioState.ROUTE_BLUETOOTH) {
@@ -287,6 +402,7 @@ public class RelayConnection extends Connection {
             current = null;
         }
         awaitingAppAnswer = false;
+        stopWatchingRecordings();
         handler.removeCallbacksAndMessages(null);
         setDisconnected(cause);
         destroy();

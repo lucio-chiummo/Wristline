@@ -6,6 +6,7 @@ import static org.junit.Assert.assertTrue;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.telecom.CallAudioState;
 import android.telecom.ConnectionRequest;
 
 import org.junit.After;
@@ -151,5 +152,212 @@ public class CallDiagnosticsTest {
         assertEquals(EventLog.DECLINED_ON_WATCH, e.code);
         assertEquals("notification", e.detail);
         assertTrue(RelayListener.isIncomingHandled());
+    }
+
+    /** Codes in the log, newest first, with only this code. */
+    private List<EventLog.Entry> withCode(String code) {
+        List<EventLog.Entry> out = new java.util.ArrayList<>();
+        for (EventLog.Entry e : Prefs.events(context)) {
+            if (e.code.equals(code)) {
+                out.add(e);
+            }
+        }
+        return out;
+    }
+
+    @Test
+    public void telecomStateChangesAreRecorded() {
+        RelayListener.currentApp = SupportedApp.WHATSAPP;
+        RelayConnection connection = new RelayConnection(context);
+
+        connection.setRinging();
+        connection.setActive();
+
+        List<EventLog.Entry> states = withCode(EventLog.CALL_STATE);
+        assertEquals(2, states.size());
+        assertEquals("active", states.get(0).detail);
+        assertEquals("ringing", states.get(1).detail);
+        assertEquals("com.whatsapp", states.get(0).app);
+        connection.onAbort();
+    }
+
+    @Test
+    public void audioStateIsRecordedOncePerChange() {
+        RelayConnection connection = new RelayConnection(context);
+        CallAudioState earpiece = new CallAudioState(false, CallAudioState.ROUTE_EARPIECE,
+                CallAudioState.ROUTE_EARPIECE | CallAudioState.ROUTE_SPEAKER);
+
+        connection.onCallAudioStateChanged(earpiece);
+        connection.onCallAudioStateChanged(earpiece);
+        connection.onCallAudioStateChanged(new CallAudioState(false, CallAudioState.ROUTE_SPEAKER,
+                CallAudioState.ROUTE_EARPIECE | CallAudioState.ROUTE_SPEAKER));
+
+        List<EventLog.Entry> routes = withCode(EventLog.AUDIO_ROUTE);
+        assertEquals(2, routes.size());
+        assertEquals("route=speaker supported=earpiece,speaker", routes.get(0).detail);
+        assertEquals("route=earpiece supported=earpiece,speaker", routes.get(1).detail);
+    }
+
+    @Test
+    public void missingBluetoothRouteWhileActiveIsRecordedOnce() {
+        RelayConnection connection = new RelayConnection(context);
+        connection.setActive();
+        CallAudioState noBluetooth = new CallAudioState(false, CallAudioState.ROUTE_EARPIECE,
+                CallAudioState.ROUTE_EARPIECE | CallAudioState.ROUTE_SPEAKER);
+
+        connection.onCallAudioStateChanged(noBluetooth);
+        connection.onCallAudioStateChanged(noBluetooth);
+
+        List<EventLog.Entry> missing = withCode(EventLog.AUDIO_NO_WATCH);
+        assertEquals(1, missing.size());
+        assertEquals("supported=earpiece,speaker", missing.get(0).detail);
+        connection.onAbort();
+    }
+
+    @Test
+    public void bluetoothRouteAvailableIsNotReportedMissing() {
+        RelayConnection connection = new RelayConnection(context);
+        connection.setActive();
+
+        connection.onCallAudioStateChanged(new CallAudioState(false, CallAudioState.ROUTE_BLUETOOTH,
+                CallAudioState.ROUTE_EARPIECE | CallAudioState.ROUTE_BLUETOOTH));
+
+        assertEquals(0, withCode(EventLog.AUDIO_NO_WATCH).size());
+        connection.onAbort();
+    }
+
+    @Test
+    public void otherTelecomSignalsAreRecorded() {
+        RelayConnection connection = new RelayConnection(context);
+
+        connection.onSilence();
+        connection.onHold();
+        connection.onUnhold();
+        connection.onCallEvent("com.example.ANSWERED_ON_WATCH", new Bundle());
+
+        List<EventLog.Entry> signals = withCode(EventLog.CALL_SIGNAL);
+        assertEquals(4, signals.size());
+        assertEquals("event com.example.ANSWERED_ON_WATCH", signals.get(0).detail);
+        assertEquals("unhold", signals.get(1).detail);
+        assertEquals("hold", signals.get(2).detail);
+        assertEquals("silence", signals.get(3).detail);
+    }
+
+    @Test
+    public void holdIsOnlyObserved() {
+        RelayConnection connection = new RelayConnection(context);
+        connection.setActive();
+
+        connection.onHold();
+
+        assertTrue("observing must not put the call on hold", connection.isActive());
+        connection.onAbort();
+    }
+
+    @Test
+    public void dtmfIsRecordedWithoutItsDigit() {
+        RelayConnection connection = new RelayConnection(context);
+
+        connection.onPlayDtmfTone('7');
+
+        assertEquals("dtmf", withCode(EventLog.CALL_SIGNAL).get(0).detail);
+    }
+
+    @Test
+    public void changedExtrasAreRecordedByKeyOnly() {
+        RelayConnection connection = new RelayConnection(context);
+        Bundle extras = new Bundle();
+        extras.putString("zeta", "+39 333 123 4567");
+        extras.putString("alpha", "Corvan");
+
+        connection.onExtrasChanged(extras);
+        connection.onExtrasChanged(null);
+
+        assertEquals("extras none", withCode(EventLog.CALL_SIGNAL).get(0).detail);
+        assertEquals("extras alpha,zeta", withCode(EventLog.CALL_SIGNAL).get(1).detail);
+    }
+
+    @Test
+    public void answerWithVideoStateIsRecordedAsItArrives() {
+        RelayConnection connection = new RelayConnection(context);
+        connection.setRinging();
+        RelayConnection.current = connection;
+
+        connection.onAnswer(0);   // no incoming call known: Wristline drops it, the report still shows it came
+
+        assertEquals("answer video=0", withCode(EventLog.CALL_SIGNAL).get(0).detail);
+    }
+
+    private List<android.media.AudioRecordingConfiguration> oneVoiceCommunication(android.media.AudioManager am) {
+        return List.of(org.robolectric.Shadows.shadowOf(am).createActiveRecordingConfiguration(
+                1, android.media.MediaRecorder.AudioSource.VOICE_COMMUNICATION, "com.whatsapp"));
+    }
+
+    private void idle() {
+        org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
+    }
+
+    @Test
+    public void recordingChangesAreRecordedOncePerChangeWhileActive() {
+        RelayListener.currentApp = SupportedApp.WHATSAPP;
+        RelayConnection connection = new RelayConnection(context);
+        connection.setActive();
+        android.media.AudioManager am = context.getSystemService(android.media.AudioManager.class);
+
+        org.robolectric.Shadows.shadowOf(am).setActiveRecordingConfigurations(oneVoiceCommunication(am), true);
+        idle();
+        org.robolectric.Shadows.shadowOf(am).setActiveRecordingConfigurations(oneVoiceCommunication(am), true);
+        idle();
+        org.robolectric.Shadows.shadowOf(am).setActiveRecordingConfigurations(List.of(), true);
+        idle();
+
+        List<EventLog.Entry> recordings = withCode(EventLog.RECORDING);
+        assertEquals(2, recordings.size());
+        assertEquals("none", recordings.get(0).detail);
+        assertEquals("source=voice_communication silenced=false", recordings.get(1).detail);
+        assertEquals("com.whatsapp", recordings.get(1).app);
+        connection.onAbort();
+    }
+
+    @Test
+    public void recordingsAreNotWatchedBeforeTheCallIsActive() {
+        RelayConnection connection = new RelayConnection(context);
+        connection.setRinging();
+        android.media.AudioManager am = context.getSystemService(android.media.AudioManager.class);
+
+        org.robolectric.Shadows.shadowOf(am).setActiveRecordingConfigurations(oneVoiceCommunication(am), true);
+        idle();
+
+        assertEquals(0, withCode(EventLog.RECORDING).size());
+        connection.onAbort();
+    }
+
+    @Test
+    public void recordingsAreNotWatchedAfterTheCallEnds() {
+        RelayConnection connection = new RelayConnection(context);
+        connection.setActive();
+        connection.onAbort();
+        android.media.AudioManager am = context.getSystemService(android.media.AudioManager.class);
+
+        org.robolectric.Shadows.shadowOf(am).setActiveRecordingConfigurations(oneVoiceCommunication(am), true);
+        idle();
+
+        assertEquals(0, withCode(EventLog.RECORDING).size());
+    }
+
+    @Test
+    public void testCallsDoNotWatchRecordings() {
+        RelayConnection connection = new RelayConnection(context);
+        connection.setRinging();
+        connection.markTestCall();
+        RelayConnection.current = connection;
+        connection.onAnswer();
+        android.media.AudioManager am = context.getSystemService(android.media.AudioManager.class);
+
+        org.robolectric.Shadows.shadowOf(am).setActiveRecordingConfigurations(oneVoiceCommunication(am), true);
+        idle();
+
+        assertEquals(0, withCode(EventLog.RECORDING).size());
+        connection.onAbort();
     }
 }

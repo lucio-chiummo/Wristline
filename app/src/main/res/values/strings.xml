@@ -96,8 +96,9 @@
     <string name="licence_sub" translatable="false">PolyForm Noncommercial 1.0.0</string>
     <string name="licence_open">Open project page</string>
     <string name="licence_notice">Wristline\nCopyright © 2026 Lucio Chiummo\n\nLicensed under the PolyForm Noncommercial License 1.0.0: you can use, change and share it for noncommercial purposes only. Any other use needs the author\'s permission. It comes as is, with NO WARRANTY, as far as the law allows.\n\nA copy of the licence and its notices is inside the app. They, the third-party licences and the source code are also on the project page.</string>
-    <string name="report_sub">Setup and recent events, including when calls happened. Caller names and numbers are left out. Only sent if you share it: check it before posting it publicly.</string>
+    <string name="report_sub">Setup, recent events (including when calls happened), your phone and watch models, and the apps on this phone that pass calls to a watch. Caller names and numbers are left out. Only sent if you share it: check it before posting it publicly.</string>
     <string name="report_subject">Wristline diagnostic report</string>
+    <string name="report_preparing">Preparing report…</string>
     <string name="unreadable_title">A %1$s call didn\'t reach the watch</string>
     <string name="unreadable_text">Wristline couldn\'t find the Answer and Decline buttons on %1$s\'s call notification; an update of %1$s may have changed it. Open Wristline → Share diagnostic report to help fix it.</string>
     <string name="test_call_sub">A test call: check that calls reach the watch</string>

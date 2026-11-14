@@ -92,7 +92,7 @@ public class MainActivity extends Activity {
         View rowReport = findViewById(R.id.row_report);
         bindRow(rowReport, R.drawable.ic_help, R.string.row_report);
         ((TextView) rowReport.findViewById(R.id.row_sub)).setText(R.string.report_sub);
-        rowReport.setOnClickListener(v -> startActivity(Diagnostics.shareIntent(this)));
+        rowReport.setOnClickListener(v -> shareReport());
         View rowLicence = findViewById(R.id.row_licence);
         bindRow(rowLicence, R.drawable.ic_info, R.string.row_licence);
         ((TextView) rowLicence.findViewById(R.id.row_sub)).setText(R.string.licence_sub);
@@ -458,5 +458,30 @@ public class MainActivity extends Activity {
     private static void bindRow(View row, int icon, int title) {
         ((ImageView) row.findViewById(R.id.row_icon)).setImageResource(icon);
         ((TextView) row.findViewById(R.id.row_title)).setText(title);
+    }
+
+    /** The report being built, if any (tests wait on it). */
+    Thread reportThread;
+
+    /**
+     * The report asks the watch over the Data Layer (seconds): it's built off the main thread, says
+     * so at once, and a second tap meanwhile does nothing.
+     */
+    private void shareReport() {
+        if (reportThread != null) {
+            return;
+        }
+        android.widget.Toast.makeText(this, R.string.report_preparing, android.widget.Toast.LENGTH_SHORT).show();
+        android.content.Context app = getApplicationContext();
+        reportThread = new Thread(() -> {
+            android.content.Intent share = Diagnostics.shareIntent(app);
+            runOnUiThread(() -> {
+                reportThread = null;
+                if (!isFinishing() && !isDestroyed()) {
+                    startActivity(share);
+                }
+            });
+        }, "diagnostic-report");
+        reportThread.start();
     }
 }
