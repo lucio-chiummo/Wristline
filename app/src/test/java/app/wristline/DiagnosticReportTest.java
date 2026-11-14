@@ -176,4 +176,12 @@ public class DiagnosticReportTest {
             assertFalse(line, looksPersonal(line));
         }
     }
+
+    @Test
+    public void saysWhetherItRingsByNotification() {
+        DiagnosticReport.Facts f = facts();
+        assertTrue(DiagnosticReport.build(f).contains("Ring by notification: off\n"));
+        f.ringByNotification = true;
+        assertTrue(DiagnosticReport.build(f).contains("Ring by notification: on\n"));
+    }
 }

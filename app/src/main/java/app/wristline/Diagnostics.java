@@ -44,6 +44,7 @@ final class Diagnostics {
         f.locale = java.util.Locale.getDefault().toLanguageTag();
         f.bluetoothCallAudio = bluetoothCallAudio(context.getSystemService(AudioManager.class));
         f.relayOn = Prefs.relayOn(context);
+        f.ringByNotification = Prefs.ringByNotification(context);
         f.watchCalling = Prefs.watchCalling(context);
         f.listenerConnected = RelayListener.isConnected();
         f.keyPresent = app.wristline.adb.AdbKey.exists(context);

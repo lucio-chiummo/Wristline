@@ -81,7 +81,13 @@
     <string name="rules_explain">How it works</string>
     <string name="dnd_on">Follows your phone: calls it silences don\'t ring the watch</string>
     <string name="dnd_off">Ignored: calls ring the watch even in Do Not Disturb</string>
-    <string name="dnd_message">When your phone is in Do Not Disturb (or Bedtime), Wristline can follow it: a call your phone would silence doesn\'t ring the watch either, and one it lets through (favourite contacts, repeat callers) still does. Change who gets through in your phone\'s Do Not Disturb settings.\n\n\"Not while I\'m using the phone\": when the phone is unlocked with the screen on, a call rings only the phone, not the watch.</string>
+    <string name="dnd_message">When your phone is in Do Not Disturb (or Bedtime), Wristline can follow it: a call your phone would silence doesn\'t ring the watch either, and one it lets through (favourite contacts, repeat callers) still does. Change who gets through in your phone\'s Do Not Disturb settings.\n\n\"Not while I\'m using the phone\": when the phone is unlocked with the screen on, a call rings only the phone, not the watch.\n\n\"Ring with a notification\": for watches where Answer on the call screen does nothing. The watch buzzes every few seconds with Answer and Decline; you talk on the phone.</string>
+    <string name="ring_by_notification">Ring with a notification</string>
+    <string name="ring_question_title">Did the watch ring?</string>
+    <string name="ring_question_text">If it rang but Answer did nothing, Wristline can ring your watch with a notification instead. It buzzes every few seconds, with Answer and Decline.</string>
+    <string name="ring_question_switch">Switch and ring again</string>
+    <string name="ring_question_again">Ring again</string>
+    <string name="try_missed_notification_desc">Check that the watch is connected and that it shows Wristline\'s notifications. Then try again.</string>
     <string name="dnd_follow">Follow Do Not Disturb</string>
     <string name="channel_missed">Missed calls</string>
     <string name="missed_title">Missed %1$s call</string>
