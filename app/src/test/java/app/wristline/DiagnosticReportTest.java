@@ -1,6 +1,7 @@
 package app.wristline;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
@@ -78,5 +79,39 @@ public class DiagnosticReportTest {
         DiagnosticReport.Facts f = facts();
         f.bluetoothCallAudio = null;
         assertTrue(DiagnosticReport.build(f).contains("Bluetooth call audio device: unknown\n"));
+    }
+
+    @Test
+    public void listsCallBridgesAndCompanions() {
+        DiagnosticReport.Facts f = facts();
+        f.defaultDialer = "com.android.dialer";
+        f.bridges = List.of(new CallBridges.Bridge("com.example.bridge", "2.0", true, false));
+        f.companions = List.of("com.heytap.health.international 4.2.0");
+        String report = DiagnosticReport.build(f);
+        assertTrue(report.contains("Default dialer: com.android.dialer\n"));
+        assertTrue(report.contains("Call bridges (InCallService):\n- com.example.bridge 2.0, self-managed yes, ui no\n"));
+        assertTrue(report.contains("Watch companion apps:\n- com.heytap.health.international 4.2.0\n"));
+        assertTrue("bridges come before the events",
+                report.indexOf("Call bridges") < report.indexOf("Recent events"));
+    }
+
+    @Test
+    public void capsLongBridgeLists() {
+        DiagnosticReport.Facts f = facts();
+        List<CallBridges.Bridge> many = new java.util.ArrayList<>();
+        for (int i = 0; i < 14; i++) {
+            many.add(new CallBridges.Bridge("com.example.b" + (char) ('a' + i), "1", false, false));
+        }
+        f.bridges = many;
+        String report = DiagnosticReport.build(f);
+        assertTrue(report.contains("- com.example.bl 1, self-managed no, ui no\n- … and 2 more\n"));
+        assertFalse(report.contains("com.example.bm"));
+    }
+
+    @Test
+    public void noBridgesOrCompanionsSaysNone() {
+        String report = DiagnosticReport.build(facts());
+        assertTrue(report.contains("Call bridges (InCallService): none\n"));
+        assertTrue(report.contains("Watch companion apps: none\n"));
     }
 }

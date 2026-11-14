@@ -27,6 +27,18 @@
         <package android:name="org.telegram.messenger" />
         <package android:name="com.instagram.android" />
         <package android:name="org.thoughtcrime.securesms" />
+        <!-- Diagnostic report: which apps bridge calls to a watch, and which companion apps are installed. -->
+        <intent>
+            <action android:name="android.telecom.InCallService" />
+        </intent>
+        <package android:name="com.google.android.apps.wear.companion" />
+        <package android:name="com.google.android.wearable.app" />
+        <package android:name="com.heytap.health.international" />
+        <package android:name="com.heytap.health" />
+        <package android:name="com.samsung.android.app.watchmanager" />
+        <package android:name="com.xiaomi.wearable" />
+        <package android:name="com.huawei.health" />
+        <package android:name="com.mobvoi.companion.aw" />
     </queries>
 
     <application
