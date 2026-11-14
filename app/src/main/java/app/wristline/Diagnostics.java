@@ -55,6 +55,10 @@ final class Diagnostics {
             f.apps.add(new DiagnosticReport.AppState(app.packageName, version, Prefs.appOn(context, app),
                     version == null ? "" : FullMode.state(context, app).name()));
         }
+        PackageManager pm = context.getPackageManager();
+        f.defaultDialer = CallBridges.defaultDialer(context);
+        f.bridges = CallBridges.inCallServices(pm);
+        f.companions = CallBridges.installedCompanions(pm);
         f.events = Prefs.events(context);
         return f;
     }

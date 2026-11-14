@@ -43,6 +43,9 @@ final class DiagnosticReport {
         List<String> missingPermissions = new ArrayList<>();
         List<AppState> apps = new ArrayList<>();
         List<EventLog.Entry> events = new ArrayList<>();
+        String defaultDialer = "unknown";
+        List<CallBridges.Bridge> bridges = new ArrayList<>();
+        List<String> companions = new ArrayList<>();
     }
 
     private DiagnosticReport() {
@@ -73,6 +76,29 @@ final class DiagnosticReport {
                         .append(", voice ").append(app.voice);
             }
             out.append('\n');
+        }
+        out.append('\n').append("Default dialer: ").append(f.defaultDialer).append('\n');
+        out.append("Call bridges (InCallService):");
+        if (f.bridges.isEmpty()) {
+            out.append(" none");
+        }
+        out.append('\n');
+        for (int i = 0; i < f.bridges.size() && i < CallBridges.MAX_LISTED; i++) {
+            CallBridges.Bridge b = f.bridges.get(i);
+            out.append("- ").append(b.packageName).append(' ').append(b.version)
+                    .append(", self-managed ").append(b.selfManaged ? "yes" : "no")
+                    .append(", ui ").append(b.ui ? "yes" : "no").append('\n');
+        }
+        if (f.bridges.size() > CallBridges.MAX_LISTED) {
+            out.append("- … and ").append(f.bridges.size() - CallBridges.MAX_LISTED).append(" more").append('\n');
+        }
+        out.append("Watch companion apps:");
+        if (f.companions.isEmpty()) {
+            out.append(" none");
+        }
+        out.append('\n');
+        for (String companion : f.companions) {
+            out.append("- ").append(companion).append('\n');
         }
         out.append('\n').append("Recent events (newest first):").append('\n');
         if (f.events.isEmpty()) {
