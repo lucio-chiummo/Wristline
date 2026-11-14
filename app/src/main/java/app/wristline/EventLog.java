@@ -35,6 +35,8 @@ final class EventLog {
     static final String CALL_CREATED = "call_created";
     /** Telecom accepted the request but then failed to make the ringing call. */
     static final String CALL_NOT_CREATED = "call_not_created";
+    /** Telecom moved Wristline's call to a new state (detail: ringing, dialing, active, disconnected...). */
+    static final String CALL_STATE = "call_state";
     static final String OUTGOING = "outgoing";
     static final String OUTGOING_NOT_STARTED = "outgoing_not_started";
     static final String ANSWERED_ON_WATCH = "answered_on_watch";
