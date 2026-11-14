@@ -58,8 +58,9 @@ Also:
   repeat callers your phone lets through still do (Home → **When the watch rings** to turn it off).
 - **Pause from anywhere**: Home's switch, a Quick Settings tile, or the chip on the watch tile.
 - **Not while I'm using the phone** (optional): calls ring only the phone while it's unlocked in your hand.
-- **Share diagnostic report** (Home): setup and recent events, without caller names or numbers,
-  through the share sheet only. It shows when recent calls happened, so check it before posting it
+- **Share diagnostic report** (Home): setup, recent events, your phone and watch models, and the
+  apps on the phone that pass calls to a watch, without caller names or numbers, through the share
+  sheet only. It shows when recent calls happened, so check it before posting it
   in a public issue.
 
 ### Calling from the watch (1.2)

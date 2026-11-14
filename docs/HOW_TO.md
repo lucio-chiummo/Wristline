@@ -186,7 +186,7 @@ Telegram contacts only appear if **Sync contacts** is on in Telegram's settings.
 | `adb` says no devices were found | Check the cable and that **USB debugging** is on, then look for the Allow prompt on the phone. |
 | No contacts show on the watch | Check that **Call from the watch** is on. For Telegram, turn on **Sync contacts** in Telegram. |
 
-**Still stuck?** [Open an issue](https://github.com/lucio-chiummo/Wristline/issues). It helps to attach a report from **Share diagnostic report** on the home screen. It has no caller names or numbers, but it does show when your recent calls happened, and issues are public, so read it first.
+**Still stuck?** [Open an issue](https://github.com/lucio-chiummo/Wristline/issues). It helps to attach a report from **Share diagnostic report** on the home screen. It names your phone and watch models and the apps on your phone that pass calls to a watch. It has no caller names or numbers, but it does show when your recent calls happened, and issues are public, so read it first.
 
 Found a security problem? Please don't post it publicly. See the [security policy](../SECURITY.md).
 

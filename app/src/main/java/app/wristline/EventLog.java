@@ -11,7 +11,9 @@ import java.util.Locale;
 /**
  * What Wristline did recently (calls relayed, answered, dropped, setup results), for the
  * diagnostic report people can share when something doesn't work. Never holds caller names or
- * numbers: only event codes, app packages and short technical details.
+ * numbers: only event codes, app packages and short technical details. Details come from fixed
+ * vocabularies: Telecom states and audio routes (call_state, audio_route, audio_no_watch), the
+ * trigger of a call Wristline started ("watch", "call back"), and the like.
  */
 final class EventLog {
     static final int MAX = 100;
