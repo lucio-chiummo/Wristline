@@ -6,6 +6,8 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.media.AudioDeviceInfo;
+import android.media.AudioManager;
 import android.os.Build;
 import android.util.Log;
 
@@ -36,6 +38,11 @@ final class Diagnostics {
         f.device = Build.MANUFACTURER + " " + Build.MODEL;
         f.sdk = Build.VERSION.SDK_INT;
         f.securityPatch = Build.VERSION.SECURITY_PATCH;
+        f.brand = Build.BRAND;
+        f.release = Build.VERSION.RELEASE;
+        f.display = Build.DISPLAY;
+        f.locale = java.util.Locale.getDefault().toLanguageTag();
+        f.bluetoothCallAudio = bluetoothCallAudio(context.getSystemService(AudioManager.class));
         f.relayOn = Prefs.relayOn(context);
         f.watchCalling = Prefs.watchCalling(context);
         f.listenerConnected = RelayListener.isConnected();
@@ -50,6 +57,24 @@ final class Diagnostics {
         }
         f.events = Prefs.events(context);
         return f;
+    }
+
+    /**
+     * Whether the phone has a Bluetooth output that can carry call audio (a watch connected for
+     * calls shows up as one). Types only, never device names. Null when it can't be told.
+     */
+    static Boolean bluetoothCallAudio(AudioManager audio) {
+        try {
+            for (AudioDeviceInfo device : audio.getDevices(AudioManager.GET_DEVICES_OUTPUTS)) {
+                if (device.getType() == AudioDeviceInfo.TYPE_BLUETOOTH_SCO
+                        || device.getType() == AudioDeviceInfo.TYPE_BLE_HEADSET) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (RuntimeException e) {
+            return null;
+        }
     }
 
     /** Installed version name, or null when the package isn't installed. */
