@@ -396,26 +396,18 @@ public class RelayListenerTest {
         return shadowOf(nm).getNotification(StatusNotifications.ID_INCOMING_FALLBACK);
     }
 
-    private boolean sent(String action) {
-        for (Intent sent : shadowOf((android.app.Application) context).getBroadcastIntents()) {
-            if (action.equals(sent.getAction())) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     @Test
-    public void answerOnTheNotificationLeavesTheVoiceToTheApp() {
+    public void answerOnTheNotificationOpensAnAnsweredWatchCall() {
         Prefs.setRingByNotification(context, true);
         listener.onNotificationPosted(ringing("com.whatsapp", "k1", "Corvan"));
 
         new ActionReceiver().onReceive(context, new Intent(ActionReceiver.ANSWER));
 
-        assertEquals("Wristline's own call fights the app over the voice", 0, telecom.getAllIncomingCalls().size());
-        assertTrue("app not answered", sent("test.3"));
-        assertEquals("notification", withCode(EventLog.ANSWERED_ON_WATCH).get(0).detail);
-        assertFalse(RelayListener.useFullModeForCall);
+        assertEquals(1, telecom.getAllIncomingCalls().size());
+        assertTrue(telecom.getAllIncomingCalls().get(0).extras.getBoolean(RelayListener.EXTRA_ANSWERED));
+        assertEquals("notification, voice on watch", withCode(EventLog.ANSWERED_ON_WATCH).get(0).detail);
+        assertFalse(WatchRing.ringing());
+        assertTrue(RelayListener.isIncomingHandled());
     }
 
     @Test
@@ -425,16 +417,6 @@ public class RelayListenerTest {
 
         assertTrue("no audio facts for a call with no Telecom call",
                 withCode(EventLog.AUDIO_LINK).stream().anyMatch(e -> e.detail.startsWith("mode=")));
-    }
-
-    @Test
-    public void aCallFromTheWatchInNotificationModeReportsThePhonesAudio() {
-        Prefs.setRingByNotification(context, true);
-        listener.onListenerConnected();
-
-        RelayListener.startOutgoing(context, SupportedApp.WHATSAPP, "Corvan", () -> { });
-
-        assertTrue(withCode(EventLog.AUDIO_LINK).stream().anyMatch(e -> e.detail.startsWith("mode=")));
     }
 
     @Test
@@ -449,35 +431,6 @@ public class RelayListenerTest {
         org.robolectric.shadows.ShadowLooper.idleMainLooper();
 
         assertEquals(before, withCode(EventLog.AUDIO_LINK).size());
-    }
-
-    @Test
-    public void aCallFromTheWatchInNotificationModeMakesNoTelecomCall() {
-        Prefs.setRingByNotification(context, true);
-        listener.onListenerConnected();
-        boolean[] started = {false};
-
-        assertTrue(RelayListener.startOutgoing(context, SupportedApp.WHATSAPP, "Corvan", () -> started[0] = true));
-
-        assertTrue("app's call not started", started[0]);
-        assertEquals(0, telecom.getAllOutgoingCalls().size());
-        assertEquals("notification", withCode(EventLog.OUTGOING).get(0).detail);
-        assertFalse(RelayListener.useFullModeForCall);
-    }
-
-    @Test
-    public void hangUpFromTheWatchWithoutATelecomCallPressesTheAppsButton() {
-        Prefs.setRingByNotification(context, true);
-        listener.onListenerConnected();
-        listener.onNotificationPosted(ringing("com.whatsapp", "k1", "Corvan"));
-        new ActionReceiver().onReceive(context, new Intent(ActionReceiver.ANSWER));
-        listener.onNotificationPosted(ongoing("com.whatsapp", "k1"));
-
-        RelayListener.hangUpFromWatch();
-        ShadowLooper.idleMainLooper();
-
-        assertTrue("app's Hang up not pressed", sent("test.4"));
-        assertEquals("notification", withCode(EventLog.HUNG_UP_ON_WATCH).get(0).detail);
     }
 
     @Test
@@ -571,7 +524,7 @@ public class RelayListenerTest {
         assertTrue(WatchRing.ringing());
         new ActionReceiver().onReceive(context, new Intent(ActionReceiver.ANSWER));
 
-        assertEquals("notification", withCode(EventLog.ANSWERED_ON_WATCH).get(0).detail);
+        assertEquals("notification, voice on watch", withCode(EventLog.ANSWERED_ON_WATCH).get(0).detail);
         assertFalse(WatchRing.ringing());
     }
 

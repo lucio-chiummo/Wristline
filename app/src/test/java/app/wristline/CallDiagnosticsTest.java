@@ -39,8 +39,17 @@ public class CallDiagnosticsTest {
     public void tearDown() {
         RelayListener.currentApp = null;
         RelayListener.incomingCall = null;
-        RelayListener.useFullModeForCall = false;
         RelayConnection.current = null;
+        VoiceHold.sdk = android.os.Build.VERSION.SDK_INT;
+    }
+
+    private EventLog.Entry latest(String code, String detailPrefix) {
+        for (EventLog.Entry e : Prefs.events(context)) {
+            if (e.code.equals(code) && e.detail.startsWith(detailPrefix)) {
+                return e;
+            }
+        }
+        throw new AssertionError("no " + code + " " + detailPrefix + " recorded");
     }
 
     private EventLog.Entry newest() {
@@ -63,6 +72,13 @@ public class CallDiagnosticsTest {
         Bundle extras = new Bundle();
         extras.putString(RelayListener.EXTRA_CALLER, "WhatsApp · Annaly");
         extras.putBoolean(TestCall.EXTRA, testCall);
+        return new ConnectionRequest(null, null, extras);
+    }
+
+    private ConnectionRequest answeredRequest() {
+        Bundle extras = new Bundle();
+        extras.putString(RelayListener.EXTRA_CALLER, "WhatsApp · Annaly");
+        extras.putBoolean(RelayListener.EXTRA_ANSWERED, true);
         return new ConnectionRequest(null, null, extras);
     }
 
@@ -94,6 +110,26 @@ public class CallDiagnosticsTest {
         return false;
     }
 
+    @Test
+    public void anAnsweredCallGoesActiveThenAnswersTheApp() {
+        RelayListener.currentApp = SupportedApp.WHATSAPP;
+        RelayListener.incomingCall = ringingCall();
+        RelayConnectionService service = Robolectric.buildService(RelayConnectionService.class).create().get();
+
+        android.telecom.Connection connection = service.onCreateIncomingConnection(null, answeredRequest());
+        org.robolectric.shadows.ShadowLooper.idleMainLooper();
+
+        assertEquals(android.telecom.Connection.STATE_ACTIVE, connection.getState());
+        assertTrue(RelayConnection.isAwaitingAppAnswer());
+        assertTrue("app answered before the watch's audio link", !appAnswered());
+
+        org.robolectric.shadows.ShadowLooper.idleMainLooper(RelayConnection.ANSWER_DELAY_MS, java.util.concurrent.TimeUnit.MILLISECONDS);
+
+        assertTrue("app never answered", appAnswered());
+        assertTrue(!RelayConnection.isAwaitingAppAnswer());
+        RelayConnection.current.onAbort();
+    }
+
     private static android.telecom.CallAudioState audio(int route, int supported) {
         return new android.telecom.CallAudioState(false, route, supported);
     }
@@ -102,22 +138,18 @@ public class CallDiagnosticsTest {
     private static final int BLUETOOTH = android.telecom.CallAudioState.ROUTE_BLUETOOTH;
     private static final int SPEAKER = android.telecom.CallAudioState.ROUTE_SPEAKER;
 
-    /** A call answered on the watch's call screen, voice through the watch. */
     private RelayConnection answeredCall() {
         RelayListener.currentApp = SupportedApp.WHATSAPP;
         RelayListener.incomingCall = ringingCall();
-        RelayListener.useFullModeForCall = true;
         RelayConnectionService service = Robolectric.buildService(RelayConnectionService.class).create().get();
-        RelayConnection connection = (RelayConnection) service.onCreateIncomingConnection(null, request(false));
-        connection.onAnswer();
+        RelayConnection connection = (RelayConnection) service.onCreateIncomingConnection(null, answeredRequest());
+        org.robolectric.shadows.ShadowLooper.idleMainLooper();
         return connection;
     }
 
     @Test
     public void anAnsweredCallWithNoWatchRouteIsAnsweredOnThePhone() {
         RelayConnection connection = answeredCall();
-        assertEquals(android.telecom.Connection.STATE_ACTIVE, connection.getState());
-        assertTrue("app answered before the watch's audio link", !appAnswered());
         connection.onCallAudioStateChanged(audio(EARPIECE, EARPIECE | SPEAKER));
 
         org.robolectric.shadows.ShadowLooper.idleMainLooper(RelayConnection.ANSWER_DELAY_MS, java.util.concurrent.TimeUnit.MILLISECONDS);
@@ -137,6 +169,70 @@ public class CallDiagnosticsTest {
 
         assertTrue(appAnswered());
         assertEquals(android.telecom.Connection.STATE_ACTIVE, connection.getState());
+        connection.onAbort();
+    }
+
+    private void offerWatchToApps() {
+        android.media.AudioManager audio = context.getSystemService(android.media.AudioManager.class);
+        org.robolectric.Shadows.shadowOf(audio).setAvailableCommunicationDevices(java.util.List.of(
+                org.robolectric.shadows.AudioDeviceInfoBuilder.newBuilder()
+                        .setType(android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO).build()));
+    }
+
+    private int audioMode() {
+        return context.getSystemService(android.media.AudioManager.class).getMode();
+    }
+
+    @Test
+    public void onAndroid17TheCallHoldsTheVoiceOnTheWatchItself() {
+        VoiceHold.sdk = 37;
+        offerWatchToApps();
+        RelayConnection connection = answeredCall();
+
+        connection.onCallAudioStateChanged(audio(BLUETOOTH, EARPIECE | BLUETOOTH | SPEAKER));
+
+        assertEquals(android.media.AudioManager.MODE_IN_COMMUNICATION, audioMode());
+        assertEquals("hold=taken", latest(EventLog.AUDIO_LINK, "hold=").detail);
+        connection.onAbort();
+        assertEquals("hold not released with the call", android.media.AudioManager.MODE_NORMAL, audioMode());
+    }
+
+    @Test
+    public void onAndroid17AFallBackToThePhoneTakesTheVoiceAgain() {
+        VoiceHold.sdk = 37;
+        offerWatchToApps();
+        RelayConnection connection = answeredCall();
+        int all = EARPIECE | BLUETOOTH | SPEAKER;
+        connection.onCallAudioStateChanged(audio(BLUETOOTH, all));
+
+        connection.onCallAudioStateChanged(audio(EARPIECE, all));
+
+        assertEquals("hold=retaken", latest(EventLog.AUDIO_LINK, "hold=").detail);
+        connection.onAbort();
+    }
+
+    @Test
+    public void onAndroid17MovingTheVoiceToThePhoneLetsGo() {
+        VoiceHold.sdk = 37;
+        offerWatchToApps();
+        RelayConnection connection = answeredCall();
+        connection.onCallAudioStateChanged(audio(BLUETOOTH, EARPIECE | BLUETOOTH | SPEAKER));
+
+        RelayConnection.moveVoice(true);
+
+        assertEquals(android.media.AudioManager.MODE_NORMAL, audioMode());
+        connection.onAbort();
+    }
+
+    @Test
+    public void onAndroid16TheCallLeavesTheAudioModeAlone() {
+        VoiceHold.sdk = 36;
+        offerWatchToApps();
+        RelayConnection connection = answeredCall();
+
+        connection.onCallAudioStateChanged(audio(BLUETOOTH, EARPIECE | BLUETOOTH | SPEAKER));
+
+        assertEquals(android.media.AudioManager.MODE_NORMAL, audioMode());
         connection.onAbort();
     }
 
@@ -166,6 +262,17 @@ public class CallDiagnosticsTest {
 
         assertEquals(Boolean.TRUE, RelayConnection.voiceOnWatch());
         connection.onAbort();
+    }
+
+    @Test
+    public void anAnsweredCallTelecomCannotCreateStillAnswersTheApp() {
+        RelayListener.currentApp = SupportedApp.WHATSAPP;
+        RelayListener.incomingCall = ringingCall();
+        RelayConnectionService service = Robolectric.buildService(RelayConnectionService.class).create().get();
+
+        service.onCreateIncomingConnectionFailed(null, answeredRequest());
+
+        assertTrue("call lost", appAnswered());
     }
 
     @Test
