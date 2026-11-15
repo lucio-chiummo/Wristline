@@ -34,6 +34,8 @@ public class RelayListener extends NotificationListenerService {
     static final String TAG = "Wristline";
     static final String EXTRA_CALLER = "app.wristline.CALLER";
     static final String EXTRA_FULL_MODE = "app.wristline.FULL_MODE";
+    /** A call answered on our ringing notification: it goes active at once, to carry the voice. */
+    static final String EXTRA_ANSWERED = "app.wristline.ANSWERED";
 
     static volatile CallActions incomingCall;
     static volatile CallActions ongoingCall;
@@ -282,9 +284,7 @@ public class RelayListener extends NotificationListenerService {
         WatchSync.recordCall(this, false, app, -1, caller, incomingStartedAt);
         if (Prefs.ringByNotification(this)) {
             // The watch's companion loses Answer on a call screen: ring with our own notification.
-            // No Telecom call at all in this mode: on these watches Wristline's own voice link
-            // gets cut as soon as it opens, while the calling app alone carries the voice fine.
-            useFullModeForCall = false;
+            // Answered there, the voice still goes through the watch (see answerWithVoiceOnWatch).
             Log.i(TAG, "incoming call (" + app.packageName + ", ringing by notification)");
             Diagnostics.record(this, EventLog.INCOMING, app, "notification");
             watchCallAudio(this);
@@ -331,6 +331,40 @@ public class RelayListener extends NotificationListenerService {
     }
 
     /** The watch answered or declined the ringing call: it isn't a missed call. */
+    /**
+     * Answer was tapped on our ringing notification. With voice through the watch set up for the
+     * app and a watch that carries call audio, opens a Telecom call that is already answered: it
+     * goes active, Telecom opens the watch's audio link, and only then the app is answered.
+     * Returns false when the caller should answer the app directly (voice on the phone).
+     */
+    @SuppressLint("MissingPermission") // Telecom refusing is caught below
+    static boolean answerWithVoiceOnWatch(Context context) {
+        SupportedApp app = currentApp;
+        CallActions call = incomingCall;
+        if (app == null || call == null || !useFullModeForCall) {
+            return false;
+        }
+        // Whether the watch can carry the call is only known once Telecom offers its routes:
+        // the connection checks before it answers the app (RelayConnection.answerApp).
+        Bundle extras = new Bundle();
+        String caller = incomingCaller == null ? app.label : incomingCaller;
+        extras.putString(EXTRA_CALLER, context.getString(R.string.caller_with_app, app.label, caller));
+        extras.putBoolean(EXTRA_ANSWERED, true);
+        try {
+            registerAccount(context);
+            context.getSystemService(TelecomManager.class).addNewIncomingCall(accountHandle(context), extras);
+            // The Telecom call reports the audio itself from here on.
+            if (callAudio != null) {
+                callAudio.stop();
+            }
+            return true;
+        } catch (RuntimeException e) {
+            Log.w(TAG, "Telecom refused the answered call; answering on the phone", e);
+            Diagnostics.record(context, EventLog.TELECOM_REFUSED, app, "answered " + e.getClass().getSimpleName());
+            return false;
+        }
+    }
+
     static void incomingHandledOnWatch() {
         incomingHandled = true;
     }
@@ -401,21 +435,6 @@ public class RelayListener extends NotificationListenerService {
             RelayConnection connection = RelayConnection.current;
             if (connection != null) {
                 connection.onDisconnect();
-                return;
-            }
-            // Ringing by notification there is no Telecom call: press the app's own button.
-            SupportedApp app = currentApp;
-            CallActions ongoing = ongoingCall;
-            CallActions incoming = incomingCall;
-            if (app == null || (ongoing == null && incoming == null)) {
-                return;
-            }
-            Log.i(TAG, "hung up from the watch");
-            Diagnostics.record(listener, EventLog.HUNG_UP_ON_WATCH, app, "notification");
-            if (ongoing != null && ongoing.hangUp != null) {
-                send(listener, ongoing.hangUp);
-            } else if (incoming != null) {
-                send(listener, incoming.decline);
             }
         });
     }
@@ -439,16 +458,6 @@ public class RelayListener extends NotificationListenerService {
         outgoingName = name;
         toldWatch = null;
         WatchSync.callState(this, WatchProtocol.STATE_CALLING, app, name);
-        if (Prefs.ringByNotification(this)) {
-            // Same as for incoming calls in this mode: no Telecom call, the app carries the voice.
-            useFullModeForCall = false;
-            Log.i(TAG, "outgoing call (" + app.packageName + ", no Telecom call)");
-            Diagnostics.record(this, EventLog.OUTGOING, app, "notification");
-            watchCallAudio(this);
-            startApp.run();
-            expectOutgoingToStart(app);
-            return true;
-        }
         useFullModeForCall = FullMode.shouldUse(this, app);
         Log.i(TAG, "outgoing call (" + app.packageName
                 + (useFullModeForCall ? ", full mode)" : ", basic mode)"));
@@ -471,12 +480,6 @@ public class RelayListener extends NotificationListenerService {
             tracker.reset();
             return false;
         }
-        expectOutgoingToStart(app);
-        return true;
-    }
-
-    /** Gives the app a moment to show its call; without one, the call from the watch is over. */
-    private void expectOutgoingToStart(SupportedApp app) {
         int callId = tracker.callId();
         handler.postDelayed(() -> {
             if (tracker.graceExpired(callId) == CallTracker.Result.END) {
@@ -485,6 +488,7 @@ public class RelayListener extends NotificationListenerService {
                 endCall(app, false);
             }
         }, OUTGOING_START_MS);
+        return true;
     }
 
     private void onOngoingCall(CallActions call) {
