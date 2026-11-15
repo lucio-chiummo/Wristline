@@ -23,9 +23,6 @@ public class RelayConnectionService extends ConnectionService {
             connection.markTestCall();
         }
         RelayConnection.current = connection;
-        if (request.getExtras().getBoolean(RelayListener.EXTRA_ANSWERED)) {
-            connection.startAnswered();
-        }
         Log.i(RelayListener.TAG, "mirrored call created");
         Diagnostics.record(this, EventLog.CALL_CREATED, testCall ? null : RelayListener.currentApp,
                 testCall ? "test call" : "");
@@ -64,10 +61,5 @@ public class RelayConnectionService extends ConnectionService {
         boolean testCall = request != null && request.getExtras().getBoolean(TestCall.EXTRA);
         Diagnostics.record(this, EventLog.CALL_NOT_CREATED, testCall ? null : RelayListener.currentApp,
                 testCall ? "test call" : "");
-        if (request != null && request.getExtras().getBoolean(RelayListener.EXTRA_ANSWERED)) {
-            // Already answered on the watch: don't lose the call, take it on the phone.
-            CallActions call = RelayListener.incomingCall;
-            RelayListener.send(this, call == null ? null : call.answer);
-        }
     }
 }

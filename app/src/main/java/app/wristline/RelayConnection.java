@@ -192,27 +192,6 @@ public class RelayConnection extends Connection {
     }
 
     /**
-     * Already answered on our ringing notification: no Answer to wait for from the watch. Goes
-     * active so Telecom opens the watch's audio link, then answers the app into it.
-     */
-    void startAnswered() {
-        awaitingAppAnswer = true;
-        // Once Telecom has the connection: it is still being created here.
-        handler.post(() -> {
-            CallActions call = RelayListener.incomingCall;
-            if (call == null) {
-                end(new DisconnectCause(DisconnectCause.CANCELED));
-                return;
-            }
-            Log.i(RelayListener.TAG, "answered on the notification (full mode)");
-            setActive();
-            routeToWatch(null);
-            VoiceControls.update(context);
-            handler.postDelayed(() -> answerApp(call), ANSWER_DELAY_MS);
-        });
-    }
-
-    /**
      * Answers the app into the watch's audio link. When Telecom offers no Bluetooth route there is
      * no such link, and an active call with no watch to carry it leaves the app's microphone
      * silent: the app is answered on the phone and this call steps aside.

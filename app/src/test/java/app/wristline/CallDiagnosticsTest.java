@@ -39,6 +39,7 @@ public class CallDiagnosticsTest {
     public void tearDown() {
         RelayListener.currentApp = null;
         RelayListener.incomingCall = null;
+        RelayListener.useFullModeForCall = false;
         RelayConnection.current = null;
     }
 
@@ -62,13 +63,6 @@ public class CallDiagnosticsTest {
         Bundle extras = new Bundle();
         extras.putString(RelayListener.EXTRA_CALLER, "WhatsApp · Annaly");
         extras.putBoolean(TestCall.EXTRA, testCall);
-        return new ConnectionRequest(null, null, extras);
-    }
-
-    private ConnectionRequest answeredRequest() {
-        Bundle extras = new Bundle();
-        extras.putString(RelayListener.EXTRA_CALLER, "WhatsApp · Annaly");
-        extras.putBoolean(RelayListener.EXTRA_ANSWERED, true);
         return new ConnectionRequest(null, null, extras);
     }
 
@@ -100,26 +94,6 @@ public class CallDiagnosticsTest {
         return false;
     }
 
-    @Test
-    public void anAnsweredCallGoesActiveThenAnswersTheApp() {
-        RelayListener.currentApp = SupportedApp.WHATSAPP;
-        RelayListener.incomingCall = ringingCall();
-        RelayConnectionService service = Robolectric.buildService(RelayConnectionService.class).create().get();
-
-        android.telecom.Connection connection = service.onCreateIncomingConnection(null, answeredRequest());
-        org.robolectric.shadows.ShadowLooper.idleMainLooper();
-
-        assertEquals(android.telecom.Connection.STATE_ACTIVE, connection.getState());
-        assertTrue(RelayConnection.isAwaitingAppAnswer());
-        assertTrue("app answered before the watch's audio link", !appAnswered());
-
-        org.robolectric.shadows.ShadowLooper.idleMainLooper(RelayConnection.ANSWER_DELAY_MS, java.util.concurrent.TimeUnit.MILLISECONDS);
-
-        assertTrue("app never answered", appAnswered());
-        assertTrue(!RelayConnection.isAwaitingAppAnswer());
-        RelayConnection.current.onAbort();
-    }
-
     private static android.telecom.CallAudioState audio(int route, int supported) {
         return new android.telecom.CallAudioState(false, route, supported);
     }
@@ -128,18 +102,22 @@ public class CallDiagnosticsTest {
     private static final int BLUETOOTH = android.telecom.CallAudioState.ROUTE_BLUETOOTH;
     private static final int SPEAKER = android.telecom.CallAudioState.ROUTE_SPEAKER;
 
+    /** A call answered on the watch's call screen, voice through the watch. */
     private RelayConnection answeredCall() {
         RelayListener.currentApp = SupportedApp.WHATSAPP;
         RelayListener.incomingCall = ringingCall();
+        RelayListener.useFullModeForCall = true;
         RelayConnectionService service = Robolectric.buildService(RelayConnectionService.class).create().get();
-        RelayConnection connection = (RelayConnection) service.onCreateIncomingConnection(null, answeredRequest());
-        org.robolectric.shadows.ShadowLooper.idleMainLooper();
+        RelayConnection connection = (RelayConnection) service.onCreateIncomingConnection(null, request(false));
+        connection.onAnswer();
         return connection;
     }
 
     @Test
     public void anAnsweredCallWithNoWatchRouteIsAnsweredOnThePhone() {
         RelayConnection connection = answeredCall();
+        assertEquals(android.telecom.Connection.STATE_ACTIVE, connection.getState());
+        assertTrue("app answered before the watch's audio link", !appAnswered());
         connection.onCallAudioStateChanged(audio(EARPIECE, EARPIECE | SPEAKER));
 
         org.robolectric.shadows.ShadowLooper.idleMainLooper(RelayConnection.ANSWER_DELAY_MS, java.util.concurrent.TimeUnit.MILLISECONDS);
@@ -188,17 +166,6 @@ public class CallDiagnosticsTest {
 
         assertEquals(Boolean.TRUE, RelayConnection.voiceOnWatch());
         connection.onAbort();
-    }
-
-    @Test
-    public void anAnsweredCallTelecomCannotCreateStillAnswersTheApp() {
-        RelayListener.currentApp = SupportedApp.WHATSAPP;
-        RelayListener.incomingCall = ringingCall();
-        RelayConnectionService service = Robolectric.buildService(RelayConnectionService.class).create().get();
-
-        service.onCreateIncomingConnectionFailed(null, answeredRequest());
-
-        assertTrue("call lost", appAnswered());
     }
 
     @Test
