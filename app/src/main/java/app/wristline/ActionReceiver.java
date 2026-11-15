@@ -36,13 +36,8 @@ public class ActionReceiver extends BroadcastReceiver {
         }
         // Answered or declined here: not a missed call.
         RelayListener.incomingHandledOnWatch();
-        boolean voiceOnWatch = answer && RelayListener.answerWithVoiceOnWatch(context);
         Diagnostics.record(context, answer ? EventLog.ANSWERED_ON_WATCH : EventLog.DECLINED_ON_WATCH,
-                RelayListener.currentApp, voiceOnWatch ? "notification, voice on watch" : "notification");
-        if (voiceOnWatch) {
-            // The answered Telecom call answers the app once the watch's audio link is up.
-            return;
-        }
+                RelayListener.currentApp, "notification");
         CallActions call = RelayListener.incomingCall;
         if (call != null) {
             RelayListener.send(context, answer ? call.answer : call.decline);
