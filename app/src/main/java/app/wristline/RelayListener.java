@@ -287,6 +287,7 @@ public class RelayListener extends NotificationListenerService {
             useFullModeForCall = false;
             Log.i(TAG, "incoming call (" + app.packageName + ", ringing by notification)");
             Diagnostics.record(this, EventLog.INCOMING, app, "notification");
+            watchCallAudio(this);
             WatchRing.start(this, caller, getString(R.string.incoming_call, app.label), WatchRing.MAX_MS);
             return;
         }
@@ -443,6 +444,7 @@ public class RelayListener extends NotificationListenerService {
             useFullModeForCall = false;
             Log.i(TAG, "outgoing call (" + app.packageName + ", no Telecom call)");
             Diagnostics.record(this, EventLog.OUTGOING, app, "notification");
+            watchCallAudio(this);
             startApp.run();
             expectOutgoingToStart(app);
             return true;
@@ -557,7 +559,26 @@ public class RelayListener extends NotificationListenerService {
         }
     }
 
+    /**
+     * With no Telecom call (ringing by notification) nothing else tells the report where the
+     * calling app puts the voice: watch the phone's audio for the length of the call.
+     */
+    private static AudioLink.Watcher callAudio;
+
+    private static void watchCallAudio(Context context) {
+        Context app = context.getApplicationContext();
+        if (callAudio != null) {
+            callAudio.stop();
+        }
+        callAudio = new AudioLink.Watcher(app, new Handler(Looper.getMainLooper()),
+                detail -> Diagnostics.record(app, EventLog.AUDIO_LINK, currentApp, detail));
+        callAudio.start();
+    }
+
     static void clearCall(Context context) {
+        if (callAudio != null) {
+            callAudio.stop();
+        }
         currentApp = null;
         incomingCall = null;
         ongoingCall = null;

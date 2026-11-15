@@ -419,6 +419,39 @@ public class RelayListenerTest {
     }
 
     @Test
+    public void aCallRungByNotificationReportsThePhonesAudio() {
+        Prefs.setRingByNotification(context, true);
+        listener.onNotificationPosted(ringing("com.whatsapp", "k1", "Corvan"));
+
+        assertTrue("no audio facts for a call with no Telecom call",
+                withCode(EventLog.AUDIO_LINK).stream().anyMatch(e -> e.detail.startsWith("mode=")));
+    }
+
+    @Test
+    public void aCallFromTheWatchInNotificationModeReportsThePhonesAudio() {
+        Prefs.setRingByNotification(context, true);
+        listener.onListenerConnected();
+
+        RelayListener.startOutgoing(context, SupportedApp.WHATSAPP, "Corvan", () -> { });
+
+        assertTrue(withCode(EventLog.AUDIO_LINK).stream().anyMatch(e -> e.detail.startsWith("mode=")));
+    }
+
+    @Test
+    public void theAudioReportStopsWhenTheCallEnds() {
+        Prefs.setRingByNotification(context, true);
+        listener.onNotificationPosted(ringing("com.whatsapp", "k1", "Corvan"));
+        listener.onNotificationRemoved(ringing("com.whatsapp", "k1", "Corvan"));
+        org.robolectric.shadows.ShadowLooper.idleMainLooper(CallTracker.GRACE_MS + 1000, java.util.concurrent.TimeUnit.MILLISECONDS);
+        int before = withCode(EventLog.AUDIO_LINK).size();
+
+        context.getSystemService(android.media.AudioManager.class).setMode(android.media.AudioManager.MODE_IN_COMMUNICATION);
+        org.robolectric.shadows.ShadowLooper.idleMainLooper();
+
+        assertEquals(before, withCode(EventLog.AUDIO_LINK).size());
+    }
+
+    @Test
     public void aCallFromTheWatchInNotificationModeMakesNoTelecomCall() {
         Prefs.setRingByNotification(context, true);
         listener.onListenerConnected();
