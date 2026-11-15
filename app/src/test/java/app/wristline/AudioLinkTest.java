@@ -86,4 +86,31 @@ public class AudioLinkTest {
         assertTrue(logged.toString(), logged.contains("mode=in_communication"));
         watcher.stop();
     }
+
+    @Test
+    public void namesTheKindOfMicrophoneNeverTheDevice() {
+        assertEquals("mic=phone", AudioLink.mic(AudioDeviceInfo.TYPE_BUILTIN_MIC));
+        assertEquals("mic=bluetooth_sco", AudioLink.mic(AudioDeviceInfo.TYPE_BLUETOOTH_SCO));
+        assertEquals("mic=ble_headset", AudioLink.mic(AudioDeviceInfo.TYPE_BLE_HEADSET));
+        assertEquals("mic=type 12", AudioLink.mic(12));
+        assertEquals("mic=unknown", AudioLink.mic(-1));
+    }
+
+    @Test
+    public void writesVolumesAsLevelOverMaximum() {
+        assertEquals("volume call=3/7 bluetooth=0/15", AudioLink.volume(3, 7, 0, 15));
+    }
+
+    @Test
+    public void logsVolumesAndTheDevicesOfferedWhenItStarts() {
+        Context context = RuntimeEnvironment.getApplication();
+        List<String> logged = new ArrayList<>();
+        AudioLink.Watcher watcher = new AudioLink.Watcher(context, new Handler(Looper.getMainLooper()), logged::add);
+
+        watcher.start();
+
+        assertTrue(logged.toString(), logged.stream().anyMatch(l -> l.startsWith("volume call=")));
+        assertTrue(logged.toString(), logged.stream().anyMatch(l -> l.startsWith("offered=")));
+        watcher.stop();
+    }
 }
