@@ -79,6 +79,8 @@ final class EventLog {
     static final String REPAIR_SILENT = "repair_silent";
     static final String MISSED = "missed";
     static final String TEST_CALL = "test_call";
+    /** After a call: Android's own log about its audio was read over Wireless debugging, or couldn't be. */
+    static final String SYSTEM_LOG = "system_log";
 
     static final class Entry {
         final long time;

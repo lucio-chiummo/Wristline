@@ -82,6 +82,7 @@ final class Diagnostics {
         f.defaultDialer = CallBridges.defaultDialer(context);
         f.bridges = CallBridges.inCallServices(pm);
         f.companions = CallBridges.installedCompanions(pm);
+        f.systemLog = SystemLogCapture.forReport(context);
         f.events = Prefs.events(context);
         return f;
     }

@@ -59,6 +59,8 @@ final class DiagnosticReport {
         String defaultDialer = "unknown";
         List<CallBridges.Bridge> bridges = new ArrayList<>();
         List<String> companions = new ArrayList<>();
+        /** What Android logged about the last call's audio ({@link SystemLog}); null when not captured. */
+        String systemLog;
     }
 
     private DiagnosticReport() {
@@ -84,6 +86,9 @@ final class DiagnosticReport {
                 .append(" · Calling from the watch: ").append(f.watchCalling ? "on" : "off").append('\n');
         out.append("Ring by notification: ").append(f.ringByNotification ? "on" : "off").append('\n');
         out.append("adb key present: ").append(f.keyPresent ? "yes" : "no").append('\n');
+        out.append("System log: ").append(f.systemLog != null ? "included at the end"
+                : f.keyPresent ? "not captured (keep Wireless debugging on during the call)"
+                : "not captured (voice not set up on the phone)").append('\n');
         out.append("Bluetooth call audio device: ").append(f.bluetoothCallAudio == null ? "unknown"
                 : f.bluetoothCallAudio ? "yes" : "no").append('\n');
         out.append("Voice hold (Android 17+): ").append(f.voiceHoldNeeded ? "needed" : "not needed")
@@ -134,6 +139,9 @@ final class DiagnosticReport {
         }
         for (EventLog.Entry e : f.events) {
             out.append(EventLog.format(e)).append('\n');
+        }
+        if (f.systemLog != null) {
+            out.append('\n').append(f.systemLog);
         }
         return out.toString();
     }
