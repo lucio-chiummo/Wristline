@@ -43,6 +43,19 @@ final class Diagnostics {
         f.display = Build.DISPLAY;
         f.locale = java.util.Locale.getDefault().toLanguageTag();
         f.bluetoothCallAudio = bluetoothCallAudio(context.getSystemService(AudioManager.class));
+        f.voiceHoldNeeded = VoiceHold.needed();
+        f.audioSettingsGranted = context.checkSelfPermission(android.Manifest.permission.MODIFY_AUDIO_SETTINGS)
+                == PackageManager.PERMISSION_GRANTED;
+        try {
+            AudioManager audio = context.getSystemService(AudioManager.class);
+            f.powerSaver = context.getSystemService(android.os.PowerManager.class).isPowerSaveMode();
+            int[] offered = audio.getAvailableCommunicationDevices().stream().mapToInt(AudioDeviceInfo::getType).toArray();
+            f.audioDevices = AudioLink.kinds("outputs", AudioLink.types(audio.getDevices(AudioManager.GET_DEVICES_OUTPUTS)))
+                    + " " + AudioLink.kinds("inputs", AudioLink.types(audio.getDevices(AudioManager.GET_DEVICES_INPUTS)))
+                    + " " + AudioLink.kinds("offered", offered);
+        } catch (RuntimeException e) {
+            f.audioDevices = "unknown";
+        }
         f.relayOn = Prefs.relayOn(context);
         f.ringByNotification = Prefs.ringByNotification(context);
         f.watchCalling = Prefs.watchCalling(context);

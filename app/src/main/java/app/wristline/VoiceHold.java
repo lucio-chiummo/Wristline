@@ -27,7 +27,13 @@ final class VoiceHold {
     /** Overridden in tests. */
     static int sdk = Build.VERSION.SDK_INT;
 
+    /** How long after taking the voice the report says whether it held. */
+    static final long CHECK_MS = 1500;
+
     private static final int SAMPLE_RATE = 8000;
+
+    private final android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable check = this::logCheck;
 
     private final Context context;
     private final AudioLink.Sink log;
@@ -72,6 +78,8 @@ final class VoiceHold {
             boolean accepted = audio.setCommunicationDevice(watch);
             log.log(!accepted ? "hold=refused" : held ? "hold=retaken" : "hold=taken");
             held = true;
+            handler.removeCallbacks(check);
+            handler.postDelayed(check, CHECK_MS);
             return accepted;
         } catch (RuntimeException e) {
             Log.w(RelayListener.TAG, "could not hold the voice on the watch", e);
@@ -86,6 +94,7 @@ final class VoiceHold {
             return;
         }
         held = false;
+        handler.removeCallbacks(check);
         AudioManager audio = context.getSystemService(AudioManager.class);
         try {
             audio.clearCommunicationDevice();
@@ -95,6 +104,27 @@ final class VoiceHold {
         }
         stopSilence();
         log.log("hold=released");
+    }
+
+    /** For the report: what the phone's call audio looks like once the hold has had time to apply. */
+    private void logCheck() {
+        if (!held) {
+            return;
+        }
+        try {
+            AudioManager audio = context.getSystemService(AudioManager.class);
+            AudioDeviceInfo device = audio.getCommunicationDevice();
+            AudioTrack track = silence;
+            AudioDeviceInfo routed = track == null ? null : track.getRoutedDevice();
+            log.log("hold check " + AudioLink.mode(audio.getMode())
+                    + " " + AudioLink.device(device == null ? -1 : device.getType())
+                    + " stream=" + (track == null ? "none"
+                            : track.getPlayState() == AudioTrack.PLAYSTATE_PLAYING ? "playing" : "stopped")
+                    + " on=" + AudioLink.device(routed == null ? -1 : routed.getType()).substring("device=".length())
+                    + " sco_on=" + audio.isBluetoothScoOn());
+        } catch (RuntimeException e) {
+            log.log("hold check failed " + e.getClass().getSimpleName());
+        }
     }
 
     /** A looping second of silence as a voice stream: what makes Android count Wristline as in a call. */

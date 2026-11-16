@@ -36,6 +36,13 @@ final class DiagnosticReport {
         String locale = "";
         /** A Bluetooth call-audio output (SCO or LE headset) exists; null when it can't be told. */
         Boolean bluetoothCallAudio;
+        /** Android 17 and later: Wristline has to hold the voice on the watch itself. */
+        boolean voiceHoldNeeded;
+        /** MODIFY_AUDIO_SETTINGS, which the voice hold needs. */
+        boolean audioSettingsGranted = true;
+        boolean powerSaver;
+        /** Kinds of audio devices when the report was made: "outputs=... inputs=... offered=...". */
+        String audioDevices = "";
         boolean relayOn;
         /** The watch is rung with Wristline's own notification instead of a phone call. */
         boolean ringByNotification;
@@ -79,6 +86,12 @@ final class DiagnosticReport {
         out.append("adb key present: ").append(f.keyPresent ? "yes" : "no").append('\n');
         out.append("Bluetooth call audio device: ").append(f.bluetoothCallAudio == null ? "unknown"
                 : f.bluetoothCallAudio ? "yes" : "no").append('\n');
+        out.append("Voice hold (Android 17+): ").append(f.voiceHoldNeeded ? "needed" : "not needed")
+                .append(" · audio settings permission: ").append(f.audioSettingsGranted ? "granted" : "MISSING").append('\n');
+        out.append("Power saver: ").append(f.powerSaver ? "on" : "off").append('\n');
+        if (!f.audioDevices.isEmpty()) {
+            out.append("Audio devices now: ").append(f.audioDevices).append('\n');
+        }
         out.append("Missing permissions: ")
                 .append(f.missingPermissions.isEmpty() ? "none" : String.join(", ", f.missingPermissions)).append('\n');
         out.append('\n').append("Apps:").append('\n');

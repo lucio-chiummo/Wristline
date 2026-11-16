@@ -582,4 +582,25 @@ public class CallDiagnosticsTest {
 
         assertEquals(before, Prefs.events(context).size());
     }
+
+    @Test
+    public void answeringTheAppIsLoggedWithTheRouteAtThatMoment() {
+        RelayConnection connection = answeredCall();
+        connection.onCallAudioStateChanged(audio(BLUETOOTH, EARPIECE | BLUETOOTH | SPEAKER));
+
+        org.robolectric.shadows.ShadowLooper.idleMainLooper(RelayConnection.ANSWER_DELAY_MS, java.util.concurrent.TimeUnit.MILLISECONDS);
+
+        assertEquals("route=bluetooth", latest(EventLog.APP_ANSWERED).detail);
+        connection.onAbort();
+    }
+
+    @Test
+    public void aMutedCallSaysSoInItsRoute() {
+        RelayConnection connection = answeredCall();
+
+        connection.onCallAudioStateChanged(new android.telecom.CallAudioState(true, BLUETOOTH, EARPIECE | BLUETOOTH | SPEAKER));
+
+        assertTrue(latest(EventLog.AUDIO_ROUTE).detail.endsWith(" muted"));
+        connection.onAbort();
+    }
 }

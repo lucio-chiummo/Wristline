@@ -113,4 +113,40 @@ public class AudioLinkTest {
         assertTrue(logged.toString(), logged.stream().anyMatch(l -> l.startsWith("offered=")));
         watcher.stop();
     }
+
+    @Test
+    public void saysWhereVoicesPlayNeverWhose() {
+        assertEquals("players voice=2 on=bluetooth_sco,earpiece",
+                AudioLink.players(2, List.of("earpiece", "bluetooth_sco", "earpiece")));
+        assertEquals("players voice=0", AudioLink.players(0, List.of()));
+    }
+
+    @Test
+    public void saysWhetherThePhoneIsLockedAndLit() {
+        assertEquals("screen=locked,off", AudioLink.screen(true, false));
+        assertEquals("screen=unlocked,on", AudioLink.screen(false, true));
+    }
+
+    @Test
+    public void listsDeviceKindsOnceEachInOrder() {
+        assertEquals("outputs=bluetooth_sco,earpiece", AudioLink.kinds("outputs", new int[] {
+                AudioDeviceInfo.TYPE_BUILTIN_EARPIECE, AudioDeviceInfo.TYPE_BLUETOOTH_SCO,
+                AudioDeviceInfo.TYPE_BUILTIN_EARPIECE}));
+        assertEquals("inputs=none", AudioLink.kinds("inputs", new int[0]));
+        assertEquals("inputs=phone_mic", AudioLink.kinds("inputs", new int[] {AudioDeviceInfo.TYPE_BUILTIN_MIC}));
+    }
+
+    @Test
+    public void logsTheScreenAndTheDevicesWhenItStarts() {
+        Context context = RuntimeEnvironment.getApplication();
+        List<String> logged = new ArrayList<>();
+        AudioLink.Watcher watcher = new AudioLink.Watcher(context, new Handler(Looper.getMainLooper()), logged::add);
+
+        watcher.start();
+
+        for (String prefix : new String[] {"screen=", "outputs=", "inputs=", "players voice=", "sco_on="}) {
+            assertTrue(prefix + " missing in " + logged, logged.stream().anyMatch(l -> l.startsWith(prefix)));
+        }
+        watcher.stop();
+    }
 }
