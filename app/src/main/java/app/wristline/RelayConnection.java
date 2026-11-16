@@ -48,6 +48,10 @@ public class RelayConnection extends Connection {
     private boolean holdingVoice;
     /** Android 17 and later: keeps the voice on the watch (see {@link VoiceHold}). */
     private final VoiceHold voiceHold;
+    /** When this call was created, for reading what Android logged about it afterwards. */
+    private final long createdAt = System.currentTimeMillis();
+    /** The call went active: its voice was meant for the watch. */
+    private boolean wentActive;
 
     RelayConnection(Context context) {
         this.context = context.getApplicationContext();
@@ -405,6 +409,7 @@ public class RelayConnection extends Connection {
         Diagnostics.record(context, EventLog.CALL_STATE, testCall ? null : RelayListener.currentApp,
                 Connection.stateToString(state).toLowerCase(java.util.Locale.ROOT));
         if (state == STATE_ACTIVE) {
+            wentActive = true;
             audioLink.start();
         }
         if (state == STATE_ACTIVE && !testCall) {
@@ -488,5 +493,9 @@ public class RelayConnection extends Connection {
         setDisconnected(cause);
         destroy();
         VoiceControls.update(context);
+        if (wentActive) {
+            wentActive = false;
+            SystemLogCapture.afterCall(context, createdAt);
+        }
     }
 }

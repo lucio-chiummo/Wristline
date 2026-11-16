@@ -141,7 +141,7 @@ You can set this up on the phone alone, or with a computer. Either way it's once
 4. Type the 6-digit code into Wristline's notification.
 5. When Wristline says it's done, turn Wireless debugging off.
 
-Wristline pairs with your phone's own Wireless debugging, keeps the key it paired with in the phone's Keystore (where the Keystore can't hold it, in Wristline's private storage, protected by a Keystore key where possible), and runs only `appops set --uid <package> READ_PHONE_STATE ignore` (or `allow` to undo) and `am kill <package>`. Apps you set up this way are repaired silently after an update when Wireless debugging is on and the key is still authorised. Turning voice off for the last app deletes the key. **Forget this phone's key** on the Voice screen deletes it too.
+Wristline pairs with your phone's own Wireless debugging, keeps the key it paired with in the phone's Keystore (where the Keystore can't hold it, in Wristline's private storage, protected by a Keystore key where possible), and runs only `appops set --uid <package> READ_PHONE_STATE ignore` (or `allow` to undo), `am kill <package>`, and, after a call while Wireless debugging is on, three read-only commands for the diagnostic report (`logcat`, `dumpsys audio` and `dumpsys bluetooth_manager`, filtered to lines about call audio and the Bluetooth voice link). Apps you set up this way are repaired silently after an update when Wireless debugging is on and the key is still authorised. Turning voice off for the last app deletes the key. **Forget this phone's key** on the Voice screen deletes it too.
 
 **With a computer**
 
