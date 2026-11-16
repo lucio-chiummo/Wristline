@@ -230,6 +230,8 @@ public class RelayConnection extends Connection {
         CallAudioState state = audioState;
         boolean noWatch = state != null && (state.getSupportedRouteMask() & CallAudioState.ROUTE_BLUETOOTH) == 0;
         RelayListener.send(context, call.answer);
+        Diagnostics.record(context, EventLog.APP_ANSWERED, RelayListener.currentApp,
+                state == null ? "route=unknown" : "route=" + AudioRoute.names(state.getRoute()));
         if (noWatch) {
             Log.w(RelayListener.TAG, "no Bluetooth route: the call is answered on the phone");
             Diagnostics.record(context, EventLog.AUDIO_NO_WATCH, RelayListener.currentApp, "answered on the phone");
@@ -428,7 +430,8 @@ public class RelayConnection extends Connection {
                 VoiceControls.update(context);
             }
             String detail = AudioRoute.describe(state.getRoute(), state.getSupportedRouteMask())
-                    + (state.getActiveBluetoothDevice() != null ? " bt=active" : "");
+                    + (state.getActiveBluetoothDevice() != null ? " bt=active" : "")
+                    + (state.isMuted() ? " muted" : "");
             if (!detail.equals(lastRouteDetail)) {
                 lastRouteDetail = detail;
                 Diagnostics.record(context, EventLog.AUDIO_ROUTE, testCall ? null : RelayListener.currentApp, detail);

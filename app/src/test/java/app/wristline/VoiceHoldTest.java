@@ -107,4 +107,29 @@ public class VoiceHoldTest {
         assertEquals(AudioManager.MODE_RINGTONE, audio.getMode());
         assertTrue(logged.isEmpty());
     }
+
+    @Test
+    public void aMomentAfterTakingItSaysWhetherItHeld() {
+        offer(AudioDeviceInfo.TYPE_BLUETOOTH_SCO);
+        VoiceHold hold = new VoiceHold(context, logged::add);
+        hold.take();
+
+        org.robolectric.shadows.ShadowLooper.idleMainLooper(VoiceHold.CHECK_MS, java.util.concurrent.TimeUnit.MILLISECONDS);
+
+        String check = logged.get(logged.size() - 1);
+        assertTrue(check, check.startsWith("hold check mode=in_communication device=bluetooth_sco stream="));
+        hold.release();
+    }
+
+    @Test
+    public void noCheckAfterLettingGo() {
+        offer(AudioDeviceInfo.TYPE_BLUETOOTH_SCO);
+        VoiceHold hold = new VoiceHold(context, logged::add);
+        hold.take();
+        hold.release();
+
+        org.robolectric.shadows.ShadowLooper.idleMainLooper(VoiceHold.CHECK_MS, java.util.concurrent.TimeUnit.MILLISECONDS);
+
+        assertEquals("hold=released", logged.get(logged.size() - 1));
+    }
 }

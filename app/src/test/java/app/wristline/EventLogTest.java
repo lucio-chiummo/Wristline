@@ -61,12 +61,19 @@ public class EventLogTest {
 
     /** The report's extra events (states, routes, recordings) take several lines per call. */
     @Test
-    public void keepsTwoHundredAndFiftyEvents() {
-        org.junit.Assert.assertEquals(250, EventLog.MAX);
+    public void keepsSixHundredEventsSoSeveralCallsWithAudioFactsFit() {
+        org.junit.Assert.assertEquals(600, EventLog.MAX);
     }
 
     @Test
     public void reportReadsOfTheWatchAreShort() {
         org.junit.Assert.assertEquals(3, WatchSync.REPORT_TIMEOUT_S);
     }
+
+    @Test
+    public void showsMillisecondsSoEventsInOneSecondKeepTheirTiming() {
+        String line = EventLog.format(new EventLog.Entry(1234, EventLog.AUDIO_LINK, "", "mode=normal"));
+        assertTrue(line, line.contains(":01.234 audio_link mode=normal"));
+    }
+
 }

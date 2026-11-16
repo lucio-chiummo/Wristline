@@ -16,7 +16,7 @@ import java.util.Locale;
  * trigger of a call Wristline started ("watch", "call back"), and the like.
  */
 final class EventLog {
-    static final int MAX = 250;
+    static final int MAX = 600;
 
     // Event codes, as they appear in the report.
     static final String LISTENER_CONNECTED = "listener_connected";
@@ -57,6 +57,8 @@ final class EventLog {
     static final String AUDIO_GAVE_UP = "audio_gave_up";
     /** The phone's audio during a call: voice link up or down, audio mode, kind of device. */
     static final String AUDIO_LINK = "audio_link";
+    /** Wristline pressed the calling app's Answer (detail: the Telecom route at that moment). */
+    static final String APP_ANSWERED = "app_answered";
     /** A calling app shows a call in progress that Wristline neither relayed nor started. */
     static final String UNTRACKED_CALL = "untracked_call";
     static final String OUTGOING = "outgoing";
@@ -158,7 +160,7 @@ final class EventLog {
 
     /** "2026-11-02 14:03:07 incoming com.whatsapp full mode". */
     static String format(Entry e) {
-        SimpleDateFormat time = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ROOT);
+        SimpleDateFormat time = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.ROOT);
         StringBuilder line = new StringBuilder(time.format(new Date(e.time))).append(' ').append(e.code);
         if (!e.app.isEmpty()) {
             line.append(' ').append(e.app);

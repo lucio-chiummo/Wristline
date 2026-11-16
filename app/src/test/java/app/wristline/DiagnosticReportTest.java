@@ -184,4 +184,19 @@ public class DiagnosticReportTest {
         f.ringByNotification = true;
         assertTrue(DiagnosticReport.build(f).contains("Ring by notification: on\n"));
     }
+
+    @Test
+    public void saysWhatTheVoiceOnTheWatchDependsOn() {
+        DiagnosticReport.Facts f = facts();
+        f.voiceHoldNeeded = true;
+        f.audioSettingsGranted = false;
+        f.powerSaver = true;
+        f.audioDevices = "outputs=earpiece,speaker inputs=phone_mic offered=earpiece,speaker";
+
+        String report = DiagnosticReport.build(f);
+
+        assertTrue(report, report.contains("Voice hold (Android 17+): needed · audio settings permission: MISSING\n"));
+        assertTrue(report, report.contains("Power saver: on\n"));
+        assertTrue(report, report.contains("Audio devices now: outputs=earpiece,speaker inputs=phone_mic offered=earpiece,speaker\n"));
+    }
 }
