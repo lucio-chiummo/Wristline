@@ -55,6 +55,8 @@ public class RelayConnection extends Connection {
     private long lastTakeAt;
     /** The carrier call was asked for from this call (Telecom answers it asynchronously). */
     private boolean carrierAsked;
+    /** The carrier call made for this call: this connection owns it and ends it. */
+    CarrierConnection myCarrier;
     /** Telecom refused the carrier call for this call: hold the voice the beta 7 way instead. */
     private boolean carrierFailedThisCall;
     /** Android 17 and later: keeps the voice on the watch (see {@link VoiceHold}). */
@@ -437,7 +439,7 @@ public class RelayConnection extends Connection {
         if (state != null) {
             CallAudioState before = audioState;
             audioState = state;
-            if (CarrierConnection.current != null) {
+            if (myCarrier != null) {
                 // The mirror's route is not the call's voice while the carrier is up: Telecom
                 // routes the carrier call, and the watch's link follows the mode it owns.
             } else if (before != null && before.getRoute() == CallAudioState.ROUTE_BLUETOOTH
@@ -530,7 +532,7 @@ public class RelayConnection extends Connection {
         if (!Prefs.ownerWar(context) || carrierFailedThisCall) {
             return false;
         }
-        if (CarrierConnection.current != null) {
+        if (myCarrier != null) {
             return true;
         }
         if (!carrierAsked) {
@@ -564,9 +566,28 @@ public class RelayConnection extends Connection {
         }
     }
 
+    /**
+     * Telecom made the carrier call this one asked for. When the call it was asked for is gone, or
+     * its user chose the phone's voice in the meantime, nobody needs the mode owned: put it down
+     * at once, before it can pull the voice anywhere.
+     */
+    static void carrierCreated(CarrierConnection carrier) {
+        RelayConnection connection = current;
+        if (connection == null || connection.testCall || connection.voiceOnPhone) {
+            carrier.end(new DisconnectCause(DisconnectCause.CANCELED));
+            if (connection != null) {
+                Diagnostics.record(connection.context, EventLog.CARRIER,
+                        connection.testCall ? null : RelayListener.currentApp, "ended");
+            }
+            return;
+        }
+        connection.myCarrier = carrier;
+    }
+
     /** The stand-in call is over (the call it stands for may carry on): Telecom gives the mode back. */
     private void endCarrier() {
-        CarrierConnection carrier = CarrierConnection.current;
+        CarrierConnection carrier = myCarrier;
+        myCarrier = null;
         if (carrier != null) {
             carrier.end(new DisconnectCause(DisconnectCause.LOCAL));
             Diagnostics.record(context, EventLog.CARRIER, testCall ? null : RelayListener.currentApp, "ended");

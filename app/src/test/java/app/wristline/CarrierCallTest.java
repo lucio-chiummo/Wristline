@@ -51,7 +51,6 @@ public class CarrierCallTest {
         RelayListener.currentApp = null;
         RelayListener.incomingCall = null;
         RelayConnection.current = null;
-        CarrierConnection.current = null;
         Prefs.setOwnerWar(context, false);
     }
 
@@ -197,7 +196,7 @@ public class CarrierCallTest {
 
         connection.onAbort();
 
-        assertNull("the carrier must not outlive the call", CarrierConnection.current);
+        assertNull("the carrier must not outlive the call", connection.myCarrier);
         assertEquals("ended", latest(EventLog.CARRIER).detail);
     }
 
@@ -209,7 +208,7 @@ public class CarrierCallTest {
 
         RelayConnection.moveVoice(true);
 
-        assertNull(CarrierConnection.current);
+        assertNull(connection.myCarrier);
         assertEquals("ended", latest(EventLog.CARRIER).detail);
 
         RelayConnection.moveVoice(false);
@@ -246,6 +245,45 @@ public class CarrierCallTest {
 
         assertEquals("the mirror's route is not the call's voice while the carrier is up",
                 Boolean.TRUE, RelayConnection.voiceOnWatch());
+        connection.onAbort();
+    }
+
+    @Test
+    public void aCarrierForACallThatIsOverIsPutDownAtOnce() {
+        RelayConnection connection = answeredCall();
+        connection.onCallAudioStateChanged(audio(BLUETOOTH, ALL));
+        RelayConnection.current = null;   // the call ended while Telecom was still making the carrier
+
+        Connection carrier = carrierUp();
+
+        assertEquals("nobody to own the mode for: the carrier must go at once",
+                Connection.STATE_DISCONNECTED, carrier.getState());
+        assertNull(connection.myCarrier);
+    }
+
+    @Test
+    public void aCarrierArrivingAfterTheVoiceMovedToThePhoneIsPutDownAtOnce() {
+        RelayConnection connection = answeredCall();
+        connection.onCallAudioStateChanged(audio(BLUETOOTH, ALL));
+        RelayConnection.moveVoice(true);   // the user chose the phone while the carrier was still coming
+
+        Connection carrier = carrierUp();
+
+        assertEquals("the carrier would pull the voice back to the watch against the user's choice",
+                Connection.STATE_DISCONNECTED, carrier.getState());
+        assertNull(connection.myCarrier);
+        assertEquals("ended", latest(EventLog.CARRIER).detail);
+    }
+
+    @Test
+    public void theCarrierIsAskedForOnlyOncePerCall() {
+        RelayConnection connection = answeredCall();
+        connection.onCallAudioStateChanged(audio(BLUETOOTH, ALL));
+        connection.onCallAudioStateChanged(audio(EARPIECE, ALL));
+        connection.onCallAudioStateChanged(audio(BLUETOOTH, ALL));
+
+        assertEquals("asked but not made yet must not ask again",
+                1, shadowOf(telecom).getAllOutgoingCalls().size());
         connection.onAbort();
     }
 }

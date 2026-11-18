@@ -61,9 +61,10 @@ public class RelayConnectionService extends ConnectionService {
             caller = getString(R.string.phone_account_label);
         }
         carrier.setCallerDisplayName(caller, TelecomManager.PRESENTATION_ALLOWED);
-        CarrierConnection.current = carrier;
         Log.i(RelayListener.TAG, "carrier call created");
         Diagnostics.record(this, EventLog.CARRIER, RelayListener.currentApp, "created");
+        // May refuse it at once when the call it was asked for is over (see carrierCreated).
+        RelayConnection.carrierCreated(carrier);
         return carrier;
     }
 
