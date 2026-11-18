@@ -204,10 +204,54 @@ public class CallDiagnosticsTest {
         RelayConnection connection = answeredCall();
         int all = EARPIECE | BLUETOOTH | SPEAKER;
         connection.onCallAudioStateChanged(audio(BLUETOOTH, all));
+        // A real drop, not the war: later than the window where a fall means the mode owner pulled it.
+        org.robolectric.shadows.ShadowLooper.idleMainLooper(RelayConnection.WAR_WINDOW_MS + 500,
+                java.util.concurrent.TimeUnit.MILLISECONDS);
 
         connection.onCallAudioStateChanged(audio(EARPIECE, all));
 
         assertEquals("hold=retaken", latest(EventLog.AUDIO_LINK, "hold=").detail);
+        connection.onAbort();
+    }
+
+    @Test
+    public void onAndroid17AFallRightAfterTheTakeGivesUpAtOnce() {
+        VoiceHold.sdk = 37;
+        offerWatchToApps();
+        RelayConnection connection = answeredCall();
+        int all = EARPIECE | BLUETOOTH | SPEAKER;
+        connection.onCallAudioStateChanged(audio(BLUETOOTH, all));
+
+        connection.onCallAudioStateChanged(audio(EARPIECE, all));
+
+        assertEquals("a fall within the war window is the owner war, not a drop",
+                "owner war", latest(EventLog.AUDIO_GAVE_UP).detail);
+        assertEquals("fighting the war is what made beta 7 fail", Boolean.FALSE, RelayConnection.voiceOnWatch());
+        assertTrue("the war phone must use the carrier from the next call on", Prefs.ownerWar(context));
+        for (EventLog.Entry e : Prefs.events(context)) {
+            assertTrue("no re-taking the voice it just lost to the war: " + e.detail,
+                    !e.code.equals(EventLog.AUDIO_LINK) || !e.detail.equals("hold=retaken"));
+        }
+        connection.onAbort();
+    }
+
+    @Test
+    public void onAndroid17NoWatchOfferedAtAnswerIsRetriedWhenItAppears() {
+        VoiceHold.sdk = 37;
+        RelayConnection connection = answeredCall();
+        connection.onCallAudioStateChanged(audio(BLUETOOTH, EARPIECE | BLUETOOTH | SPEAKER));
+        assertEquals("hold=no watch offered", latest(EventLog.AUDIO_LINK, "hold=").detail);
+
+        // The watch's voice link comes up a moment later.
+        offerWatchToApps();
+        android.media.AudioManager audio = context.getSystemService(android.media.AudioManager.class);
+        org.robolectric.Shadows.shadowOf(audio).addOutputDevice(
+                org.robolectric.shadows.AudioDeviceInfoBuilder.newBuilder()
+                        .setType(android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO).build(), true);
+        org.robolectric.shadows.ShadowLooper.idleMainLooper();
+
+        assertEquals("hold=taken", latest(EventLog.AUDIO_LINK, "hold=").detail);
+        assertEquals(android.media.AudioManager.MODE_IN_COMMUNICATION, audioMode());
         connection.onAbort();
     }
 

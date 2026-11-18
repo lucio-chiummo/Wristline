@@ -93,6 +93,19 @@ final class Prefs {
         prefs(context).edit().putBoolean("ring_by_notification", on).apply();
     }
 
+    /**
+     * A call on this phone lost the mode-owner war (Android 17: the calling app's audio framework
+     * keeps pulling the voice off the watch): from the next answered call on, Telecom owns the mode
+     * through the carrier call instead. Learned from the call it happened in, never assumed.
+     */
+    static boolean ownerWar(Context context) {
+        return prefs(context).getBoolean("owner_war", false);
+    }
+
+    static void setOwnerWar(Context context, boolean war) {
+        prefs(context).edit().putBoolean("owner_war", war).apply();
+    }
+
     /** Off unless asked: don't ring the watch while the phone is unlocked and in use. */
     static boolean notWhileInUse(Context context) {
         return prefs(context).getBoolean("not_while_in_use", false);
