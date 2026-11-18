@@ -96,7 +96,7 @@
     <string name="row_licence">Licenza</string>
     <string name="licence_open">Apri la pagina del progetto</string>
     <string name="licence_notice">Wristline\nCopyright © 2026 Lucio Chiummo\n\nConcesso in licenza secondo la PolyForm Noncommercial License 1.0.0: puoi usarlo, modificarlo e condividerlo solo per scopi non commerciali. Ogni altro uso richiede il permesso dell\'autore. È fornito così com\'è, SENZA ALCUNA GARANZIA, nei limiti consentiti dalla legge.\n\nUna copia della licenza e delle sue note è nell\'app. Questi testi, le licenze di terze parti e il codice sorgente sono anche sulla pagina del progetto.</string>
-    <string name="report_sub">Configurazione, eventi recenti (compreso quando sono avvenute le chiamate), modelli di telefono e orologio e le app di questo telefono che passano le chiamate a un orologio. Nomi e numeri di chi chiama sono esclusi. Inviato solo se lo condividi: controllalo prima di pubblicarlo.</string>
+    <string name="report_sub">Configurazione, eventi recenti (compreso quando sono avvenute le chiamate), modelli di telefono e orologio e le app di questo telefono che passano le chiamate a un orologio. Con la voce configurata dal telefono e il debug wireless attivo, anche ciò che Android ha registrato su audio e Bluetooth dell\'ultima chiamata. Nomi e numeri di chi chiama sono esclusi. Inviato solo se lo condividi: controllalo prima di pubblicarlo.</string>
     <string name="report_subject">Rapporto diagnostico di Wristline</string>
     <string name="report_preparing">Preparo il rapporto…</string>
     <string name="unreadable_title">Una chiamata %1$s non è arrivata all\'orologio</string>
