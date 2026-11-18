@@ -72,13 +72,28 @@ public class RelayListener extends NotificationListenerService {
         return new PhoneAccountHandle(new ComponentName(context, RelayConnectionService.class), "relay");
     }
 
-    private static void registerAccount(Context context) {
-        PhoneAccount account = PhoneAccount.builder(accountHandle(context), context.getString(R.string.phone_account_label))
+    /**
+     * The carrier: a managed Telecom account. A call on it makes Telecom own the audio mode, which
+     * is what a self-managed call can't get on HyperOS (see docs/BETA8_HYPEROS_FIX.md). Only used
+     * on a phone that has lost the mode-owner war; the service routes by the account's id.
+     */
+    static PhoneAccountHandle carrierHandle(Context context) {
+        return new PhoneAccountHandle(new ComponentName(context, RelayConnectionService.class), "carrier");
+    }
+
+    static void registerAccount(Context context) {
+        TelecomManager telecom = context.getSystemService(TelecomManager.class);
+        PhoneAccount relay = PhoneAccount.builder(accountHandle(context), context.getString(R.string.phone_account_label))
                 .setCapabilities(PhoneAccount.CAPABILITY_SELF_MANAGED)
                 .setSupportedUriSchemes(Collections.singletonList(PhoneAccount.SCHEME_SIP))
                 .setIcon(Icon.createWithResource(context, R.drawable.ic_notification))
                 .build();
-        context.getSystemService(TelecomManager.class).registerPhoneAccount(account);
+        telecom.registerPhoneAccount(relay);
+        PhoneAccount carrier = PhoneAccount.builder(carrierHandle(context), context.getString(R.string.phone_account_label))
+                .setSupportedUriSchemes(Collections.singletonList(PhoneAccount.SCHEME_SIP))
+                .setIcon(Icon.createWithResource(context, R.drawable.ic_notification))
+                .build();
+        telecom.registerPhoneAccount(carrier);
     }
 
     /** Contacts changed: refresh the watch's list (debounced; a sync touches many rows). */

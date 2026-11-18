@@ -53,6 +53,10 @@ public class RelayConnection extends Connection {
     private boolean holdingVoice;
     /** When the voice hold last took, to tell the war from a real drop; 0 when it never took. */
     private long lastTakeAt;
+    /** The carrier call was asked for from this call (Telecom answers it asynchronously). */
+    private boolean carrierAsked;
+    /** Telecom refused the carrier call for this call: hold the voice the beta 7 way instead. */
+    private boolean carrierFailedThisCall;
     /** Android 17 and later: keeps the voice on the watch (see {@link VoiceHold}). */
     private final VoiceHold voiceHold;
 
@@ -114,11 +118,13 @@ public class RelayConnection extends Connection {
         Log.i(RelayListener.TAG, toPhone ? "voice moved to the phone" : "voice moved back to the watch");
         Diagnostics.record(connection.context, EventLog.VOICE_MOVED, RelayListener.currentApp, toPhone ? "phone" : "watch");
         if (toPhone) {
+            connection.endCarrier();
             connection.voiceHold.release();
             connection.holdingVoice = false;
             connection.setAudioRoute(CallAudioState.ROUTE_EARPIECE);
         } else {
-            connection.routeToWatch(null);
+            connection.carrierAsked = false;
+            connection.routeToWatch(connection.audioState);
         }
         VoiceControls.update(connection.context);
         return true;
@@ -426,7 +432,10 @@ public class RelayConnection extends Connection {
         if (state != null) {
             CallAudioState before = audioState;
             audioState = state;
-            if (before != null && before.getRoute() == CallAudioState.ROUTE_BLUETOOTH
+            if (CarrierConnection.current != null) {
+                // The mirror's route is not the call's voice while the carrier is up: Telecom
+                // routes the carrier call, and the watch's link follows the mode it owns.
+            } else if (before != null && before.getRoute() == CallAudioState.ROUTE_BLUETOOTH
                     && state.getRoute() != CallAudioState.ROUTE_BLUETOOTH && !voiceOnPhone && isActive()) {
                 boolean war = !testCall && VoiceHold.needed() && lastTakeAt > 0
                         && android.os.SystemClock.elapsedRealtime() - lastTakeAt < WAR_WINDOW_MS;
@@ -491,9 +500,12 @@ public class RelayConnection extends Connection {
         // On Android 17 the route alone doesn't keep the calling app's voice there: take it when
         // the call reaches the watch, and again each time the app takes it back to the phone.
         if (!testCall && VoiceHold.needed() && (!onWatch || !holdingVoice)) {
-            // Only a take that Android accepted counts: one refused for now (no watch offered yet)
-            // must be tried again when the watch's voice link appears.
-            if (voiceHold.take()) {
+            if (engageCarrier()) {
+                // Telecom owns the audio mode through the carrier: the voice stays on the watch
+                // without Wristline fighting the calling app's audio framework for it.
+            } else if (voiceHold.take()) {
+                // Only a take that Android accepted counts: one refused for now (no watch offered
+                // yet) must be tried again when the watch's voice link appears.
                 holdingVoice = true;
                 lastTakeAt = android.os.SystemClock.elapsedRealtime();
             }
@@ -501,6 +513,58 @@ public class RelayConnection extends Connection {
         if (!onWatch) {
             Log.i(RelayListener.TAG, "routing call audio to the watch");
             setAudioRoute(CallAudioState.ROUTE_BLUETOOTH);
+        }
+    }
+
+    /**
+     * True when the carrier call carries this call's mode ownership: up, or asked for and still
+     * coming. Never asked for on a phone that hasn't lost the mode-owner war, and never re-asked
+     * after Telecom refused it in this call.
+     */
+    private boolean engageCarrier() {
+        if (!Prefs.ownerWar(context) || carrierFailedThisCall) {
+            return false;
+        }
+        if (CarrierConnection.current != null) {
+            return true;
+        }
+        if (!carrierAsked) {
+            carrierAsked = true;
+            Log.i(RelayListener.TAG, "asking Telecom to carry the call's audio mode (the owner war)");
+            try {
+                android.os.Bundle callExtras = new android.os.Bundle();
+                CharSequence caller = getCallerDisplayName();
+                callExtras.putString(RelayListener.EXTRA_CALLER, caller == null ? null : caller.toString());
+                android.os.Bundle extras = new android.os.Bundle();
+                extras.putParcelable(android.telecom.TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE,
+                        RelayListener.carrierHandle(context));
+                extras.putBundle(android.telecom.TelecomManager.EXTRA_OUTGOING_CALL_EXTRAS, callExtras);
+                context.getSystemService(android.telecom.TelecomManager.class).placeCall(getAddress(), extras);
+            } catch (RuntimeException e) {
+                Log.w(RelayListener.TAG, "could not ask for the carrier call", e);
+                Diagnostics.record(context, EventLog.CARRIER, testCall ? null : RelayListener.currentApp, "failed");
+                carrierFailedThisCall = true;
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** Telecom refused the carrier call: this call falls back to holding the voice itself. */
+    static void carrierFailed() {
+        RelayConnection connection = current;
+        if (connection != null) {
+            connection.carrierFailedThisCall = true;
+            connection.routeToWatch(connection.audioState);
+        }
+    }
+
+    /** The stand-in call is over (the call it stands for may carry on): Telecom gives the mode back. */
+    private void endCarrier() {
+        CarrierConnection carrier = CarrierConnection.current;
+        if (carrier != null) {
+            carrier.end(new DisconnectCause(DisconnectCause.LOCAL));
+            Diagnostics.record(context, EventLog.CARRIER, testCall ? null : RelayListener.currentApp, "ended");
         }
     }
 
@@ -516,6 +580,7 @@ public class RelayConnection extends Connection {
             current = null;
         }
         awaitingAppAnswer = false;
+        endCarrier();
         stopWatchingRecordings();
         audioLink.stop();
         voiceHold.release();
