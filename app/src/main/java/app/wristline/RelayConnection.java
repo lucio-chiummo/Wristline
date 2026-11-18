@@ -28,6 +28,11 @@ public class RelayConnection extends Connection {
     private String lastRouteDetail;
     /** How often the voice may fall back from the watch before Wristline stops moving it there. */
     static final int MAX_BOUNCES = 3;
+    /**
+     * A fall from the watch this soon after taking it is the mode-owner war (the calling app's
+     * audio framework pulling the voice back), not a real drop: stop fighting at once.
+     */
+    static final long WAR_WINDOW_MS = 2000;
     /** Last audio state Telecom reported for this call. */
     private CallAudioState audioState;
     /** Times the voice fell back from the watch to the phone by itself in this call. */
@@ -46,13 +51,17 @@ public class RelayConnection extends Connection {
     private final AudioLink.Watcher audioLink;
     /** The voice hold was taken for this stay on the watch; cleared when the voice goes to the phone. */
     private boolean holdingVoice;
+    /** When the voice hold last took, to tell the war from a real drop; 0 when it never took. */
+    private long lastTakeAt;
     /** Android 17 and later: keeps the voice on the watch (see {@link VoiceHold}). */
     private final VoiceHold voiceHold;
 
     RelayConnection(Context context) {
         this.context = context.getApplicationContext();
         audioLink = new AudioLink.Watcher(this.context, handler, detail ->
-                Diagnostics.record(this.context, EventLog.AUDIO_LINK, testCall ? null : RelayListener.currentApp, detail));
+                Diagnostics.record(this.context, EventLog.AUDIO_LINK, testCall ? null : RelayListener.currentApp, detail),
+                // The watch's voice link can appear a moment after the call starts: try the take again.
+                this::retryVoiceToWatch);
         voiceHold = new VoiceHold(this.context, detail ->
                 Diagnostics.record(this.context, EventLog.AUDIO_LINK, RelayListener.currentApp, detail));
         setConnectionProperties(PROPERTY_SELF_MANAGED);
@@ -418,16 +427,31 @@ public class RelayConnection extends Connection {
             CallAudioState before = audioState;
             audioState = state;
             if (before != null && before.getRoute() == CallAudioState.ROUTE_BLUETOOTH
-                    && state.getRoute() != CallAudioState.ROUTE_BLUETOOTH && !voiceOnPhone && isActive()
-                    && ++bounces >= MAX_BOUNCES) {
-                // The watch (or the app) keeps refusing the voice: fighting over it breaks the sound.
-                voiceOnPhone = true;
-                voiceHold.release();
-                holdingVoice = false;
-                Log.w(RelayListener.TAG, "the voice keeps leaving the watch: staying on the phone");
-                Diagnostics.record(context, EventLog.AUDIO_GAVE_UP, testCall ? null : RelayListener.currentApp,
-                        "left the watch " + bounces + " times");
-                VoiceControls.update(context);
+                    && state.getRoute() != CallAudioState.ROUTE_BLUETOOTH && !voiceOnPhone && isActive()) {
+                boolean war = !testCall && VoiceHold.needed() && lastTakeAt > 0
+                        && android.os.SystemClock.elapsedRealtime() - lastTakeAt < WAR_WINDOW_MS;
+                if (war) {
+                    // A fall this soon after the take is the calling app pulling the voice back, not
+                    // the watch losing it: fighting over it is what breaks the sound. One gap, then
+                    // the phone keeps the voice — and the next call goes through the carrier.
+                    voiceOnPhone = true;
+                    voiceHold.release();
+                    holdingVoice = false;
+                    Prefs.setOwnerWar(context, true);
+                    Log.w(RelayListener.TAG, "the voice was pulled off the watch at once: staying on the phone");
+                    Diagnostics.record(context, EventLog.AUDIO_GAVE_UP, testCall ? null : RelayListener.currentApp,
+                            "owner war");
+                    VoiceControls.update(context);
+                } else if (++bounces >= MAX_BOUNCES) {
+                    // The watch (or the app) keeps refusing the voice: fighting over it breaks the sound.
+                    voiceOnPhone = true;
+                    voiceHold.release();
+                    holdingVoice = false;
+                    Log.w(RelayListener.TAG, "the voice keeps leaving the watch: staying on the phone");
+                    Diagnostics.record(context, EventLog.AUDIO_GAVE_UP, testCall ? null : RelayListener.currentApp,
+                            "left the watch " + bounces + " times");
+                    VoiceControls.update(context);
+                }
             }
             String detail = AudioRoute.describe(state.getRoute(), state.getSupportedRouteMask())
                     + (state.getActiveBluetoothDevice() != null ? " bt=active" : "")
@@ -467,12 +491,23 @@ public class RelayConnection extends Connection {
         // On Android 17 the route alone doesn't keep the calling app's voice there: take it when
         // the call reaches the watch, and again each time the app takes it back to the phone.
         if (!testCall && VoiceHold.needed() && (!onWatch || !holdingVoice)) {
-            holdingVoice = true;
-            voiceHold.take();
+            // Only a take that Android accepted counts: one refused for now (no watch offered yet)
+            // must be tried again when the watch's voice link appears.
+            if (voiceHold.take()) {
+                holdingVoice = true;
+                lastTakeAt = android.os.SystemClock.elapsedRealtime();
+            }
         }
         if (!onWatch) {
             Log.i(RelayListener.TAG, "routing call audio to the watch");
             setAudioRoute(CallAudioState.ROUTE_BLUETOOTH);
+        }
+    }
+
+    /** The watch's voice link appeared late: the take is worth another try while the call is on and unheld. */
+    private void retryVoiceToWatch() {
+        if (!testCall && isActive() && !voiceOnPhone && !holdingVoice && VoiceHold.needed()) {
+            routeToWatch(audioState);
         }
     }
 
