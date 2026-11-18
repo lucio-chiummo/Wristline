@@ -14,9 +14,6 @@ import android.telecom.DisconnectCause;
  * call it stands in for. Only made on a phone that has lost the war (see {@link Prefs#ownerWar}).
  */
 public class CarrierConnection extends Connection {
-    /** The carrier call of the call in progress, null when there is none. */
-    static volatile CarrierConnection current;
-
     CarrierConnection() {
         setConnectionCapabilities(CAPABILITY_MUTE);
         setAudioModeIsVoip(true);
@@ -36,9 +33,6 @@ public class CarrierConnection extends Connection {
     }
 
     void end(DisconnectCause cause) {
-        if (current == this) {
-            current = null;
-        }
         setDisconnected(cause);
         destroy();
     }
