@@ -76,11 +76,18 @@ final class VoiceHold {
             // Setting the mode again makes Wristline the most recent owner.
             audio.setMode(AudioManager.MODE_IN_COMMUNICATION);
             boolean accepted = audio.setCommunicationDevice(watch);
-            log.log(!accepted ? "hold=refused" : held ? "hold=retaken" : "hold=taken");
+            if (!accepted) {
+                // A take that didn't take: no hold to report, no stream to keep Android
+                // counting Wristline as in a call.
+                log.log("hold=refused");
+                stopSilence();
+                return false;
+            }
+            log.log(held ? "hold=retaken" : "hold=taken");
             held = true;
             handler.removeCallbacks(check);
             handler.postDelayed(check, CHECK_MS);
-            return accepted;
+            return true;
         } catch (RuntimeException e) {
             Log.w(RelayListener.TAG, "could not hold the voice on the watch", e);
             log.log("hold=failed " + e.getClass().getSimpleName());
