@@ -3,6 +3,7 @@ package app.wristline;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.robolectric.Shadows.shadowOf;
 
 import android.content.Context;
 import android.content.Intent;
@@ -147,6 +148,44 @@ public class AudioLinkTest {
         for (String prefix : new String[] {"screen=", "outputs=", "inputs=", "players voice=", "sco_on="}) {
             assertTrue(prefix + " missing in " + logged, logged.stream().anyMatch(l -> l.startsWith(prefix)));
         }
+        watcher.stop();
+    }
+
+    @Test
+    public void tellsWhenABluetoothVoiceDeviceAppears() {
+        Context context = RuntimeEnvironment.getApplication();
+        android.media.AudioManager audio = context.getSystemService(android.media.AudioManager.class);
+        List<String> logged = new ArrayList<>();
+        List<String> told = new ArrayList<>();
+        AudioLink.Watcher watcher = new AudioLink.Watcher(context, new Handler(Looper.getMainLooper()),
+                logged::add, () -> told.add("sco appeared"));
+        watcher.start();
+        told.clear();
+
+        shadowOf(audio).addOutputDevice(org.robolectric.shadows.AudioDeviceInfoBuilder.newBuilder()
+                .setType(AudioDeviceInfo.TYPE_BLUETOOTH_SCO).build(), true);
+        ShadowLooper.idleMainLooper();
+
+        assertEquals("the watch's voice link appeared: the take is worth another try", List.of("sco appeared"), told);
+        watcher.stop();
+    }
+
+    @Test
+    public void staysQuietWhenOtherDevicesAppear() {
+        Context context = RuntimeEnvironment.getApplication();
+        android.media.AudioManager audio = context.getSystemService(android.media.AudioManager.class);
+        List<String> logged = new ArrayList<>();
+        List<String> told = new ArrayList<>();
+        AudioLink.Watcher watcher = new AudioLink.Watcher(context, new Handler(Looper.getMainLooper()),
+                logged::add, () -> told.add("sco appeared"));
+        watcher.start();
+        told.clear();
+
+        shadowOf(audio).addOutputDevice(org.robolectric.shadows.AudioDeviceInfoBuilder.newBuilder()
+                .setType(AudioDeviceInfo.TYPE_BUILTIN_SPEAKER).build(), true);
+        ShadowLooper.idleMainLooper();
+
+        assertTrue(told.isEmpty());
         watcher.stop();
     }
 }
