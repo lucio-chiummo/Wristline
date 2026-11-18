@@ -75,6 +75,21 @@ public class VoiceHoldTest {
     }
 
     @Test
+    public void aRefusedTakeIsNotHeld() {
+        offer(AudioDeviceInfo.TYPE_BLUETOOTH_SCO);
+        shadowOf(audio).lockCommunicationDevice(true);
+        VoiceHold hold = new VoiceHold(context, logged::add);
+
+        assertFalse(hold.take());
+        hold.release();
+
+        shadowOf(audio).lockCommunicationDevice(false);
+        assertTrue(hold.take());
+        assertEquals("a refused take must not count as taken", List.of("hold=refused", "hold=taken"), logged);
+        hold.release();
+    }
+
+    @Test
     public void withNoWatchOfferedItLeavesTheAudioAlone() {
         offer(AudioDeviceInfo.TYPE_BUILTIN_EARPIECE, AudioDeviceInfo.TYPE_BUILTIN_SPEAKER);
         VoiceHold hold = new VoiceHold(context, logged::add);
