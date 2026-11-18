@@ -138,6 +138,8 @@ final class AudioLink {
         private final Context context;
         private final Handler handler;
         private final Sink sink;
+        /** Runs when a Bluetooth voice device (SCO or BLE) appears; null for report-only watchers. */
+        private final Runnable onBluetoothDevicesAdded;
         private final Map<String, String> last = new HashMap<>();
         private boolean started;
 
@@ -176,6 +178,15 @@ final class AudioLink {
             @Override
             public void onAudioDevicesAdded(AudioDeviceInfo[] added) {
                 reportDevices();
+                if (onBluetoothDevicesAdded != null) {
+                    for (AudioDeviceInfo device : added) {
+                        if (device.getType() == AudioDeviceInfo.TYPE_BLUETOOTH_SCO
+                                || device.getType() == AudioDeviceInfo.TYPE_BLE_HEADSET) {
+                            onBluetoothDevicesAdded.run();
+                            break;
+                        }
+                    }
+                }
             }
 
             @Override
@@ -192,9 +203,14 @@ final class AudioLink {
         };
 
         Watcher(Context context, Handler handler, Sink sink) {
+            this(context, handler, sink, null);
+        }
+
+        Watcher(Context context, Handler handler, Sink sink, Runnable onBluetoothDevicesAdded) {
             this.context = context.getApplicationContext();
             this.handler = handler;
             this.sink = sink;
+            this.onBluetoothDevicesAdded = onBluetoothDevicesAdded;
         }
 
         void start() {
