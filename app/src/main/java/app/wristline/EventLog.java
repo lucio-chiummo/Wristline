@@ -55,6 +55,11 @@ final class EventLog {
     static final String AUDIO_NO_WATCH = "audio_no_watch";
     /** The voice kept falling back from the watch to the phone: Wristline stopped moving it. */
     static final String AUDIO_GAVE_UP = "audio_gave_up";
+    /**
+     * The second Telecom call that makes Telecom own the audio mode on a war phone (detail:
+     * created, failed, ended). See docs/BETA8_HYPEROS_FIX.md.
+     */
+    static final String CARRIER = "carrier";
     /** The phone's audio during a call: voice link up or down, audio mode, kind of device. */
     static final String AUDIO_LINK = "audio_link";
     /** Wristline pressed the calling app's Answer (detail: the Telecom route at that moment). */
