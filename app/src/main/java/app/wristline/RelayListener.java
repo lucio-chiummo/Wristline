@@ -454,6 +454,15 @@ public class RelayListener extends NotificationListenerService {
         });
     }
 
+    /**
+     * A relayed call is on, by the mirror or by the app's in-call notification. The tracker can be
+     * idle while the mirror lives (its ringing notification went at answer), so the mirror itself
+     * is the authority: a call-out now would be ignored by an app already in a call.
+     */
+    static boolean relayedCallInProgress() {
+        return RelayConnection.isRelayingCall() || (ongoingCall != null && currentApp != null);
+    }
+
     /** The call in progress was started from the watch: keep the watch's call screen informed. */
     private static volatile String outgoingName;
 

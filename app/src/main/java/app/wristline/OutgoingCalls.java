@@ -23,6 +23,14 @@ final class OutgoingCalls {
             Log.w(RelayListener.TAG, "no " + app.label + " call row for contact " + contactId);
             return;
         }
+        // An app already in a call ignores a second call request: refuse before anything starts,
+        // and tell the watch why instead of leaving it on a call screen that never connects.
+        if (RelayListener.relayedCallInProgress()) {
+            Log.i(RelayListener.TAG, "not calling: a relayed call is already on");
+            Diagnostics.record(context, EventLog.OUTGOING_REFUSED, app, trigger);
+            WatchSync.callStates(context, app, contact.name, WatchProtocol.STATE_BUSY, WatchProtocol.STATE_ENDED);
+            return;
+        }
 
         // The app's own "Voice call" contact entry: the same thing the Contacts app opens.
         Intent intent = new Intent(Intent.ACTION_VIEW)

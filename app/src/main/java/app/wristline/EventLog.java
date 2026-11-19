@@ -68,6 +68,8 @@ final class EventLog {
     static final String UNTRACKED_CALL = "untracked_call";
     static final String OUTGOING = "outgoing";
     static final String OUTGOING_NOT_STARTED = "outgoing_not_started";
+    /** A call-out from the watch was refused because a relayed call is already on (detail: the trigger). */
+    static final String OUTGOING_REFUSED = "outgoing_refused";
     /** Wristline started a calling app's call (detail: what asked for it, "watch" or "call back"). */
     static final String APP_STARTED = "app_started";
     /** A call from the watch started on the phone only: the notification listener wasn't bound. */
