@@ -79,6 +79,12 @@ public class RelayConnection extends Connection {
         setAudioModeIsVoip(true);
     }
 
+    /** A real relayed call is on (not a test ring): a call-out now would fight it for the audio. */
+    static boolean isRelayingCall() {
+        RelayConnection connection = current;
+        return connection != null && !connection.testCall;
+    }
+
     static void endFromApp() {
         RelayConnection connection = current;
         if (connection != null) {

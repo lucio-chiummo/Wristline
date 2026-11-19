@@ -95,6 +95,27 @@ final class WatchSync {
         }, "watch-call-state").start();
     }
 
+    /**
+     * Several call states in order, on one thread: a refusal sends "busy" then "ended", and two
+     * threads could deliver them the wrong way round. Off the main thread; fire and forget.
+     */
+    static void callStates(Context context, SupportedApp app, String name, String... states) {
+        new Thread(() -> {
+            try {
+                for (com.google.android.gms.wearable.Node node : com.google.android.gms.tasks.Tasks.await(
+                        Wearable.getNodeClient(context).getConnectedNodes())) {
+                    for (String state : states) {
+                        byte[] payload = WatchProtocol.callStatePayload(
+                                WatchProtocol.callState(state, -1, WatchProtocol.MUTE_NONE), app.packageName, name);
+                        Wearable.getMessageClient(context).sendMessage(node.getId(), WatchProtocol.PATH_CALL_STATE, payload);
+                    }
+                }
+            } catch (Exception e) {
+                Log.w(RelayListener.TAG, "could not tell the watch about the call", e);
+            }
+        }, "watch-call-states").start();
+    }
+
     /** Records a relayed call for the watch's "Recent" list and republishes. Off the main thread. */
     static void recordCall(Context context, boolean outgoing, SupportedApp app, long contactId, String name, long time) {
         new Thread(() -> {

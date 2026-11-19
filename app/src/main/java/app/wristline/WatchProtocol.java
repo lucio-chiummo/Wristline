@@ -32,6 +32,8 @@ final class WatchProtocol {
     static final String STATE_RINGING = "ringing";
     static final String STATE_ACTIVE = "active";
     static final String STATE_ENDED = "ended";
+    /** A call-out was refused: a relayed call is already on. The watch shows why and closes. */
+    static final String STATE_BUSY = "busy";
     static final String KEY_HISTORY = "history";
     static final String KEY_TIME = "time";
     static final String KEY_OUTGOING = "outgoing";

@@ -36,6 +36,7 @@ public class WatchProtocolTest {
         assertEquals("active;4200;off", WatchProtocol.callState(WatchProtocol.STATE_ACTIVE, 4200, WatchProtocol.MUTE_OFF));
         assertEquals("ringing;;on", WatchProtocol.callState(WatchProtocol.STATE_RINGING, 4200, WatchProtocol.MUTE_ON));
         assertEquals("ended;;", WatchProtocol.callState(WatchProtocol.STATE_ENDED, -1, null));
+        assertEquals("busy;;", WatchProtocol.callState(WatchProtocol.STATE_BUSY, -1, null));
         assertEquals("active;;", WatchProtocol.callState(WatchProtocol.STATE_ACTIVE, -1, WatchProtocol.MUTE_NONE));
     }
 
