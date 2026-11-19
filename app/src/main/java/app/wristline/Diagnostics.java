@@ -44,6 +44,8 @@ final class Diagnostics {
         f.locale = java.util.Locale.getDefault().toLanguageTag();
         f.bluetoothCallAudio = bluetoothCallAudio(context.getSystemService(AudioManager.class));
         f.voiceHoldNeeded = VoiceHold.needed();
+        f.ownerWar = Prefs.ownerWar(context);
+        f.carrierEnabled = RelayListener.carrierEnabled(context);
         f.audioSettingsGranted = context.checkSelfPermission(android.Manifest.permission.MODIFY_AUDIO_SETTINGS)
                 == PackageManager.PERMISSION_GRANTED;
         try {

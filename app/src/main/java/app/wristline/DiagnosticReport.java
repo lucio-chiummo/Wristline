@@ -38,6 +38,10 @@ final class DiagnosticReport {
         Boolean bluetoothCallAudio;
         /** Android 17 and later: Wristline has to hold the voice on the watch itself. */
         boolean voiceHoldNeeded;
+        /** This phone lost the mode-owner war: calls are meant to go through the carrier. */
+        boolean ownerWar;
+        /** The carrier account is enabled in Calling accounts; Telecom starts it disabled. */
+        boolean carrierEnabled;
         /** MODIFY_AUDIO_SETTINGS, which the voice hold needs. */
         boolean audioSettingsGranted = true;
         boolean powerSaver;
@@ -93,6 +97,8 @@ final class DiagnosticReport {
                 : f.bluetoothCallAudio ? "yes" : "no").append('\n');
         out.append("Voice hold (Android 17+): ").append(f.voiceHoldNeeded ? "needed" : "not needed")
                 .append(" · audio settings permission: ").append(f.audioSettingsGranted ? "granted" : "MISSING").append('\n');
+        out.append("Mode-owner war: ").append(f.ownerWar ? "lost (carrier armed)" : "not seen")
+                .append(" · carrier account: ").append(f.carrierEnabled ? "enabled" : "DISABLED").append('\n');
         out.append("Power saver: ").append(f.powerSaver ? "on" : "off").append('\n');
         if (!f.audioDevices.isEmpty()) {
             out.append("Audio devices now: ").append(f.audioDevices).append('\n');

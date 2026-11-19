@@ -2,6 +2,8 @@
 <resources>
     <string name="app_name" translatable="false">Wristline</string>
     <string name="phone_account_label" translatable="false">Wristline</string>
+    <!-- The carrier's own name in Calling accounts: two accounts share the app, so the user can tell which to enable. -->
+    <string name="carrier_account_label">Wristline — voice on watch</string>
 
     <string name="no_supported_app">None of the apps Wristline supports is installed. It works with WhatsApp, Telegram, Instagram and Signal.</string>
 
@@ -43,6 +45,12 @@
     <string name="status_repair_title">Voice needs repair</string>
     <string name="status_repair_sub">%1$s calls play on the phone until it\'s repaired</string>
     <string name="repair">Repair</string>
+    <string name="status_carrier_title">One switch left for the voice</string>
+    <string name="status_carrier_sub">Enable Wristline in Calling accounts so calls stay on the watch</string>
+    <string name="carrier_title">Enable the voice carrier</string>
+    <string name="carrier_desc">This phone pulls the voice off the watch during a call. Wristline keeps it there with a calling account, which Android leaves off until you enable it. Tap below, turn on \"Wristline — voice on watch\", then come back here.</string>
+    <string name="carrier_open">Open calling accounts</string>
+    <string name="carrier_manual">In the phone\'s Settings, look for Calling accounts (or Call settings) and enable \"Wristline — voice on watch\".</string>
     <string name="master_switch">Relay calls to my watch</string>
     <string name="section_apps">Apps</string>
     <string name="apps_count">%1$d of %2$d on</string>

@@ -574,6 +574,17 @@ public class RelayConnection extends Connection {
             return true;
         }
         if (!carrierAsked) {
+            boolean enabled = RelayListener.carrierEnabled(context);
+            Diagnostics.record(context, EventLog.CARRIER, testCall ? null : RelayListener.currentApp,
+                    "account enabled=" + enabled);
+            if (!enabled) {
+                // A disabled account never places the call: hold the voice now instead of waiting
+                // two seconds for a carrier that cannot come. The report says which it was.
+                Diagnostics.record(context, EventLog.CARRIER, testCall ? null : RelayListener.currentApp,
+                        "disabled");
+                carrierFailedThisCall = true;
+                return false;
+            }
             carrierAsked = true;
             final int askId = ++carrierAskId;
             Log.i(RelayListener.TAG, "asking Telecom to carry the call's audio mode (the owner war)");
