@@ -23,12 +23,15 @@ public class CarrierConnection extends Connection {
 
     @Override
     public void onDisconnect() {
-        // The user ended the stand-in on the phone's call screen: the real call carries on.
+        // The user ended the stand-in on the phone's call screen: the real call carries on, but the
+        // mode is no longer owned — tell the call so it can fall back to the voice hold.
+        RelayConnection.carrierGone(this);
         end(new DisconnectCause(DisconnectCause.LOCAL));
     }
 
     @Override
     public void onAbort() {
+        RelayConnection.carrierGone(this);
         end(new DisconnectCause(DisconnectCause.CANCELED));
     }
 

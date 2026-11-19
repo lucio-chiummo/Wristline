@@ -63,6 +63,15 @@ public class CarrierCallTest {
         throw new AssertionError("no " + code + " recorded");
     }
 
+    private boolean carrierSaid(String detail) {
+        for (EventLog.Entry e : Prefs.events(context)) {
+            if (e.code.equals(EventLog.CARRIER) && e.detail.equals(detail)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private boolean voiceHeld() {
         for (EventLog.Entry e : Prefs.events(context)) {
             if (e.code.equals(EventLog.AUDIO_LINK) && e.detail.startsWith("hold=")) {
@@ -366,6 +375,85 @@ public class CarrierCallTest {
 
         assertEquals("left the watch " + RelayConnection.MAX_BOUNCES + " times", latest(EventLog.AUDIO_GAVE_UP).detail);
         assertFalse("repeated real dropouts must not latch the carrier", Prefs.ownerWar(context));
+        connection.onAbort();
+    }
+
+    @Test
+    public void aCarrierThatIsDestroyedMidCallFallsBackToTheVoiceHold() {
+        RelayConnection connection = answeredCall();
+        connection.onCallAudioStateChanged(audio(BLUETOOTH, ALL));
+        CarrierConnection carrier = (CarrierConnection) carrierUp();
+
+        carrier.onDisconnect();
+
+        assertNull("the dead carrier must not stay owned", connection.myCarrier);
+        assertEquals("lost", latest(EventLog.CARRIER).detail);
+        assertEquals("the call carries on the beta 7 way", "hold=taken", latest(EventLog.AUDIO_LINK).detail);
+        assertEquals("the carrier is never asked again this call", 1, shadowOf(telecom).getAllOutgoingCalls().size());
+        connection.onAbort();
+    }
+
+    @Test
+    public void aCarrierNeverMadeTimesOutToTheVoiceHold() {
+        RelayConnection connection = answeredCall();
+        connection.onCallAudioStateChanged(audio(BLUETOOTH, ALL));
+
+        idle(RelayConnection.CARRIER_WAIT_MS);
+
+        assertEquals("timeout", latest(EventLog.CARRIER).detail);
+        assertTrue("the call carries on the beta 7 way", voiceHeld());
+        connection.onAbort();
+    }
+
+    @Test
+    public void aCarrierMadeAfterTheTimeoutIsPutDown() {
+        RelayConnection connection = answeredCall();
+        connection.onCallAudioStateChanged(audio(BLUETOOTH, ALL));
+        idle(RelayConnection.CARRIER_WAIT_MS);
+
+        Connection carrier = carrierUp();
+
+        assertEquals("a late carrier would give two owners", Connection.STATE_DISCONNECTED, carrier.getState());
+        assertEquals("ended", latest(EventLog.CARRIER).detail);
+        connection.onAbort();
+    }
+
+    @Test
+    public void aCarrierTheWatchStopsHoldingIsFailedInCall() {
+        RelayConnection connection = answeredCall();
+        connection.onCallAudioStateChanged(audio(BLUETOOTH, ALL));
+        carrierUp();
+        offerEarpieceToo();
+
+        switchToEarpiece();
+        idle(RelayConnection.CARRIER_CHECK_MS);
+
+        assertTrue("the carrier stopped owning the mode", carrierSaid("unheld"));
+        assertNull(connection.myCarrier);
+        assertTrue("the call carries on the beta 7 way", voiceHeld());
+        connection.onAbort();
+    }
+
+    @Test
+    public void theCarrierIsNotAskedAgainAfterItFailed() {
+        RelayConnection connection = answeredCall();
+        connection.onCallAudioStateChanged(audio(BLUETOOTH, ALL));
+        ((CarrierConnection) carrierUp()).onDisconnect();
+
+        for (int i = 0; i < 3; i++) {
+            connection.onCallAudioStateChanged(audio(BLUETOOTH, ALL));
+        }
+
+        assertEquals(1, shadowOf(telecom).getAllOutgoingCalls().size());
+        connection.onAbort();
+    }
+
+    @Test
+    public void theAskIsRecorded() {
+        RelayConnection connection = answeredCall();
+        connection.onCallAudioStateChanged(audio(BLUETOOTH, ALL));
+
+        assertEquals("asked", latest(EventLog.CARRIER).detail);
         connection.onAbort();
     }
 }
