@@ -32,7 +32,7 @@ public class RelayConnection extends Connection {
      * A fall from the watch this soon after taking it is the mode-owner war (the calling app's
      * audio framework pulling the voice back), not a real drop: stop fighting at once.
      */
-    static final long WAR_WINDOW_MS = 2000;
+    static final long WAR_WINDOW_MS = 3000;
     /** Last audio state Telecom reported for this call. */
     private CallAudioState audioState;
     /** Times the voice fell back from the watch to the phone by itself in this call. */

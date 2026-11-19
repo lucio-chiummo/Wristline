@@ -341,6 +341,20 @@ public class CarrierCallTest {
     }
 
     @Test
+    public void aFallAt2500msIsWarWithTheWiderWindow() {
+        Prefs.setOwnerWar(context, false);
+        RelayConnection connection = answeredCall();
+        connection.onCallAudioStateChanged(audio(BLUETOOTH, ALL));
+        idle(2500);
+
+        connection.onCallAudioStateChanged(audio(EARPIECE, ALL));
+
+        assertEquals("the POCO's 2.45 s fall must read as war", "owner war", latest(EventLog.AUDIO_GAVE_UP).detail);
+        assertTrue(Prefs.ownerWar(context));
+        connection.onAbort();
+    }
+
+    @Test
     public void aBounceGiveUpDoesNotArmTheWar() {
         Prefs.setOwnerWar(context, false);
         RelayConnection connection = answeredCall();
