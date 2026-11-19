@@ -148,6 +148,11 @@ public class InCallActivity extends Activity {
 
     void onState(Protocol.CallState state) {
         runOnUiThread(() -> {
+            if (Protocol.STATE_BUSY.equals(state.kind)) {
+                android.widget.Toast.makeText(this, R.string.already_on_call, android.widget.Toast.LENGTH_LONG).show();
+                finish();
+                return;
+            }
             if (Protocol.STATE_ENDED.equals(state.kind)) {
                 finish();
                 return;

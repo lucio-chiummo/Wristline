@@ -27,6 +27,7 @@ final class Protocol {
     static final String STATE_RINGING = "ringing";
     static final String STATE_ACTIVE = "active";
     static final String STATE_ENDED = "ended";
+    static final String STATE_BUSY = "busy";
     static final String KEY_HISTORY = "history";
     static final String KEY_TIME = "time";
     static final String KEY_OUTGOING = "outgoing";
