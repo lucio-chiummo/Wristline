@@ -73,7 +73,8 @@ public class RelayConnection extends Connection {
                 // The watch's voice link can appear a moment after the call starts: try the take again.
                 this::retryVoiceToWatch);
         voiceHold = new VoiceHold(this.context, detail ->
-                Diagnostics.record(this.context, EventLog.AUDIO_LINK, RelayListener.currentApp, detail));
+                Diagnostics.record(this.context, EventLog.AUDIO_LINK, RelayListener.currentApp, detail),
+                this::onVoiceLost);
         setConnectionProperties(PROPERTY_SELF_MANAGED);
         setConnectionCapabilities(CAPABILITY_MUTE | CAPABILITY_SUPPORT_HOLD);
         setAudioModeIsVoip(true);
@@ -456,23 +457,10 @@ public class RelayConnection extends Connection {
                     // A fall this soon after the take is the calling app pulling the voice back, not
                     // the watch losing it: fighting over it is what breaks the sound. One gap, then
                     // the phone keeps the voice — and the next call goes through the carrier.
-                    voiceOnPhone = true;
-                    voiceHold.release();
-                    holdingVoice = false;
-                    Prefs.setOwnerWar(context, true);
-                    Log.w(RelayListener.TAG, "the voice was pulled off the watch at once: staying on the phone");
-                    Diagnostics.record(context, EventLog.AUDIO_GAVE_UP, testCall ? null : RelayListener.currentApp,
-                            "owner war");
-                    VoiceControls.update(context);
+                    giveUpVoice("owner war", true);
                 } else if (++bounces >= MAX_BOUNCES) {
                     // The watch (or the app) keeps refusing the voice: fighting over it breaks the sound.
-                    voiceOnPhone = true;
-                    voiceHold.release();
-                    holdingVoice = false;
-                    Log.w(RelayListener.TAG, "the voice keeps leaving the watch: staying on the phone");
-                    Diagnostics.record(context, EventLog.AUDIO_GAVE_UP, testCall ? null : RelayListener.currentApp,
-                            "left the watch " + bounces + " times");
-                    VoiceControls.update(context);
+                    giveUpVoice("left the watch " + bounces + " times", false);
                 }
             }
             String detail = AudioRoute.describe(state.getRoute(), state.getSupportedRouteMask())
@@ -484,6 +472,42 @@ public class RelayConnection extends Connection {
             }
         }
         routeToWatch(state);
+    }
+
+    /**
+     * The voice left the watch while Wristline held it, with no Telecom route change to show for
+     * it (the HyperOS earpiece switch). War-shaped when it came inside the take window: arm the
+     * carrier for the next call. A deliberate move to the phone, or a hold already let go, is not a loss.
+     */
+    private void onVoiceLost() {
+        if (testCall || voiceOnPhone || !holdingVoice) {
+            voiceHold.release();
+            return;
+        }
+        boolean war = lastTakeAt > 0
+                && android.os.SystemClock.elapsedRealtime() - lastTakeAt < WAR_WINDOW_MS;
+        giveUpVoice(war ? "owner war (left without Telecom seeing it)" : "left without Telecom seeing it", war);
+    }
+
+    /**
+     * The voice left the watch: stop fighting for this call and keep it on the phone. The war is
+     * armed only when the loss is war-shaped (inside the take window); repeated real dropouts are
+     * not a war and must not latch the carrier onto a healthy phone.
+     */
+    private void giveUpVoice(String reason, boolean war) {
+        if (war) {
+            Prefs.setOwnerWar(context, true);
+        }
+        voiceOnPhone = true;
+        voiceHold.release();
+        holdingVoice = false;
+        if (!testCall && audioState != null && audioState.getRoute() == CallAudioState.ROUTE_BLUETOOTH) {
+            // Telecom must not keep routing to a watch that no longer carries the voice.
+            setAudioRoute(CallAudioState.ROUTE_EARPIECE);
+        }
+        Log.w(RelayListener.TAG, "the voice left the watch: staying on the phone");
+        Diagnostics.record(context, EventLog.AUDIO_GAVE_UP, testCall ? null : RelayListener.currentApp, reason);
+        VoiceControls.update(context);
     }
 
     /**
