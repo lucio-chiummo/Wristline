@@ -147,4 +147,87 @@ public class VoiceHoldTest {
 
         assertEquals("hold=released", logged.get(logged.size() - 1));
     }
+
+    private AudioDeviceInfo device(int type) {
+        return org.robolectric.shadows.AudioDeviceInfoBuilder.newBuilder().setType(type).build();
+    }
+
+    private void idle(long ms) {
+        org.robolectric.shadows.ShadowLooper.idleMainLooper(ms, java.util.concurrent.TimeUnit.MILLISECONDS);
+    }
+
+    @Test
+    public void aSwitchToTheEarpieceWhileHeldIsReportedOnce() {
+        offer(AudioDeviceInfo.TYPE_BUILTIN_EARPIECE, AudioDeviceInfo.TYPE_BLUETOOTH_SCO);
+        int[] lost = {0};
+        VoiceHold hold = new VoiceHold(context, logged::add, () -> lost[0]++);
+        hold.take();
+
+        audio.setCommunicationDevice(device(AudioDeviceInfo.TYPE_BUILTIN_EARPIECE));
+        idle(VoiceHold.WATCH_CHECK_MS);
+
+        assertEquals("the invisible switch must be reported once", 1, lost[0]);
+        assertTrue(logged.toString(), logged.contains("hold=lost device=earpiece"));
+        idle(2000);
+        assertEquals("polling stops after the loss", 1, lost[0]);
+        hold.release();
+    }
+
+    @Test
+    public void aHeldVoiceThatStaysOnTheWatchIsNeverReported() {
+        offer(AudioDeviceInfo.TYPE_BLUETOOTH_SCO);
+        int[] lost = {0};
+        VoiceHold hold = new VoiceHold(context, logged::add, () -> lost[0]++);
+        hold.take();
+
+        idle(5000);
+
+        assertEquals(0, lost[0]);
+        hold.release();
+    }
+
+    @Test
+    public void aWatchDroppingOutOfTheListIsNotALoss() {
+        offer(AudioDeviceInfo.TYPE_BUILTIN_EARPIECE, AudioDeviceInfo.TYPE_BLUETOOTH_SCO);
+        int[] lost = {0};
+        VoiceHold hold = new VoiceHold(context, logged::add, () -> lost[0]++);
+        hold.take();
+
+        // The watch is gone entirely: a real drop, left to the route path, not a war.
+        offer(AudioDeviceInfo.TYPE_BUILTIN_EARPIECE);
+        audio.setCommunicationDevice(device(AudioDeviceInfo.TYPE_BUILTIN_EARPIECE));
+        idle(2000);
+
+        assertEquals(0, lost[0]);
+        hold.release();
+    }
+
+    @Test
+    public void releasingBeforeASwitchIsNotALoss() {
+        offer(AudioDeviceInfo.TYPE_BUILTIN_EARPIECE, AudioDeviceInfo.TYPE_BLUETOOTH_SCO);
+        int[] lost = {0};
+        VoiceHold hold = new VoiceHold(context, logged::add, () -> lost[0]++);
+        hold.take();
+        hold.release();
+
+        audio.setCommunicationDevice(device(AudioDeviceInfo.TYPE_BUILTIN_EARPIECE));
+        idle(2000);
+
+        assertEquals("the user's own move is never a loss", 0, lost[0]);
+    }
+
+    @Test
+    public void watchHasVoiceSaysWhatItSees() {
+        offer(AudioDeviceInfo.TYPE_BUILTIN_EARPIECE);
+        assertNull("no watch offered", VoiceHold.watchHasVoice(context));
+
+        offer(AudioDeviceInfo.TYPE_BUILTIN_EARPIECE, AudioDeviceInfo.TYPE_BLUETOOTH_SCO);
+        VoiceHold hold = new VoiceHold(context, logged::add);
+        hold.take();
+        assertEquals(Boolean.TRUE, VoiceHold.watchHasVoice(context));
+
+        audio.setCommunicationDevice(device(AudioDeviceInfo.TYPE_BUILTIN_EARPIECE));
+        assertEquals(Boolean.FALSE, VoiceHold.watchHasVoice(context));
+        hold.release();
+    }
 }
