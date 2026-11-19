@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="no_supported_app">Nessuna delle app supportate da Wristline è installata. Funziona con WhatsApp, Telegram, Instagram e Signal.</string>
+    <string name="carrier_account_label">Wristline — voce sull\'orologio</string>
 
     <string name="step_listener_title">Accesso alle notifiche</string>
     <string name="step_listener_desc">Rileva le chiamate in arrivo dalle app che hai attivato.</string>
@@ -38,6 +39,12 @@
     <string name="status_repair_title">La voce va riparata</string>
     <string name="status_repair_sub">Le chiamate %1$s si sentono sul telefono finché non viene riparata</string>
     <string name="repair">Ripara</string>
+    <string name="status_carrier_title">Manca un interruttore per la voce</string>
+    <string name="status_carrier_sub">Attiva Wristline in Account di chiamata per tenere la voce sull\'orologio</string>
+    <string name="carrier_title">Attiva il carrier della voce</string>
+    <string name="carrier_desc">Questo telefono si riprende la voce dall\'orologio durante la chiamata. Wristline la tiene lì con un account di chiamata, che Android lascia disattivato finché non lo attivi tu. Tocca qui sotto, attiva \"Wristline — voce sull\'orologio\", poi torna qui.</string>
+    <string name="carrier_open">Apri account di chiamata</string>
+    <string name="carrier_manual">Nelle Impostazioni del telefono cerca Account di chiamata (o Impostazioni chiamate) e attiva \"Wristline — voce sull\'orologio\".</string>
     <string name="master_switch">Inoltra le chiamate all\'orologio</string>
     <string name="section_apps">App</string>
     <string name="apps_count">%1$d di %2$d attive</string>

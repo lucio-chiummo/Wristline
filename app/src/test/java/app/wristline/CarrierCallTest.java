@@ -43,6 +43,19 @@ public class CarrierCallTest {
         VoiceHold.sdk = 37;
         RelayListener.currentApp = SupportedApp.WHATSAPP;
         Prefs.setOwnerWar(context, true);
+        RelayListener.registerAccount(context);
+        carrierAccountEnabled(true);
+    }
+
+    /**
+     * Telecom starts a managed account registered by a non-dialer disabled; the user enables it in
+     * Calling accounts. The tests model the enabled state, which the field report proved is off
+     * until then.
+     */
+    private void carrierAccountEnabled(boolean enabled) {
+        PhoneAccount carrier = telecom.getPhoneAccount(RelayListener.carrierHandle(context));
+        org.robolectric.util.ReflectionHelpers.setField(carrier, "mIsEnabled", enabled);
+        telecom.registerPhoneAccount(carrier);
     }
 
     @After
@@ -454,6 +467,20 @@ public class CarrierCallTest {
         connection.onCallAudioStateChanged(audio(BLUETOOTH, ALL));
 
         assertEquals("asked", latest(EventLog.CARRIER).detail);
+        connection.onAbort();
+    }
+
+    @Test
+    public void aDisabledCarrierAccountHoldsTheVoiceInsteadOfWaiting() {
+        carrierAccountEnabled(false);
+        RelayConnection connection = answeredCall();
+
+        connection.onCallAudioStateChanged(audio(BLUETOOTH, ALL));
+
+        assertTrue("a disabled account cannot place the carrier: hold the voice at once", voiceHeld());
+        assertTrue("the report must say the account was off", carrierSaid("account enabled=false"));
+        assertTrue(carrierSaid("disabled"));
+        assertTrue("nothing asked of Telecom", shadowOf(telecom).getAllOutgoingCalls().isEmpty());
         connection.onAbort();
     }
 }

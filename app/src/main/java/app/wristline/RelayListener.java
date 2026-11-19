@@ -81,6 +81,18 @@ public class RelayListener extends NotificationListenerService {
         return new PhoneAccountHandle(new ComponentName(context, RelayConnectionService.class), "carrier");
     }
 
+    /**
+     * Whether Telecom will let the carrier place a call. A managed account registered by an app
+     * that isn't the dialer starts <em>disabled</em> (seen on Android 17: the self-managed relay
+     * account is enabled, the carrier is not), and only the user can enable it in Calling accounts.
+     * Asking while it is disabled buys nothing but silence, so the call holds the voice itself.
+     */
+    static boolean carrierEnabled(Context context) {
+        PhoneAccount account = context.getSystemService(TelecomManager.class)
+                .getPhoneAccount(carrierHandle(context));
+        return account != null && account.isEnabled();
+    }
+
     static void registerAccount(Context context) {
         TelecomManager telecom = context.getSystemService(TelecomManager.class);
         PhoneAccount relay = PhoneAccount.builder(accountHandle(context), context.getString(R.string.phone_account_label))
@@ -89,8 +101,11 @@ public class RelayListener extends NotificationListenerService {
                 .setIcon(Icon.createWithResource(context, R.drawable.ic_notification))
                 .build();
         telecom.registerPhoneAccount(relay);
-        PhoneAccount carrier = PhoneAccount.builder(carrierHandle(context), context.getString(R.string.phone_account_label))
-                .setSupportedUriSchemes(Collections.singletonList(PhoneAccount.SCHEME_SIP))
+        PhoneAccount carrier = PhoneAccount.builder(carrierHandle(context), context.getString(R.string.carrier_account_label))
+                // tel as well as sip: the Calling accounts enable screen lists tel-scheme accounts,
+                // and a SIP-only account never appears there, so the user could not enable it.
+                .setSupportedUriSchemes(java.util.Arrays.asList(PhoneAccount.SCHEME_TEL, PhoneAccount.SCHEME_SIP))
+                .setCapabilities(PhoneAccount.CAPABILITY_CALL_PROVIDER)
                 .setIcon(Icon.createWithResource(context, R.drawable.ic_notification))
                 .build();
         telecom.registerPhoneAccount(carrier);

@@ -205,7 +205,8 @@ public class MainActivity extends Activity {
         boolean reachedWatch = Prefs.testCallResult(this) == TestCall.Result.REACHED
                 || !Prefs.callHistory(this).isEmpty();
         SetupStatus.Kind kind = SetupStatus.decide(
-                relayOn, missing.size(), ListenerRebind.unbound(this), broken.size(), reachedWatch);
+                relayOn, missing.size(), ListenerRebind.unbound(this), broken.size(), reachedWatch,
+                Prefs.ownerWar(this), RelayListener.carrierEnabled(this));
         if (kind != SetupStatus.Kind.NOT_RECEIVING) {
             fixTried = false;
         }
@@ -275,6 +276,13 @@ public class MainActivity extends Activity {
                 showAttention(null, null, getString(R.string.repair),
                         v -> startActivity(new Intent(this, VoiceActivity.class)));
                 break;
+            case CARRIER_OFF:
+                paintStatus(R.color.amber_card, R.color.amber, R.color.on_amber, R.drawable.ic_warning);
+                statusTitle.setText(R.string.status_carrier_title);
+                statusSub.setText(R.string.status_carrier_sub);
+                showAttention(getString(R.string.carrier_title), getString(R.string.carrier_desc),
+                        getString(R.string.carrier_open), v -> openCallingAccounts());
+                break;
             case TRY_IT:
                 paintStatus(R.color.ready_card, R.color.green, R.color.ground, R.drawable.ic_watch);
                 statusTitle.setText(R.string.status_try_title);
@@ -298,6 +306,41 @@ public class MainActivity extends Activity {
                 statusSub.setText(R.string.status_ready_sub);
                 break;
         }
+    }
+
+    /**
+     * Calling accounts is where the carrier is enabled. Skins hide or move that screen, so try the
+     * two public ways in and, if neither opens, say where to look instead of leaving a dead button.
+     */
+    private void openCallingAccounts() {
+        // The public action lands on the SIM-only screen on some skins (vivo, Android 17), which
+        // lists no third-party account at all. Telecom's own enable screen is the one that shows
+        // the carrier switch, under two known component names.
+        String[][] components = {
+                {"com.android.server.telecom", "com.android.server.telecomui.settings.EnableAccountPreferenceActivity"},
+                {"com.android.server.telecom", "com.android.server.telecom.settings.EnableAccountPreferenceActivity"},
+        };
+        for (String[] component : components) {
+            try {
+                startActivity(new Intent().setClassName(component[0], component[1]));
+                return;
+            } catch (android.content.ActivityNotFoundException ignored) {
+                // Not on this skin: try the next way in.
+            }
+        }
+        String[] actions = {
+                android.telecom.TelecomManager.ACTION_CHANGE_PHONE_ACCOUNTS,
+                android.telecom.TelecomManager.ACTION_SHOW_CALL_SETTINGS,
+        };
+        for (String action : actions) {
+            try {
+                startActivity(new Intent(action));
+                return;
+            } catch (android.content.ActivityNotFoundException ignored) {
+                // Not on this skin: try the next screen.
+            }
+        }
+        Toast.makeText(this, R.string.carrier_manual, Toast.LENGTH_LONG).show();
     }
 
     private void fix() {
