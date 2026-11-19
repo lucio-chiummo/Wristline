@@ -29,20 +29,54 @@ final class VoiceHold {
 
     /** How long after taking the voice the report says whether it held. */
     static final long CHECK_MS = 1500;
+    /** How often the hold is watched for a loss Telecom never reports (the HyperOS earpiece switch). */
+    static final long WATCH_CHECK_MS = 500;
 
     private static final int SAMPLE_RATE = 8000;
 
     private final android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
     private final Runnable check = this::logCheck;
+    private final Runnable poll = this::checkWatch;
 
     private final Context context;
     private final AudioLink.Sink log;
+    /** Told once when the voice leaves the watch while held; null in tests that only watch the log. */
+    private final Runnable onLost;
     private AudioTrack silence;
     private boolean held;
 
     VoiceHold(Context context, AudioLink.Sink log) {
+        this(context, log, null);
+    }
+
+    VoiceHold(Context context, AudioLink.Sink log, Runnable onLost) {
         this.context = context.getApplicationContext();
         this.log = log;
+        this.onLost = onLost;
+    }
+
+    /**
+     * Whether the watch still carries the call voice: TRUE on a watch device, FALSE on anything
+     * else (the calling app pulled it to the earpiece), null when no watch is offered at all (a
+     * real drop, left to the route path). The communication device is what the POCO's hold check
+     * already proved moves under HyperOS without Telecom reporting a route change.
+     */
+    static Boolean watchHasVoice(Context context) {
+        AudioManager audio = context.getSystemService(AudioManager.class);
+        boolean watchOffered = false;
+        for (AudioDeviceInfo device : audio.getAvailableCommunicationDevices()) {
+            if (device.getType() == AudioDeviceInfo.TYPE_BLUETOOTH_SCO
+                    || device.getType() == AudioDeviceInfo.TYPE_BLE_HEADSET) {
+                watchOffered = true;
+                break;
+            }
+        }
+        if (!watchOffered) {
+            return null;
+        }
+        AudioDeviceInfo on = audio.getCommunicationDevice();
+        int type = on == null ? -1 : on.getType();
+        return type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO || type == AudioDeviceInfo.TYPE_BLE_HEADSET;
     }
 
     static boolean needed(int sdk) {
@@ -87,6 +121,8 @@ final class VoiceHold {
             held = true;
             handler.removeCallbacks(check);
             handler.postDelayed(check, CHECK_MS);
+            handler.removeCallbacks(poll);
+            handler.postDelayed(poll, WATCH_CHECK_MS);
             return true;
         } catch (RuntimeException e) {
             Log.w(RelayListener.TAG, "could not hold the voice on the watch", e);
@@ -102,6 +138,7 @@ final class VoiceHold {
         }
         held = false;
         handler.removeCallbacks(check);
+        handler.removeCallbacks(poll);
         AudioManager audio = context.getSystemService(AudioManager.class);
         try {
             audio.clearCommunicationDevice();
@@ -111,6 +148,27 @@ final class VoiceHold {
         }
         stopSilence();
         log.log("hold=released");
+    }
+
+    /**
+     * The voice left the watch while Wristline held it, with no Telecom route change to show for
+     * it: stop watching and tell the call once. The hold is left taken so the caller's release()
+     * does the letting go; polling stops here, so the callback cannot fire twice.
+     */
+    private void checkWatch() {
+        if (!held) {
+            return;
+        }
+        if (watchHasVoice(context) == Boolean.FALSE) {
+            handler.removeCallbacks(poll);
+            AudioDeviceInfo on = context.getSystemService(AudioManager.class).getCommunicationDevice();
+            log.log("hold=lost " + AudioLink.device(on == null ? -1 : on.getType()));
+            if (onLost != null) {
+                onLost.run();
+            }
+            return;
+        }
+        handler.postDelayed(poll, WATCH_CHECK_MS);
     }
 
     /** For the report: what the phone's call audio looks like once the hold has had time to apply. */
