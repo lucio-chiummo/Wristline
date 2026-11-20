@@ -357,7 +357,7 @@ public class CallDiagnosticsTest {
 
     @Test
     public void testCallAnswerIsRecordedApartFromDecline() {
-        RelayConnection connection = new RelayConnection(context);
+        RelayConnection connection = new RelayConnection(context, false);
         connection.setRinging();
         connection.markTestCall();
         RelayConnection.current = connection;
@@ -371,7 +371,7 @@ public class CallDiagnosticsTest {
 
     @Test
     public void testCallDeclineIsRecorded() {
-        RelayConnection connection = new RelayConnection(context);
+        RelayConnection connection = new RelayConnection(context, false);
         connection.setRinging();
         connection.markTestCall();
         RelayConnection.current = connection;
@@ -422,7 +422,7 @@ public class CallDiagnosticsTest {
     @Test
     public void telecomStateChangesAreRecorded() {
         RelayListener.currentApp = SupportedApp.WHATSAPP;
-        RelayConnection connection = new RelayConnection(context);
+        RelayConnection connection = new RelayConnection(context, false);
 
         connection.setRinging();
         connection.setActive();
@@ -437,7 +437,7 @@ public class CallDiagnosticsTest {
 
     @Test
     public void audioStateIsRecordedOncePerChange() {
-        RelayConnection connection = new RelayConnection(context);
+        RelayConnection connection = new RelayConnection(context, false);
         CallAudioState earpiece = new CallAudioState(false, CallAudioState.ROUTE_EARPIECE,
                 CallAudioState.ROUTE_EARPIECE | CallAudioState.ROUTE_SPEAKER);
 
@@ -454,7 +454,7 @@ public class CallDiagnosticsTest {
 
     @Test
     public void missingBluetoothRouteWhileActiveIsRecordedOnce() {
-        RelayConnection connection = new RelayConnection(context);
+        RelayConnection connection = new RelayConnection(context, false);
         connection.setActive();
         CallAudioState noBluetooth = new CallAudioState(false, CallAudioState.ROUTE_EARPIECE,
                 CallAudioState.ROUTE_EARPIECE | CallAudioState.ROUTE_SPEAKER);
@@ -470,7 +470,7 @@ public class CallDiagnosticsTest {
 
     @Test
     public void bluetoothRouteAvailableIsNotReportedMissing() {
-        RelayConnection connection = new RelayConnection(context);
+        RelayConnection connection = new RelayConnection(context, false);
         connection.setActive();
 
         connection.onCallAudioStateChanged(new CallAudioState(false, CallAudioState.ROUTE_BLUETOOTH,
@@ -482,7 +482,7 @@ public class CallDiagnosticsTest {
 
     @Test
     public void otherTelecomSignalsAreRecorded() {
-        RelayConnection connection = new RelayConnection(context);
+        RelayConnection connection = new RelayConnection(context, false);
 
         connection.onSilence();
         connection.onHold();
@@ -499,7 +499,7 @@ public class CallDiagnosticsTest {
 
     @Test
     public void holdIsOnlyObserved() {
-        RelayConnection connection = new RelayConnection(context);
+        RelayConnection connection = new RelayConnection(context, false);
         connection.setActive();
 
         connection.onHold();
@@ -510,7 +510,7 @@ public class CallDiagnosticsTest {
 
     @Test
     public void dtmfIsRecordedWithoutItsDigit() {
-        RelayConnection connection = new RelayConnection(context);
+        RelayConnection connection = new RelayConnection(context, false);
 
         connection.onPlayDtmfTone('7');
 
@@ -519,7 +519,7 @@ public class CallDiagnosticsTest {
 
     @Test
     public void changedExtrasAreRecordedByKeyOnly() {
-        RelayConnection connection = new RelayConnection(context);
+        RelayConnection connection = new RelayConnection(context, false);
         Bundle extras = new Bundle();
         extras.putString("zeta", "+39 333 123 4567");
         extras.putString("alpha", "Corvan");
@@ -533,7 +533,7 @@ public class CallDiagnosticsTest {
 
     @Test
     public void answerWithVideoStateIsRecordedAsItArrives() {
-        RelayConnection connection = new RelayConnection(context);
+        RelayConnection connection = new RelayConnection(context, false);
         connection.setRinging();
         RelayConnection.current = connection;
 
@@ -554,7 +554,7 @@ public class CallDiagnosticsTest {
     @Test
     public void recordingChangesAreRecordedOncePerChangeWhileActive() {
         RelayListener.currentApp = SupportedApp.WHATSAPP;
-        RelayConnection connection = new RelayConnection(context);
+        RelayConnection connection = new RelayConnection(context, false);
         connection.setActive();
         android.media.AudioManager am = context.getSystemService(android.media.AudioManager.class);
 
@@ -575,7 +575,7 @@ public class CallDiagnosticsTest {
 
     @Test
     public void recordingsAreNotWatchedBeforeTheCallIsActive() {
-        RelayConnection connection = new RelayConnection(context);
+        RelayConnection connection = new RelayConnection(context, false);
         connection.setRinging();
         android.media.AudioManager am = context.getSystemService(android.media.AudioManager.class);
 
@@ -588,7 +588,7 @@ public class CallDiagnosticsTest {
 
     @Test
     public void recordingsAreNotWatchedAfterTheCallEnds() {
-        RelayConnection connection = new RelayConnection(context);
+        RelayConnection connection = new RelayConnection(context, false);
         connection.setActive();
         connection.onAbort();
         android.media.AudioManager am = context.getSystemService(android.media.AudioManager.class);
@@ -601,7 +601,7 @@ public class CallDiagnosticsTest {
 
     @Test
     public void testCallsDoNotWatchRecordings() {
-        RelayConnection connection = new RelayConnection(context);
+        RelayConnection connection = new RelayConnection(context, false);
         connection.setRinging();
         connection.markTestCall();
         RelayConnection.current = connection;

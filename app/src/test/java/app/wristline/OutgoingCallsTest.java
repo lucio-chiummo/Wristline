@@ -100,7 +100,7 @@ public class OutgoingCallsTest {
                 .addAction(new android.app.Notification.Action.Builder(null, "Answer", answer).build())
                 .build();
         RelayListener.ongoingCall = CallActions.from(n, false);
-        RelayConnection connection = new RelayConnection(context);
+        RelayConnection connection = new RelayConnection(context, false);
         RelayConnection.current = connection;
         return connection;
     }
@@ -208,7 +208,7 @@ public class OutgoingCallsTest {
     @Test
     public void aTestCallDoesNotRefuseACallOut() {
         FakeContacts.rows.add(new Object[] {7L, "Corvan", SupportedApp.WHATSAPP.callMimeType, 42L});
-        RelayConnection test = new RelayConnection(context);
+        RelayConnection test = new RelayConnection(context, false);
         test.markTestCall();
         RelayConnection.current = test;
 
