@@ -46,7 +46,9 @@ public class RelayConnectionService extends ConnectionService {
             // must not become a way to dial out from the phone.
             Log.w(RelayListener.TAG, "refused a call on the carrier that Wristline didn't place");
             Diagnostics.record(this, EventLog.CARRIER, RelayListener.currentApp, "refused");
-            return Connection.createFailedConnection(new DisconnectCause(DisconnectCause.ERROR));
+            CharSequence why = getText(R.string.carrier_refused);
+            return Connection.createFailedConnection(
+                    new DisconnectCause(DisconnectCause.ERROR, why, why, "not placed by Wristline"));
         }
         String caller = extras == null ? null : extras.getString(RelayListener.EXTRA_CALLER);
         if (caller == null) {
