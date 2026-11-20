@@ -74,6 +74,24 @@ public class WatchBuzzTest {
     }
 
     @Test
+    public void aStopReplacesTheBuzzWithASilentRingtoneVibration() {
+        WatchBuzz.start(context, 30_000);
+
+        WatchBuzz.stop(context);
+
+        long[] pattern = vibrator.getPattern();
+        assertNotNull(pattern);
+        long total = 0;
+        for (long ms : pattern) {
+            total += ms;
+        }
+        assertTrue("ran " + total + " ms", total <= 1);
+        assertEquals("not repeating", -1, vibrator.getRepeat());
+        assertEquals(VibrationAttributes.USAGE_RINGTONE,
+                ((VibrationAttributes) vibrator.getVibrationAttributesFromLastVibration()).getUsage());
+    }
+
+    @Test
     public void noVibratorDoesNothing() {
         vibrator.setHasVibrator(false);
 
