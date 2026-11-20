@@ -97,7 +97,7 @@ final class DiagnosticReport {
                 : f.bluetoothCallAudio ? "yes" : "no").append('\n');
         out.append("Voice hold (Android 17+): ").append(f.voiceHoldNeeded ? "needed" : "not needed")
                 .append(" · audio settings permission: ").append(f.audioSettingsGranted ? "granted" : "MISSING").append('\n');
-        out.append("Mode-owner war: ").append(f.ownerWar ? "lost (managed relay armed)" : "not seen")
+        out.append("Mode-owner war: ").append(f.ownerWar ? "lost (managed relay)" : "not seen")
                 .append(" · carrier account: ").append(f.carrierEnabled ? "enabled" : "DISABLED").append('\n');
         out.append("Power saver: ").append(f.powerSaver ? "on" : "off").append('\n');
         if (!f.audioDevices.isEmpty()) {
