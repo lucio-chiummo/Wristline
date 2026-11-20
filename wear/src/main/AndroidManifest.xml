@@ -4,6 +4,8 @@
     <uses-feature android:name="android.hardware.type.watch" />
     <!-- The call indicator on the watch face is an ongoing notification. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Vibrates for a call the phone rings the watch for. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
         android:allowBackup="false"
@@ -61,6 +63,10 @@
                 <data
                     android:host="*"
                     android:pathPrefix="/wristline/callstate"
+                    android:scheme="wear" />
+                <data
+                    android:host="*"
+                    android:pathPrefix="/wristline/ring"
                     android:scheme="wear" />
             </intent-filter>
             <!-- New contacts / recent calls from the phone: refresh the tile. -->
