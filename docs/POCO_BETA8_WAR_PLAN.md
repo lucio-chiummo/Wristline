@@ -409,3 +409,40 @@ next plan, not a tweak for this round.
 
 Not measured, because the carrier never existed: `dumpsys telecom` / audio mode owner with the
 carrier up.
+
+## 15. The way that works on hardware: the relayed call itself is the managed call (2026-11-20, vivo)
+
+Throwaway branch `spike-managed-relay` (never merge). Each step on the owner's vivo, Android 17,
+Pixel Watch 5 on HFP, carrier account enabled.
+
+| # | What the spike did | What Telecom / AudioService did |
+|---|---|---|
+| E1 | Test call rung on the carrier account, connection **not** self-managed, `setAudioModeIsVoip(false)` | No dialog. `SET_RINGING` → answered → `SET_ACTIVE` → BT. `setMode(MODE_IN_CALL)` by Telecom (pid 2559, uid 1000) |
+| E2 | Same, the app calls `setMode(MODE_IN_COMMUNICATION)` 1.5 s after answer | Ignored: mode stays `IN_CALL`, owner Telecom, communication device stays `bt_sco` |
+| E3 | Real WhatsApp call relayed the E1 way | **Caller could not hear the owner.** `RecordActivityMonitor`: every WhatsApp capture `src:VOICE_COMMUNICATION silenced`, then `src:MIC silenced` (retries to hang-up). In `IN_CALL` only the mode owner may capture |
+| E4 | Real WhatsApp call, managed connection with `setAudioModeIsVoip(true)` | Works both ways (owner confirmed). `setMode(MODE_IN_COMMUNICATION)` by Telecom; WhatsApp capture `not silenced`; route BT |
+| E5 | E4 + the app's `setMode(IN_COMMUNICATION)` probe | Stacked under Telecom, never selected while the call was up (`selected … by pid=2559`) |
+| E6 | Watch call-out placed with `placeCall` on the carrier account (managed, VoIP) | No confirm dialog, no account chooser: `CREATED selfMgd:false` → `DIALING` → `ACTIVE` → BT; mode by Telecom; WhatsApp capture not silenced; works both ways (owner confirmed) |
+
+What this settles:
+
+- R1's dialog came from *two* calls (a managed one beside a self-managed one). With **one** call —
+  the relay itself managed — Telecom never asks.
+- The managed call must be **VoIP** (`IN_COMMUNICATION`). `IN_CALL` silences the calling app's
+  microphone; the earlier carrier design had it right on paper (`setAudioModeIsVoip(true)`).
+- A privileged Telecom owner is not displaced by an app's `setMode` (E2, E5) — the property
+  `BETA8_HYPEROS_FIX.md` needs to end the war. The vivo cannot show the war itself; that the
+  POCO's Telecom behaves as its decompiled `VoipCallFocusState` says stays the round's bet.
+- WhatsApp registers no Telecom account on this phone: no second call to collide with.
+
+Costs seen, accepted for war phones only:
+
+- The phone's dialer (Google Phone) shows the call: heads-up when ringing, `InCallActivity` on
+  a call-out. Its call screening runs (`SCREENING_COMPLETED [Allow …]`).
+- Managed calls ring the phone with its own ringtone/vibration besides the calling app's ring,
+  and go into the phone's call log.
+- Once enabled, the account (`CAPABILITY_CALL_PROVIDER`) is a call provider the dialer may offer;
+  a call Wristline did not place must be refused.
+
+Replaces the carrier-beside-the-mirror design of §§1–13 and the R1 path of §14. Plan:
+`docs/superpowers/plans/2026-11-20-managed-relay.md`.
