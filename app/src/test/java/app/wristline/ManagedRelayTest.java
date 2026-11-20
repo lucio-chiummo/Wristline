@@ -29,6 +29,8 @@ import org.robolectric.annotation.Config;
 /**
  * A war phone relays the call as one managed Telecom call on the carrier account: Telecom owns the
  * audio mode and the routes, so Wristline only asks for the watch and never takes the voice.
+ * Robolectric runs no Telecom call filtering or audio arbitration: §15–16 of
+ * docs/POCO_BETA8_WAR_PLAN.md hold the hardware evidence these tests can't give.
  */
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = 36, shadows = RelayHandleTest.KeepsEnabled.class)
