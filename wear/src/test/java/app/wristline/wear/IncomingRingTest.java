@@ -15,6 +15,7 @@ import android.content.Intent;
 import android.os.Looper;
 import android.os.Vibrator;
 import android.view.View;
+import android.window.OnBackInvokedCallback;
 import android.widget.TextView;
 
 import org.junit.After;
@@ -27,6 +28,7 @@ import org.robolectric.RuntimeEnvironment;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
 
+import java.lang.reflect.Method;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -279,5 +281,25 @@ public class IncomingRingTest {
         assertTrue(screen.isFinishing());
         assertEquals(0, shadowOf(manager).size());
         assertNull(shadowOf(screen).getNextStartedActivity());
+    }
+
+    /** The system Back (a swipe, or a gesture no one else takes) must not just hide a ringing call. */
+    @Test
+    public void backDeclines() throws Exception {
+        IncomingRing.start(context, ring);
+        IncomingActivity screen = openIncomingScreen();
+
+        // The window's own dispatcher, the one the system calls (its Activity's is a proxy).
+        View decor = screen.getWindow().getDecorView();
+        Object root = View.class.getMethod("getViewRootImpl").invoke(decor);
+        Object dispatcher = root.getClass().getMethod("getOnBackInvokedDispatcher").invoke(root);
+        Method top = dispatcher.getClass().getMethod("getTopCallback");
+        ((OnBackInvokedCallback) top.invoke(dispatcher)).onBackInvoked();
+        screen.onBackPressed();
+
+        assertEquals(Protocol.PATH_DECLINE, sent.poll(5, TimeUnit.SECONDS));
+        assertNull("once", sent.poll(300, TimeUnit.MILLISECONDS));
+        assertTrue(screen.isFinishing());
+        assertEquals(0, shadowOf(manager).size());
     }
 }

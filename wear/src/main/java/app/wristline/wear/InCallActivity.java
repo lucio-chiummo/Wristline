@@ -19,8 +19,8 @@ import android.widget.TextView;
  * Wristline's own call screen for calls started from the watch, and for calls answered on
  * {@link IncomingActivity} (the watch's system call screen can't be opened by other apps). Shows
  * who and which app, "Calling…", "Ringing…" until the other side answers, then the call time;
- * one tap on the red button hangs up. Swipe-to-dismiss is off (it hid the screen without hanging
- * up): "Minimise" leaves it, opening Wristline brings it back. The crown changes the call volume. Closes when the phone says the call ended.
+ * one tap on the red button, or a Pixel Watch's double pinch, hangs up. Swipe-to-dismiss is off
+ * (it hid the screen without hanging up): "Minimise" leaves it, opening Wristline brings it back. The crown changes the call volume. Closes when the phone says the call ended.
  */
 public class InCallActivity extends Activity {
     static final String EXTRA_NAME = "name";
@@ -40,6 +40,8 @@ public class InCallActivity extends Activity {
     private float crown;
     /** Answered on the watch: stays "Connecting…" until the call is active. */
     private boolean answered;
+    /** The watch's double pinch while the screen is in front: {@link WatchGestures}. */
+    private Object gestures;
 
     static Intent intent(Context context, String name, String app) {
         return new Intent(context, InCallActivity.class)
@@ -82,13 +84,28 @@ public class InCallActivity extends Activity {
         }
         timer = findViewById(R.id.timer);
         mute = findViewById(R.id.mute);
-        findViewById(R.id.hang_up).setOnClickListener(v -> {
-            new Thread(() -> PhoneLink.hangUp(getApplicationContext())).start();
-            finish();
-        });
+        findViewById(R.id.hang_up).setOnClickListener(v -> hangUp());
         mute.setOnClickListener(v -> new Thread(() -> PhoneLink.toggleMute(getApplicationContext())).start());
         findViewById(R.id.minimise).setOnClickListener(v -> minimise());
         current = this;
+    }
+
+    private void hangUp() {
+        new Thread(() -> PhoneLink.hangUp(getApplicationContext())).start();
+        finish();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        gestures = WatchGestures.listen(this, this::hangUp, null);
+    }
+
+    @Override
+    protected void onPause() {
+        WatchGestures.stop(this, gestures);
+        gestures = null;
+        super.onPause();
     }
 
     /**
