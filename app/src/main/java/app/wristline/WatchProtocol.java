@@ -65,6 +65,9 @@ final class WatchProtocol {
 
     /** No mute action on the app's in-call notification. */
     static final String MUTE_NONE = "";
+    /** Bridge tag on the phone's ring notification; the watch app excludes it from bridging. Keep in sync with the watch. */
+    static final String RING_BRIDGE_TAG = "wristline_ring";
+
     static final String MUTE_OFF = "off";
     static final String MUTE_ON = "on";
 

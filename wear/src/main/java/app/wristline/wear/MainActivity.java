@@ -65,6 +65,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        RingBridging.exclude(this);
         setContentView(R.layout.activity_main);
         list = findViewById(R.id.contacts);
         message = findViewById(R.id.message);

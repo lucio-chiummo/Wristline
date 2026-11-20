@@ -66,6 +66,8 @@ dependencies {
     implementation("androidx.wear.watchface:watchface-complications-data-source:1.3.0")
     // Call indicator on the watch face while a call started from the watch is on.
     implementation("androidx.wear:wear-ongoing:1.1.0")
+    // Keeps the phone's ring notification off this watch, which shows its own incoming screen.
+    implementation("androidx.wear:wear-phone-interactions:1.1.0")
     implementation("androidx.core:core:1.19.1")
 
     testImplementation("junit:junit:4.13.2")

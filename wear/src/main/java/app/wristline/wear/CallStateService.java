@@ -15,6 +15,12 @@ import java.nio.charset.StandardCharsets;
  */
 public class CallStateService extends WearableListenerService {
     @Override
+    public void onCreate() {
+        super.onCreate();
+        RingBridging.exclude(this);
+    }
+
+    @Override
     public void onDataChanged(DataEventBuffer events) {
         for (DataEvent event : events) {
             String path = event.getDataItem().getUri().getPath();
