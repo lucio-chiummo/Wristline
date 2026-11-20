@@ -41,7 +41,7 @@
     <string name="repair">Ripara</string>
     <string name="status_carrier_title">Manca un interruttore per la voce</string>
     <string name="status_carrier_sub">Attiva Wristline in Account di chiamata per tenere la voce sull\'orologio</string>
-    <string name="carrier_title">Attiva il carrier della voce</string>
+    <string name="carrier_title">Attiva l\'account di chiamata di Wristline</string>
     <string name="carrier_desc">Questo telefono si riprende la voce dall\'orologio durante la chiamata. Wristline la tiene lì con un account di chiamata, che Android lascia disattivato finché non lo attivi tu. Tocca qui sotto, attiva \"Wristline — voce sull\'orologio\", poi torna qui.</string>
     <string name="carrier_open">Apri account di chiamata</string>
     <string name="carrier_manual">Nelle Impostazioni del telefono cerca Account di chiamata (o Impostazioni chiamate) e attiva \"Wristline — voce sull\'orologio\".</string>

@@ -27,8 +27,9 @@ import java.util.Collections;
 
 /**
  * Watches the call notifications of the supported apps and mirrors each incoming call as a
- * self-managed Telecom call. The Pixel Watch companion bridges self-managed Telecom calls to the
- * watch as real calls (ringing screen, Answer/Decline), which these apps don't do themselves.
+ * self-managed Telecom call, or as a managed one on the carrier account on a phone that lost the
+ * mode-owner war (see {@link #relayHandle}). The watch's companion bridges these Telecom calls to
+ * the watch as real calls (ringing screen, Answer/Decline), which these apps don't do themselves.
  */
 public class RelayListener extends NotificationListenerService {
     static final String TAG = "Wristline";

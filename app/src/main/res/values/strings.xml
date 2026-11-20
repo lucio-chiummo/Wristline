@@ -47,7 +47,7 @@
     <string name="repair">Repair</string>
     <string name="status_carrier_title">One switch left for the voice</string>
     <string name="status_carrier_sub">Enable Wristline in Calling accounts so calls stay on the watch</string>
-    <string name="carrier_title">Enable the voice carrier</string>
+    <string name="carrier_title">Turn on Wristline\'s calling account</string>
     <string name="carrier_desc">This phone pulls the voice off the watch during a call. Wristline keeps it there with a calling account, which Android leaves off until you enable it. Tap below, turn on \"Wristline — voice on watch\", then come back here.</string>
     <string name="carrier_open">Open calling accounts</string>
     <string name="carrier_manual">In the phone\'s Settings, look for Calling accounts (or Call settings) and enable \"Wristline — voice on watch\".</string>
