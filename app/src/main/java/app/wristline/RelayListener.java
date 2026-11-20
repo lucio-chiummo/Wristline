@@ -73,9 +73,9 @@ public class RelayListener extends NotificationListenerService {
     }
 
     /**
-     * The carrier: a managed Telecom account. A call on it makes Telecom own the audio mode, which
-     * is what a self-managed call can't get on HyperOS (see docs/BETA8_HYPEROS_FIX.md). Only used
-     * on a phone that has lost the mode-owner war; the service routes by the account's id.
+     * The carrier: a managed Telecom account. The relayed call itself rings on it, so Telecom owns
+     * the audio mode, which a self-managed call can't get on HyperOS (see docs/BETA8_HYPEROS_FIX.md).
+     * Only used on a phone that has lost the mode-owner war; the service routes by the account's id.
      */
     static PhoneAccountHandle carrierHandle(Context context) {
         return new PhoneAccountHandle(new ComponentName(context, RelayConnectionService.class), "carrier");
@@ -96,10 +96,10 @@ public class RelayListener extends NotificationListenerService {
     }
 
     /**
-     * Whether Telecom will let the carrier place a call. A managed account registered by an app
+     * Whether Telecom will let the carrier account carry a call. A managed account registered by an app
      * that isn't the dialer starts <em>disabled</em> (seen on Android 17: the self-managed relay
      * account is enabled, the carrier is not), and only the user can enable it in Calling accounts.
-     * Asking while it is disabled buys nothing but silence, so the call holds the voice itself.
+     * A disabled carrier rings nothing, so the call stays on the self-managed relay.
      */
     static boolean carrierEnabled(Context context) {
         TelecomManager telecom = context.getSystemService(TelecomManager.class);

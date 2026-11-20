@@ -254,4 +254,132 @@ public class ManagedRelayTest {
         assertSame(c, RelayConnection.current);
         ((RelayConnection) c).onAbort();
     }
+
+    /** An answered self-managed call on the relay account, with the watch offered for calls. */
+    private RelayConnection answeredSelfManagedCall() {
+        RelayListener.incomingCall = ringingCall();
+        offerWatchToApps();
+        Bundle extras = new Bundle();
+        extras.putString(RelayListener.EXTRA_CALLER, "WhatsApp · Annaly");
+        extras.putBoolean(RelayListener.EXTRA_ANSWERED, true);
+        RelayConnection connection = (RelayConnection) service.onCreateIncomingConnection(
+                RelayListener.accountHandle(context), new ConnectionRequest(null, null, extras));
+        org.robolectric.shadows.ShadowLooper.idleMainLooper();
+        return connection;
+    }
+
+    private void idle(long ms) {
+        org.robolectric.shadows.ShadowLooper.idleMainLooper(ms, java.util.concurrent.TimeUnit.MILLISECONDS);
+    }
+
+    private android.media.AudioManager audioManager() {
+        return context.getSystemService(android.media.AudioManager.class);
+    }
+
+    private void offerEarpieceToo() {
+        shadowOf(audioManager()).setAvailableCommunicationDevices(java.util.List.of(
+                org.robolectric.shadows.AudioDeviceInfoBuilder.newBuilder()
+                        .setType(android.media.AudioDeviceInfo.TYPE_BUILTIN_EARPIECE).build(),
+                org.robolectric.shadows.AudioDeviceInfoBuilder.newBuilder()
+                        .setType(android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO).build()));
+    }
+
+    private void switchToEarpiece() {
+        audioManager().setCommunicationDevice(org.robolectric.shadows.AudioDeviceInfoBuilder.newBuilder()
+                .setType(android.media.AudioDeviceInfo.TYPE_BUILTIN_EARPIECE).build());
+    }
+
+    @Test
+    public void registersAManagedCarrierAccountBesideTheSelfManagedOne() {
+        RelayListener.registerAccount(context);
+
+        PhoneAccount carrier = null;
+        PhoneAccount relay = null;
+        for (PhoneAccount account : shadowOf(telecom).getAllPhoneAccounts()) {
+            if ("carrier".equals(account.getAccountHandle().getId())) {
+                carrier = account;
+            } else if ("relay".equals(account.getAccountHandle().getId())) {
+                relay = account;
+            }
+        }
+        assertTrue("carrier account not registered", carrier != null);
+        assertEquals("the carrier must be a managed call: Telecom owns its audio mode",
+                0, carrier.getCapabilities() & PhoneAccount.CAPABILITY_SELF_MANAGED);
+        assertTrue("the relay stays self-managed",
+                relay != null && (relay.getCapabilities() & PhoneAccount.CAPABILITY_SELF_MANAGED) != 0);
+    }
+
+    @Test
+    public void aPhoneThatNeverLostAWarHoldsTheVoiceItself() {
+        Prefs.setOwnerWar(context, false);
+        carrierAccountEnabled(false);
+        RelayConnection connection = answeredSelfManagedCall();
+
+        connection.onCallAudioStateChanged(audio(BLUETOOTH, ALL));
+
+        assertTrue("no second call on a phone that never lost the war", shadowOf(telecom).getAllOutgoingCalls().isEmpty());
+        assertEquals("hold=taken", latest(EventLog.AUDIO_LINK).detail);
+        connection.onAbort();
+    }
+
+    @Test
+    public void aLossInsideTheWarWindowGivesUpAndArmsTheWar() {
+        Prefs.setOwnerWar(context, false);
+        RelayConnection connection = answeredSelfManagedCall();
+        connection.onCallAudioStateChanged(audio(BLUETOOTH, ALL));
+        offerEarpieceToo();
+
+        switchToEarpiece();
+        idle(VoiceHold.WATCH_CHECK_MS);
+
+        assertEquals("owner war (left without Telecom seeing it)", latest(EventLog.AUDIO_GAVE_UP).detail);
+        assertTrue("the invisible war must arm the managed relay for the next call", Prefs.ownerWar(context));
+        assertEquals(Boolean.FALSE, RelayConnection.voiceOnWatch());
+        connection.onAbort();
+    }
+
+    @Test
+    public void aLossLaterThanTheWarWindowGivesUpWithoutArming() {
+        Prefs.setOwnerWar(context, false);
+        RelayConnection connection = answeredSelfManagedCall();
+        connection.onCallAudioStateChanged(audio(BLUETOOTH, ALL));
+        offerEarpieceToo();
+        idle(RelayConnection.WAR_WINDOW_MS + 500);
+
+        switchToEarpiece();
+        idle(VoiceHold.WATCH_CHECK_MS);
+
+        assertEquals("left without Telecom seeing it", latest(EventLog.AUDIO_GAVE_UP).detail);
+        assertFalse("a late loss is a real drop, not a war", Prefs.ownerWar(context));
+        connection.onAbort();
+    }
+
+    @Test
+    public void aFallAt2500msIsWarWithTheWiderWindow() {
+        Prefs.setOwnerWar(context, false);
+        RelayConnection connection = answeredSelfManagedCall();
+        connection.onCallAudioStateChanged(audio(BLUETOOTH, ALL));
+        idle(2500);
+
+        connection.onCallAudioStateChanged(audio(EARPIECE, ALL));
+
+        assertEquals("the POCO's 2.45 s fall must read as war", "owner war", latest(EventLog.AUDIO_GAVE_UP).detail);
+        assertTrue(Prefs.ownerWar(context));
+        connection.onAbort();
+    }
+
+    @Test
+    public void aBounceGiveUpDoesNotArmTheWar() {
+        Prefs.setOwnerWar(context, false);
+        RelayConnection connection = answeredSelfManagedCall();
+        for (int i = 0; i < RelayConnection.MAX_BOUNCES; i++) {
+            connection.onCallAudioStateChanged(audio(BLUETOOTH, ALL));
+            idle(RelayConnection.WAR_WINDOW_MS + 500);
+            connection.onCallAudioStateChanged(audio(EARPIECE, ALL));
+        }
+
+        assertEquals("left the watch " + RelayConnection.MAX_BOUNCES + " times", latest(EventLog.AUDIO_GAVE_UP).detail);
+        assertFalse("repeated real dropouts must not latch the managed relay", Prefs.ownerWar(context));
+        connection.onAbort();
+    }
 }
