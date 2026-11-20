@@ -74,7 +74,16 @@ public class RelayConnection extends Connection {
     /** The call went active: its voice was meant for the watch. */
     private boolean wentActive;
 
-    RelayConnection(Context context) {
+    /**
+     * A managed call (not self-managed): Telecom owns the audio mode and routes, so Wristline
+     * only asks for the watch's route and never takes the voice itself.
+     */
+    final boolean managed;
+    /** The last route Wristline asked Telecom for (read by tests; Telecom gives no echo here). */
+    int requestedRoute;
+
+    RelayConnection(Context context, boolean managed) {
+        this.managed = managed;
         this.context = context.getApplicationContext();
         audioLink = new AudioLink.Watcher(this.context, handler, detail ->
                 Diagnostics.record(this.context, EventLog.AUDIO_LINK, testCall ? null : RelayListener.currentApp, detail),
@@ -83,7 +92,7 @@ public class RelayConnection extends Connection {
         voiceHold = new VoiceHold(this.context, detail ->
                 Diagnostics.record(this.context, EventLog.AUDIO_LINK, RelayListener.currentApp, detail),
                 this::onVoiceLost);
-        setConnectionProperties(PROPERTY_SELF_MANAGED);
+        setConnectionProperties(managed ? 0 : PROPERTY_SELF_MANAGED);
         setConnectionCapabilities(CAPABILITY_MUTE | CAPABILITY_SUPPORT_HOLD);
         setAudioModeIsVoip(true);
     }
@@ -142,7 +151,7 @@ public class RelayConnection extends Connection {
             connection.endCarrier();
             connection.voiceHold.release();
             connection.holdingVoice = false;
-            connection.setAudioRoute(CallAudioState.ROUTE_EARPIECE);
+            connection.requestRoute(CallAudioState.ROUTE_EARPIECE);
         } else {
             connection.carrierAsked = false;
             connection.routeToWatch(connection.audioState);
@@ -459,7 +468,7 @@ public class RelayConnection extends Connection {
                 // routes the carrier call, and the watch's link follows the mode it owns.
             } else if (before != null && before.getRoute() == CallAudioState.ROUTE_BLUETOOTH
                     && state.getRoute() != CallAudioState.ROUTE_BLUETOOTH && !voiceOnPhone && isActive()) {
-                boolean war = !testCall && VoiceHold.needed() && lastTakeAt > 0
+                boolean war = !managed && !testCall && VoiceHold.needed() && lastTakeAt > 0
                         && android.os.SystemClock.elapsedRealtime() - lastTakeAt < WAR_WINDOW_MS;
                 if (war) {
                     // A fall this soon after the take is the calling app pulling the voice back, not
@@ -511,11 +520,17 @@ public class RelayConnection extends Connection {
         holdingVoice = false;
         if (!testCall && audioState != null && audioState.getRoute() == CallAudioState.ROUTE_BLUETOOTH) {
             // Telecom must not keep routing to a watch that no longer carries the voice.
-            setAudioRoute(CallAudioState.ROUTE_EARPIECE);
+            requestRoute(CallAudioState.ROUTE_EARPIECE);
         }
         Log.w(RelayListener.TAG, "the voice left the watch: staying on the phone");
         Diagnostics.record(context, EventLog.AUDIO_GAVE_UP, testCall ? null : RelayListener.currentApp, reason);
         VoiceControls.update(context);
+    }
+
+    @SuppressWarnings("deprecation") // setAudioRoute: CallEndpoint API needs 34
+    private void requestRoute(int route) {
+        requestedRoute = route;
+        setAudioRoute(route);
     }
 
     /**
@@ -544,7 +559,7 @@ public class RelayConnection extends Connection {
         boolean onWatch = state.getRoute() == CallAudioState.ROUTE_BLUETOOTH;
         // On Android 17 the route alone doesn't keep the calling app's voice there: take it when
         // the call reaches the watch, and again each time the app takes it back to the phone.
-        if (!testCall && VoiceHold.needed() && (!onWatch || !holdingVoice)) {
+        if (!managed && !testCall && VoiceHold.needed() && (!onWatch || !holdingVoice)) {
             if (engageCarrier()) {
                 // Telecom owns the audio mode through the carrier: the voice stays on the watch
                 // without Wristline fighting the calling app's audio framework for it.
@@ -557,7 +572,7 @@ public class RelayConnection extends Connection {
         }
         if (!onWatch) {
             Log.i(RelayListener.TAG, "routing call audio to the watch");
-            setAudioRoute(CallAudioState.ROUTE_BLUETOOTH);
+            requestRoute(CallAudioState.ROUTE_BLUETOOTH);
         }
     }
 
@@ -700,7 +715,7 @@ public class RelayConnection extends Connection {
 
     /** The watch's voice link appeared late: the take is worth another try while the call is on and unheld. */
     private void retryVoiceToWatch() {
-        if (!testCall && isActive() && !voiceOnPhone && !holdingVoice && VoiceHold.needed()) {
+        if (!managed && !testCall && isActive() && !voiceOnPhone && !holdingVoice && VoiceHold.needed()) {
             routeToWatch(audioState);
         }
     }

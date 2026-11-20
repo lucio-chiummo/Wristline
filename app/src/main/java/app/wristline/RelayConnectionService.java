@@ -4,6 +4,7 @@ import android.net.Uri;
 import android.telecom.Connection;
 import android.telecom.ConnectionRequest;
 import android.telecom.ConnectionService;
+import android.telecom.DisconnectCause;
 import android.telecom.PhoneAccount;
 import android.telecom.PhoneAccountHandle;
 import android.telecom.TelecomManager;
@@ -14,7 +15,8 @@ public class RelayConnectionService extends ConnectionService {
     @Override
     public Connection onCreateIncomingConnection(PhoneAccountHandle account, ConnectionRequest request) {
         String caller = request.getExtras().getString(RelayListener.EXTRA_CALLER, getString(R.string.phone_account_label));
-        RelayConnection connection = new RelayConnection(this);
+        boolean managed = RelayListener.isCarrier(account, this);
+        RelayConnection connection = new RelayConnection(this, managed);
         connection.setAddress(Uri.fromParts(PhoneAccount.SCHEME_SIP, caller, null), TelecomManager.PRESENTATION_ALLOWED);
         connection.setCallerDisplayName(caller, TelecomManager.PRESENTATION_ALLOWED);
         connection.setRinging();
@@ -23,6 +25,9 @@ public class RelayConnectionService extends ConnectionService {
             connection.markTestCall();
         }
         RelayConnection.current = connection;
+        if (managed) {
+            Diagnostics.record(this, EventLog.CARRIER, testCall ? null : RelayListener.currentApp, "managed relay");
+        }
         if (request.getExtras().getBoolean(RelayListener.EXTRA_ANSWERED)) {
             connection.startAnswered();
         }
@@ -34,19 +39,27 @@ public class RelayConnectionService extends ConnectionService {
 
     @Override
     public Connection onCreateOutgoingConnection(PhoneAccountHandle account, ConnectionRequest request) {
-        if (RelayListener.isCarrier(account, this)) {
-            return createCarrier(request);
-        }
+        boolean managed = RelayListener.isCarrier(account, this);
         android.os.Bundle extras = request.getExtras();
+        if (managed && (extras == null || !extras.containsKey(RelayListener.EXTRA_CALLER))) {
+            // Only a call Wristline places (it names the caller) is relayed; the carrier account
+            // must not become a way to dial out from the phone.
+            Log.w(RelayListener.TAG, "refused a call on the carrier that Wristline didn't place");
+            Diagnostics.record(this, EventLog.CARRIER, RelayListener.currentApp, "refused");
+            return Connection.createFailedConnection(new DisconnectCause(DisconnectCause.ERROR));
+        }
         String caller = extras == null ? null : extras.getString(RelayListener.EXTRA_CALLER);
         if (caller == null) {
             caller = getString(R.string.phone_account_label);
         }
-        RelayConnection connection = new RelayConnection(this);
+        RelayConnection connection = new RelayConnection(this, managed);
         connection.setAddress(request.getAddress(), TelecomManager.PRESENTATION_ALLOWED);
         connection.setCallerDisplayName(caller, TelecomManager.PRESENTATION_ALLOWED);
         connection.startOutgoing(extras != null && extras.getBoolean(RelayListener.EXTRA_FULL_MODE));
         RelayConnection.current = connection;
+        if (managed) {
+            Diagnostics.record(this, EventLog.CARRIER, RelayListener.currentApp, "managed relay");
+        }
         Log.i(RelayListener.TAG, "outgoing mirror created");
         return connection;
     }
