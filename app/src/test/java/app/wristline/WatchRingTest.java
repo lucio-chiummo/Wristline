@@ -35,11 +35,16 @@ public class WatchRingTest {
         context = RuntimeEnvironment.getApplication();
         nm = context.getSystemService(NotificationManager.class);
         StatusNotifications.createChannels(context);
+        WatchSync.sender = (c, path, payload) ->
+                sent.add(path + " " + new String(payload, java.nio.charset.StandardCharsets.UTF_8));
     }
+
+    private final java.util.List<String> sent = new java.util.ArrayList<>();
 
     @After
     public void tearDown() {
         WatchRing.stop(context);
+        WatchSync.sender = WatchSync.WATCH_SENDER;
     }
 
     private Notification shown() {
@@ -122,5 +127,41 @@ public class WatchRingTest {
         assertEquals(NotificationManager.IMPORTANCE_HIGH, channel.getImportance());
         assertNull("the calling app already plays its ringtone", channel.getSound());
         assertTrue(channel.shouldVibrate());
+    }
+
+    @Test
+    public void aRingTellsTheWatchToStartOnce() {
+        WatchRing.start(context, "Corvan", "Incoming WhatsApp call", WatchRing.MAX_MS);
+        pass(3 * WatchRing.REPEAT_MS);
+
+        assertEquals(java.util.List.of("/wristline/ring start|60000"), sent);
+    }
+
+    @Test
+    public void stoppingARingTellsTheWatchToStop() {
+        WatchRing.start(context, "Corvan", "Incoming WhatsApp call", WatchRing.MAX_MS);
+        sent.clear();
+
+        WatchRing.stop(context);
+        WatchRing.stop(context);
+
+        assertEquals(java.util.List.of("/wristline/ring stop"), sent);
+    }
+
+    @Test
+    public void stoppingWhenNothingRangSendsNothing() {
+        WatchRing.stop(context);
+
+        assertTrue(sent.isEmpty());
+    }
+
+    @Test
+    public void aRingThatTimesOutTellsTheWatchToStop() {
+        WatchRing.start(context, "Corvan", "Incoming WhatsApp call", 10_000);
+        sent.clear();
+
+        pass(12_000);
+
+        assertEquals(java.util.List.of("/wristline/ring stop"), sent);
     }
 }
