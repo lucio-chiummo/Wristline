@@ -27,6 +27,9 @@ import org.robolectric.RuntimeEnvironment;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
 
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -39,6 +42,7 @@ public class IncomingRingTest {
     private NotificationManager manager;
     private final BlockingQueue<String> sent = new LinkedBlockingQueue<>();
     private final Protocol.Ring ring = Protocol.parseRing("start|60000|" + Protocol.WHATSAPP + "|Corvan");
+    private final List<ActivityController<IncomingActivity>> opened = new ArrayList<>();
 
     @Before
     public void setUp() {
@@ -55,14 +59,23 @@ public class IncomingRingTest {
     public void tearDown() {
         PhoneLink.sender = null;
         IncomingRing.stop(context);
+        for (ActivityController<IncomingActivity> screen : opened) {
+            screen.destroy();
+        }
     }
 
     /** Opens the screen as the full-screen intent would, past IncomingRing's own attempt to start it. */
     private IncomingActivity openIncomingScreen() {
+        return open(IncomingActivity.intent(context, ring));
+    }
+
+    private IncomingActivity open(Intent intent) {
         while (shadowOf(context).getNextStartedActivity() != null) {
             // IncomingRing.start's direct start of the screen
         }
-        return Robolectric.buildActivity(IncomingActivity.class, IncomingActivity.intent(context, ring)).setup().get();
+        ActivityController<IncomingActivity> screen = Robolectric.buildActivity(IncomingActivity.class, intent).setup();
+        opened.add(screen);
+        return screen.get();
     }
 
     @Test
@@ -86,6 +99,80 @@ public class IncomingRingTest {
         assertEquals(NotificationManager.IMPORTANCE_HIGH, channel.getImportance());
         assertNull("WatchBuzz vibrates, the channel stays silent", channel.getSound());
         assertFalse(channel.shouldVibrate());
+        // A silent group (NotificationCompat's setSilent) makes the system drop the full-screen intent.
+        assertNull(notification.getGroup());
+        assertEquals(Notification.GROUP_ALERT_ALL, notification.getGroupAlertBehavior());
+    }
+
+    /** The phone's stop came before the screen got going: it must not open for a ring that's over. */
+    @Test
+    public void aStopBeforeTheScreenOpensClosesItAtOnce() {
+        IncomingRing.start(context, ring);
+        IncomingRing.stop(context);
+
+        IncomingActivity screen = openIncomingScreen();
+
+        assertTrue(screen.isFinishing());
+    }
+
+    /** A lost stop: the screen goes when the ring would have ended anyway. */
+    @Test
+    public void theScreenClosesByItselfAfterTheLongestRing() {
+        IncomingRing.start(context, ring);
+        IncomingActivity screen = openIncomingScreen();
+
+        long left = IncomingRing.remainingMs();
+        assertTrue("counted from the ring's start", left > 50_000 && left <= 60_000);
+
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(left - 1_000));
+        assertFalse(screen.isFinishing());
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(2_000));
+        assertTrue(screen.isFinishing());
+    }
+
+    @Test
+    public void answerWorksOnce() throws InterruptedException {
+        IncomingRing.start(context, ring);
+        IncomingActivity screen = openIncomingScreen();
+
+        screen.findViewById(R.id.answer).performClick();
+        screen.findViewById(R.id.answer).performClick();
+        screen.findViewById(R.id.decline).performClick();
+        screen.onNewIntent(new Intent(IncomingActivity.intent(context, ring))
+                .putExtra(IncomingActivity.EXTRA_ACTION, IncomingActivity.ACTION_ANSWER));
+
+        assertEquals(Protocol.PATH_ANSWER, sent.poll(5, TimeUnit.SECONDS));
+        assertNull("no second message", sent.poll(300, TimeUnit.MILLISECONDS));
+        assertNotNull(shadowOf(screen).getNextStartedActivity());
+        assertNull("one call screen", shadowOf(screen).getNextStartedActivity());
+    }
+
+    /** The notification's Answer pressed after the ring is over does nothing. */
+    @Test
+    public void aLateNotificationAnswerDoesNothing() throws InterruptedException {
+        IncomingRing.start(context, ring);
+        IncomingRing.stop(context);
+
+        IncomingActivity screen = open(new Intent(IncomingActivity.intent(context, ring))
+                .putExtra(IncomingActivity.EXTRA_ACTION, IncomingActivity.ACTION_ANSWER));
+
+        assertTrue(screen.isFinishing());
+        assertNull(sent.poll(300, TimeUnit.MILLISECONDS));
+        assertNull(shadowOf(screen).getNextStartedActivity());
+    }
+
+    /** A new ring delivered to the open screen shows the new caller. */
+    @Test
+    public void aNewRingShowsTheNewCaller() {
+        IncomingRing.start(context, ring);
+        IncomingActivity screen = openIncomingScreen();
+        Protocol.Ring next = Protocol.parseRing("start|60000|" + Protocol.SIGNAL + "|Brisa");
+
+        IncomingRing.start(context, next);
+        screen.onNewIntent(IncomingActivity.intent(context, next));
+
+        assertEquals("Brisa", ((TextView) screen.findViewById(R.id.name)).getText().toString());
+        assertFalse(screen.isFinishing());
     }
 
     @Test

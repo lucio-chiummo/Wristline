@@ -5,6 +5,8 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.View;
 import android.view.WindowManager;
 
@@ -26,6 +28,10 @@ public class IncomingActivity extends Activity {
     static volatile IncomingActivity current;
 
     private ObjectAnimator pulse;
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private final Runnable timeout = this::finish;
+    /** Answered or declined: further presses (screen or notification) do nothing. */
+    private boolean done;
 
     static Intent intent(Context context, Protocol.Ring ring) {
         return new Intent(context, IncomingActivity.class)
@@ -41,24 +47,38 @@ public class IncomingActivity extends Activity {
         setTurnScreenOn(true);
         setContentView(R.layout.activity_incoming);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        pulse = Ui.callHeader(this, name(), app());
         findViewById(R.id.status_separator).setVisibility(View.GONE);
         findViewById(R.id.status).setVisibility(View.GONE);
         findViewById(R.id.answer).setOnClickListener(v -> answer());
         findViewById(R.id.decline).setOnClickListener(v -> decline());
         current = this;
-        onAction(getIntent());
+        show(getIntent());
     }
 
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
-        onAction(intent);
+        show(intent);
     }
 
-    /** The notification's Answer or Decline button. */
-    private void onAction(Intent intent) {
+    /**
+     * Shows the caller, or closes when the ring is already over (the phone's stop beat the screen,
+     * or it was lost): the screen never outlives the ring. Then the notification's Answer or
+     * Decline, if one was pressed.
+     */
+    private void show(Intent intent) {
+        long left = IncomingRing.remainingMs();
+        if (left <= 0) {
+            finish();
+            return;
+        }
+        if (pulse != null) {
+            pulse.cancel();
+        }
+        pulse = Ui.callHeader(this, name(), app());
+        handler.removeCallbacks(timeout);
+        handler.postDelayed(timeout, left);
         String action = intent.getStringExtra(EXTRA_ACTION);
         if (ACTION_ANSWER.equals(action)) {
             answer();
@@ -76,6 +96,10 @@ public class IncomingActivity extends Activity {
     }
 
     private void answer() {
+        if (done) {
+            return;
+        }
+        done = true;
         new Thread(() -> PhoneLink.answer(getApplicationContext())).start();
         ringOver();
         // The phone then sends the call's state, which the call screen shows.
@@ -84,6 +108,10 @@ public class IncomingActivity extends Activity {
     }
 
     private void decline() {
+        if (done) {
+            return;
+        }
+        done = true;
         new Thread(() -> PhoneLink.decline(getApplicationContext())).start();
         ringOver();
         finish();
@@ -96,7 +124,10 @@ public class IncomingActivity extends Activity {
 
     @Override
     protected void onDestroy() {
-        pulse.cancel();
+        handler.removeCallbacks(timeout);
+        if (pulse != null) {
+            pulse.cancel();
+        }
         if (current == this) {
             current = null;
         }
