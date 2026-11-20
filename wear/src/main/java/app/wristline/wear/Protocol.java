@@ -63,6 +63,9 @@ final class Protocol {
     static final String TELEGRAM = "org.telegram.messenger";
     static final String SIGNAL = "org.thoughtcrime.securesms";
 
+    /** Bridge tag on the phone's ring notification, excluded from bridging here. Keep in sync with the phone. */
+    static final String RING_BRIDGE_TAG = "wristline_ring";
+
     static final String MUTE_OFF = "off";
     static final String MUTE_ON = "on";
 

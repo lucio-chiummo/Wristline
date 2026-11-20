@@ -72,6 +72,12 @@ public class WatchRingTest {
     }
 
     @Test
+    public void theRingNotificationCarriesTheBridgeTag() {
+        WatchRing.start(context, "Anna", "Incoming call", "com.whatsapp", WatchRing.MAX_MS);
+        assertEquals("wristline_ring", new Notification.WearableExtender(shown()).getBridgeTag());
+    }
+
+    @Test
     public void postsAnswerAndDecline() {
         WatchRing.start(context, "Corvan", "Incoming WhatsApp call", "com.whatsapp", WatchRing.MAX_MS);
 

@@ -116,6 +116,9 @@ final class WatchRing {
                 .setTimeoutAfter(timeoutMs)
                 .addAction(action(context, context.getString(R.string.answer), ActionReceiver.ANSWER, 1))
                 .addAction(action(context, context.getString(R.string.decline), ActionReceiver.DECLINE, 2))
+                // Wristline's watch app opts this tag out of bridging, so a watch that shows its own
+                // incoming screen doesn't also get this notification; other watches still do.
+                .extend(new Notification.WearableExtender().setBridgeTag(WatchProtocol.RING_BRIDGE_TAG))
                 .build();
         context.getSystemService(NotificationManager.class).notify(StatusNotifications.ID_INCOMING_FALLBACK, ring);
     }
