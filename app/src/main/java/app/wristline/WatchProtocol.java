@@ -30,6 +30,10 @@ final class WatchProtocol {
     /** Message the phone sends so the watch app vibrates for a ringing call: {@link #ringStartPayload} or {@link #RING_STOP}. */
     static final String PATH_RING = "/wristline/ring";
     static final String RING_STOP = "stop";
+    /** Message the watch sends when Answer is tapped on its incoming screen (empty payload). */
+    static final String PATH_ANSWER = "/wristline/answer";
+    /** Message the watch sends when Decline is tapped on its incoming screen (empty payload). */
+    static final String PATH_DECLINE = "/wristline/decline";
     static final String STATE_CALLING = "calling";
     /** The app shows its in-call notification but the other side hasn't answered yet. */
     static final String STATE_RINGING = "ringing";
@@ -78,9 +82,13 @@ final class WatchProtocol {
         return (state + "|" + app + "|" + name).getBytes(StandardCharsets.UTF_8);
     }
 
-    /** "start|<most ms the watch may vibrate>": the watch also stops by itself after that long. */
-    static byte[] ringStartPayload(long maxMs) {
-        return ("start|" + maxMs).getBytes(StandardCharsets.UTF_8);
+    /**
+     * "start|<most ms the watch may vibrate>|<app package>|<caller>": the watch also stops by itself
+     * after that long. Empty for an unknown app or caller; the caller is last, as it may hold "|".
+     */
+    static byte[] ringStartPayload(long maxMs, String appPackage, String name) {
+        return ("start|" + maxMs + "|" + (appPackage == null ? "" : appPackage) + "|" + (name == null ? "" : name))
+                .getBytes(StandardCharsets.UTF_8);
     }
 
     /** A call the watch asked for. */

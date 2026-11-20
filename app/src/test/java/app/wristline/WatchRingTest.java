@@ -73,7 +73,7 @@ public class WatchRingTest {
 
     @Test
     public void postsAnswerAndDecline() {
-        WatchRing.start(context, "Corvan", "Incoming WhatsApp call", WatchRing.MAX_MS);
+        WatchRing.start(context, "Corvan", "Incoming WhatsApp call", "com.whatsapp", WatchRing.MAX_MS);
 
         Notification n = shown();
         assertNotNull(n);
@@ -90,7 +90,7 @@ public class WatchRingTest {
 
     @Test
     public void alertsAgainEveryFourSeconds() {
-        WatchRing.start(context, "Corvan", "Incoming WhatsApp call", WatchRing.MAX_MS);
+        WatchRing.start(context, "Corvan", "Incoming WhatsApp call", "com.whatsapp", WatchRing.MAX_MS);
         Notification first = shown();
 
         pass(WatchRing.REPEAT_MS);
@@ -101,7 +101,7 @@ public class WatchRingTest {
 
     @Test
     public void stopsAfterItsLimit() {
-        WatchRing.start(context, "Corvan", "Incoming WhatsApp call", 10_000);
+        WatchRing.start(context, "Corvan", "Incoming WhatsApp call", "com.whatsapp", 10_000);
 
         pass(12_000);
 
@@ -111,7 +111,7 @@ public class WatchRingTest {
 
     @Test
     public void stopCancelsTheNotificationAndTheRepeats() {
-        WatchRing.start(context, "Corvan", "Incoming WhatsApp call", WatchRing.MAX_MS);
+        WatchRing.start(context, "Corvan", "Incoming WhatsApp call", "com.whatsapp", WatchRing.MAX_MS);
 
         WatchRing.stop(context);
         pass(2 * WatchRing.REPEAT_MS);
@@ -122,8 +122,8 @@ public class WatchRingTest {
 
     @Test
     public void startingAgainRestartsWithTheNewCaller() {
-        WatchRing.start(context, "Corvan", "Incoming WhatsApp call", WatchRing.MAX_MS);
-        WatchRing.start(context, "Annaly", "Incoming Telegram call", WatchRing.MAX_MS);
+        WatchRing.start(context, "Corvan", "Incoming WhatsApp call", "com.whatsapp", WatchRing.MAX_MS);
+        WatchRing.start(context, "Annaly", "Incoming Telegram call", "org.telegram.messenger", WatchRing.MAX_MS);
         pass(WatchRing.REPEAT_MS);
 
         assertEquals("Annaly", shown().extras.getCharSequence(Notification.EXTRA_TITLE).toString());
@@ -140,16 +140,25 @@ public class WatchRingTest {
 
     @Test
     public void aRingTellsTheWatchToStartOnce() throws Exception {
-        WatchRing.start(context, "Corvan", "Incoming WhatsApp call", WatchRing.MAX_MS);
+        WatchRing.start(context, "Corvan", "Incoming WhatsApp call", "com.whatsapp", WatchRing.MAX_MS);
         pass(3 * WatchRing.REPEAT_MS);
         flush();
 
-        assertEquals(List.of("/wristline/ring start|60000"), sent);
+        assertEquals(List.of("/wristline/ring start|60000|com.whatsapp|Corvan"), sent);
+    }
+
+    @Test
+    public void aRingTellsTheWatchWhoIsCalling() throws Exception {
+        WatchRing.start(context, "Ann", "Incoming WhatsApp call", "com.whatsapp", WatchRing.MAX_MS);
+        flush();
+
+        assertEquals(List.of("/wristline/ring " + new String(WatchProtocol.ringStartPayload(
+                WatchRing.MAX_MS, "com.whatsapp", "Ann"), StandardCharsets.UTF_8)), sent);
     }
 
     @Test
     public void stoppingARingTellsTheWatchToStop() throws Exception {
-        WatchRing.start(context, "Corvan", "Incoming WhatsApp call", WatchRing.MAX_MS);
+        WatchRing.start(context, "Corvan", "Incoming WhatsApp call", "com.whatsapp", WatchRing.MAX_MS);
         flush();
         sent.clear();
 
@@ -170,7 +179,7 @@ public class WatchRingTest {
 
     @Test
     public void aRingThatTimesOutTellsTheWatchToStop() throws Exception {
-        WatchRing.start(context, "Corvan", "Incoming WhatsApp call", 10_000);
+        WatchRing.start(context, "Corvan", "Incoming WhatsApp call", "com.whatsapp", 10_000);
         flush();
         sent.clear();
 
@@ -195,10 +204,10 @@ public class WatchRingTest {
             order.add(new String(payload, StandardCharsets.UTF_8));
         };
 
-        WatchRing.start(context, "Corvan", "Incoming WhatsApp call", WatchRing.MAX_MS);
+        WatchRing.start(context, "Corvan", "Incoming WhatsApp call", "com.whatsapp", WatchRing.MAX_MS);
         WatchRing.stop(context);
         flush();
 
-        assertEquals(List.of("start|60000", "stop"), order);
+        assertEquals(List.of("start|60000|com.whatsapp|Corvan", "stop"), order);
     }
 }

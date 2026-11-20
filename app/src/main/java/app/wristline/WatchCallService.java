@@ -1,17 +1,27 @@
 package app.wristline;
 
+import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
 import com.google.android.gms.wearable.MessageEvent;
 import com.google.android.gms.wearable.WearableListenerService;
 
-/** Receives "call this contact with this app" from the watch app. */
+/** Receives "call this contact with this app", and the call screens' buttons, from the watch app. */
 public class WatchCallService extends WearableListenerService {
     @Override
     public void onMessageReceived(MessageEvent event) {
         ListenerRebind.ifNeeded(this, ListenerRebind.WATCH, null);
         if (WatchProtocol.PATH_HANGUP.equals(event.getPath())) {
             RelayListener.hangUpFromWatch();
+            return;
+        }
+        if (WatchProtocol.PATH_ANSWER.equals(event.getPath()) || WatchProtocol.PATH_DECLINE.equals(event.getPath())) {
+            // The watch app's incoming screen: the same as the ringing notification's buttons.
+            boolean answer = WatchProtocol.PATH_ANSWER.equals(event.getPath());
+            Context app = getApplicationContext();
+            new Handler(Looper.getMainLooper()).post(() -> ActionReceiver.handleRingAnswer(app, answer));
             return;
         }
         if (WatchProtocol.PATH_MUTE.equals(event.getPath())) {
