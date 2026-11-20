@@ -62,6 +62,7 @@ public class ManagedRelayTest {
         VoiceHold.sdk = android.os.Build.VERSION.SDK_INT;
         RelayListener.currentApp = null;
         RelayListener.incomingCall = null;
+        RelayListener.ongoingCall = null;
         RelayListener.useFullModeForCall = false;
         RelayConnection.current = null;
         Prefs.setOwnerWar(context, false);
@@ -155,16 +156,34 @@ public class ManagedRelayTest {
     }
 
     @Test
-    public void aNotificationAnswerOnAWarPhonePlacesTheManagedCall() {
+    public void aNotificationAnswerOnAWarPhoneAnswersTheAppFirst() {
         assertTrue(answerOnTheNotification());
+
+        assertTrue("the app is answered before any managed call exists", appAnswered());
+        assertTrue("WhatsApp rings into a managed call that exists before its answer",
+                shadowOf(telecom).getAllOutgoingCalls().isEmpty());
+        idle(RelayListener.MANAGED_PLACE_DELAY_MS);
 
         org.robolectric.shadows.ShadowTelecomManager.OutgoingCallRecord placed = shadowOf(telecom).getOnlyOutgoingCall();
         assertEquals(RelayListener.carrierHandle(context), placed.phoneAccount);
         Bundle callExtras = placed.extras.getBundle(TelecomManager.EXTRA_OUTGOING_CALL_EXTRAS);
         assertTrue(callExtras.getBoolean(RelayListener.EXTRA_ANSWERED));
+        assertTrue(callExtras.getBoolean(RelayListener.EXTRA_APP_ANSWERED));
         assertTrue(callExtras.containsKey(RelayListener.EXTRA_CALLER));
         assertTrue("a managed incoming call is filtered before it may go active",
                 shadowOf(telecom).getAllIncomingCalls().isEmpty());
+    }
+
+    @Test
+    public void theManagedCallIsNotPlacedWhenTheCallEndedMeanwhile() {
+        assertTrue(answerOnTheNotification());
+        RelayListener.incomingCall = null;
+        RelayListener.ongoingCall = null;
+
+        idle(RelayListener.MANAGED_PLACE_DELAY_MS + RelayListener.ANSWERED_PLACE_WAIT_MS);
+
+        assertTrue(shadowOf(telecom).getAllOutgoingCalls().isEmpty());
+        assertEquals(1, appAnswers());
     }
 
     @Test
@@ -178,24 +197,66 @@ public class ManagedRelayTest {
     }
 
     @Test
-    public void anAnsweredOutgoingRequestOnTheCarrierGoesActiveAndAnswersTheApp() {
-        RelayListener.incomingCall = ringingCall();
-        Bundle extras = new Bundle();
-        extras.putString(RelayListener.EXTRA_CALLER, "WhatsApp · Annaly");
-        extras.putBoolean(RelayListener.EXTRA_ANSWERED, true);
+    public void anAppAnsweredManagedCallGoesActiveWithoutAnsweringAgain() {
+        assertTrue(answerOnTheNotification());
+        idle(RelayListener.MANAGED_PLACE_DELAY_MS);
+        ConnectionRequest request = placedRequest();
+        assertTrue(request.getExtras().getLong(RelayListener.EXTRA_ANSWER_ID) != 0);
 
-        Connection c = service.onCreateOutgoingConnection(RelayListener.carrierHandle(context),
-                new ConnectionRequest(RelayListener.carrierHandle(context),
-                        Uri.fromParts(PhoneAccount.SCHEME_SIP, "WhatsApp · Annaly", null), extras));
+        Connection c = service.onCreateOutgoingConnection(RelayListener.carrierHandle(context), request);
         org.robolectric.shadows.ShadowLooper.idleMainLooper();
 
         assertTrue(c instanceof RelayConnection);
         assertTrue(((RelayConnection) c).managed);
-        assertEquals(Connection.STATE_ACTIVE, c.getState());
-        assertFalse("app answered before the watch's audio link", appAnswered());
+        assertFalse(c.getState() == Connection.STATE_ACTIVE);
         idle(RelayConnection.ANSWER_DELAY_MS);
-        assertTrue("app never answered", appAnswered());
+        assertEquals(Connection.STATE_ACTIVE, c.getState());
+        assertFalse(RelayConnection.isAwaitingAppAnswer());
+        idle(RelayConnection.ANSWER_DELAY_MS * 3);
+        assertEquals("the app was answered before the call: never again", 1, appAnswers());
         ((RelayConnection) c).onAbort();
+    }
+
+    @Test
+    public void anAppAnsweredManagedCallEndsWhenTheCallIsOver() {
+        assertTrue(answerOnTheNotification());
+        idle(RelayListener.MANAGED_PLACE_DELAY_MS);
+        ConnectionRequest request = placedRequest();
+        RelayListener.incomingCall = null;
+
+        Connection c = service.onCreateOutgoingConnection(RelayListener.carrierHandle(context), request);
+        org.robolectric.shadows.ShadowLooper.idleMainLooper();
+
+        assertEquals(Connection.STATE_DISCONNECTED, c.getState());
+        assertEquals(DisconnectCause.CANCELED, c.getDisconnectCause().getCode());
+    }
+
+    @Test
+    public void anAppAnsweredManagedCallWithNoWatchRouteStepsAside() {
+        assertTrue(answerOnTheNotification());
+        idle(RelayListener.MANAGED_PLACE_DELAY_MS);
+        RelayConnection c = (RelayConnection) service.onCreateOutgoingConnection(
+                RelayListener.carrierHandle(context), placedRequest());
+        c.onCallAudioStateChanged(audio(EARPIECE, EARPIECE | CallAudioState.ROUTE_SPEAKER));
+
+        idle(RelayConnection.ANSWER_DELAY_MS * 2);
+
+        assertEquals(Connection.STATE_DISCONNECTED, c.getState());
+        assertEquals(DisconnectCause.ANSWERED_ELSEWHERE, c.getDisconnectCause().getCode());
+        assertEquals("answered on the phone", latest(EventLog.AUDIO_NO_WATCH).detail);
+        assertEquals(1, appAnswers());
+    }
+
+    @Test
+    public void aRefusedAppAnsweredManagedCallDoesNotAnswerAgain() {
+        assertTrue(answerOnTheNotification());
+        idle(RelayListener.MANAGED_PLACE_DELAY_MS);
+
+        service.onCreateOutgoingConnectionFailed(RelayListener.carrierHandle(context), placedRequest());
+        idle(RelayListener.ANSWERED_PLACE_WAIT_MS);
+
+        assertEquals("the app is answered already", 1, appAnswers());
+        assertEquals("telecom refused", latest(EventLog.CARRIER).detail);
     }
 
     @Test
@@ -247,14 +308,19 @@ public class ManagedRelayTest {
     }
 
     @Test
-    public void aManagedAnswerTelecomNeverMakesFallsBackToThePhoneAfterTheWait() {
+    public void anAppAnsweredManagedCallTelecomNeverMadeDoesNotAnswerAgain() {
         assertTrue(answerOnTheNotification());
+        idle(RelayListener.MANAGED_PLACE_DELAY_MS);
+        assertEquals(1, shadowOf(telecom).getAllOutgoingCalls().size());
+        // After the app's answer its ringing call is gone: the wait still reports the miss.
+        RelayListener.incomingCall = null;
+        RelayListener.ongoingCall = ringingCall();
         idle(RelayListener.ANSWERED_PLACE_WAIT_MS - 1);
-        assertEquals(0, appAnswers());
+        assertFalse(recorded(EventLog.CARRIER, "telecom never made the call"));
 
         idle(1);
 
-        assertEquals("answered once, on the phone", 1, appAnswers());
+        assertEquals("answered once, before the managed call", 1, appAnswers());
         assertEquals("telecom never made the call", latest(EventLog.CARRIER).detail);
         assertNull(RelayConnection.current);
     }
@@ -262,13 +328,14 @@ public class ManagedRelayTest {
     @Test
     public void aManagedAnswerMadeInTimeDisarmsTheWait() {
         assertTrue(answerOnTheNotification());
+        idle(RelayListener.MANAGED_PLACE_DELAY_MS);
 
         RelayConnection c = (RelayConnection) service.onCreateOutgoingConnection(
                 RelayListener.carrierHandle(context), placedRequest());
         idle(RelayListener.ANSWERED_PLACE_WAIT_MS + RelayConnection.ANSWER_DELAY_MS);
 
         assertEquals(Connection.STATE_ACTIVE, c.getState());
-        assertEquals("answered once, by the connection", 1, appAnswers());
+        assertEquals("answered once, before the managed call", 1, appAnswers());
         assertFalse(recorded(EventLog.CARRIER, "telecom never made the call"));
         c.onAbort();
     }
@@ -276,7 +343,7 @@ public class ManagedRelayTest {
     @Test
     public void aConnectionArrivingAfterTheWaitEndsItself() {
         assertTrue(answerOnTheNotification());
-        idle(RelayListener.ANSWERED_PLACE_WAIT_MS);
+        idle(RelayListener.MANAGED_PLACE_DELAY_MS + RelayListener.ANSWERED_PLACE_WAIT_MS);
 
         Connection late = service.onCreateOutgoingConnection(RelayListener.carrierHandle(context), placedRequest());
         idle(RelayConnection.ANSWER_DELAY_MS * 2);
@@ -291,7 +358,7 @@ public class ManagedRelayTest {
     @Test
     public void aRefusalAfterTheWaitDoesNotAnswerTwice() {
         assertTrue(answerOnTheNotification());
-        idle(RelayListener.ANSWERED_PLACE_WAIT_MS);
+        idle(RelayListener.MANAGED_PLACE_DELAY_MS + RelayListener.ANSWERED_PLACE_WAIT_MS);
 
         service.onCreateOutgoingConnectionFailed(RelayListener.carrierHandle(context), placedRequest());
 
@@ -301,6 +368,7 @@ public class ManagedRelayTest {
     @Test
     public void aRefusalInTimeDisarmsTheWait() {
         assertTrue(answerOnTheNotification());
+        idle(RelayListener.MANAGED_PLACE_DELAY_MS);
 
         service.onCreateOutgoingConnectionFailed(RelayListener.carrierHandle(context), placedRequest());
         idle(RelayListener.ANSWERED_PLACE_WAIT_MS);

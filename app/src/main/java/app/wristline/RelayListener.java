@@ -39,6 +39,8 @@ public class RelayListener extends NotificationListenerService {
     static final String EXTRA_ANSWERED = "app.wristline.ANSWERED";
     /** Which notification answer a placed managed call is; 0 for any other call. */
     static final String EXTRA_ANSWER_ID = "app.wristline.ANSWER_ID";
+    /** A placed managed call whose app was answered already: the call must not answer it again. */
+    static final String EXTRA_APP_ANSWERED = "app.wristline.APP_ANSWERED";
 
     static volatile CallActions incomingCall;
     static volatile CallActions ongoingCall;
@@ -65,6 +67,8 @@ public class RelayListener extends NotificationListenerService {
      * or a self-managed call already on), so no callback says so: past this, answer on the phone.
      */
     static final long ANSWERED_PLACE_WAIT_MS = 2000;
+    /** From the app's answer to placing the managed call, so its call is up before ours exists. */
+    static final long MANAGED_PLACE_DELAY_MS = 1500;
     private final Handler handler = new Handler(Looper.getMainLooper());
 
     @Override
@@ -405,7 +409,8 @@ public class RelayListener extends NotificationListenerService {
     /**
      * Answer was tapped on our ringing notification. With voice through the watch set up for the
      * app and a watch that carries call audio, opens a Telecom call that is already answered: it
-     * goes active, Telecom opens the watch's audio link, and only then the app is answered.
+     * goes active, Telecom opens the watch's audio link, and only then the app is answered. On a
+     * war phone the app is answered first and the managed call placed after it.
      * Returns false when the caller should answer the app directly (voice on the phone).
      */
     @SuppressLint("MissingPermission") // Telecom refusing is caught below
@@ -421,24 +426,18 @@ public class RelayListener extends NotificationListenerService {
         String caller = incomingCaller == null ? app.label : incomingCaller;
         extras.putString(EXTRA_CALLER, context.getString(R.string.caller_with_app, app.label, caller));
         extras.putBoolean(EXTRA_ANSWERED, true);
-        long answerId = 0;
         try {
             registerAccount(context);
             PhoneAccountHandle handle = relayHandle(context);
             if (isCarrier(handle, context)) {
                 // Telecom filters a managed incoming call, and an answered call going active before
-                // the filter ends drops the watch's audio; an outgoing call isn't filtered.
-                answerId = armAnsweredPlace();
-                extras.putLong(EXTRA_ANSWER_ID, answerId);
-                Bundle placeExtras = new Bundle();
-                placeExtras.putParcelable(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE, handle);
-                placeExtras.putBundle(TelecomManager.EXTRA_OUTGOING_CALL_EXTRAS, extras);
-                context.getSystemService(TelecomManager.class).placeCall(
-                        android.net.Uri.fromParts(PhoneAccount.SCHEME_SIP, caller, null), placeExtras);
-                long id = answerId;
+                // the filter ends drops the watch's audio; an outgoing call isn't filtered. WhatsApp
+                // rings once a managed call exists while it isn't answered: answer it first.
+                send(context, call.answer);
+                extras.putBoolean(EXTRA_APP_ANSWERED, true);
                 Context appContext = context.getApplicationContext();
                 new Handler(Looper.getMainLooper()).postDelayed(
-                        () -> answeredPlaceTimedOut(appContext, id, call), ANSWERED_PLACE_WAIT_MS);
+                        () -> placeAnswered(appContext, app, call, handle, caller, extras), MANAGED_PLACE_DELAY_MS);
             } else {
                 context.getSystemService(TelecomManager.class).addNewIncomingCall(handle, extras);
             }
@@ -450,9 +449,34 @@ public class RelayListener extends NotificationListenerService {
         } catch (RuntimeException e) {
             Log.w(TAG, "Telecom refused the answered call; answering on the phone", e);
             Diagnostics.record(context, EventLog.TELECOM_REFUSED, app, "answered " + e.getClass().getSimpleName());
-            claimAnsweredPlace(answerId);
             return false;
         }
+    }
+
+    /** Places the managed call for an app answered on the notification, unless that call is over. */
+    @SuppressLint("MissingPermission") // Telecom refusing is caught below
+    private static void placeAnswered(Context context, SupportedApp app, CallActions call,
+            PhoneAccountHandle handle, String caller, Bundle extras) {
+        if (incomingCall != call && ongoingCall == null) {
+            Log.i(TAG, "the call ended before the managed call was placed");
+            return;
+        }
+        long id = armAnsweredPlace();
+        extras.putLong(EXTRA_ANSWER_ID, id);
+        Bundle placeExtras = new Bundle();
+        placeExtras.putParcelable(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE, handle);
+        placeExtras.putBundle(TelecomManager.EXTRA_OUTGOING_CALL_EXTRAS, extras);
+        try {
+            context.getSystemService(TelecomManager.class).placeCall(
+                    android.net.Uri.fromParts(PhoneAccount.SCHEME_SIP, caller, null), placeExtras);
+        } catch (RuntimeException e) {
+            // The app is answered already: its voice stays on the phone.
+            Log.w(TAG, "Telecom refused the answered call; the voice stays on the phone", e);
+            Diagnostics.record(context, EventLog.TELECOM_REFUSED, app, "answered " + e.getClass().getSimpleName());
+            claimAnsweredPlace(id);
+            return;
+        }
+        new Handler(Looper.getMainLooper()).postDelayed(() -> answeredPlaceTimedOut(context, id), ANSWERED_PLACE_WAIT_MS);
     }
 
     private static long lastAnswerId;
@@ -479,14 +503,14 @@ public class RelayListener extends NotificationListenerService {
         return true;
     }
 
-    private static void answeredPlaceTimedOut(Context context, long id, CallActions call) {
-        if (!claimAnsweredPlace(id) || incomingCall != call) {
-            // Telecom made or refused it in time, or that call is over.
+    private static void answeredPlaceTimedOut(Context context, long id) {
+        if (!claimAnsweredPlace(id)) {
+            // Telecom made or refused it in time.
             return;
         }
-        Log.w(TAG, "Telecom never made the answered call; answering on the phone");
+        // The app is answered already (its ringing call is gone): the voice stays on the phone.
+        Log.w(TAG, "Telecom never made the answered call; the voice stays on the phone");
         Diagnostics.record(context, EventLog.CARRIER, currentApp, "telecom never made the call");
-        RelayConnectionService.answerOnThePhone(context);
     }
 
     static void incomingHandledOnWatch() {
