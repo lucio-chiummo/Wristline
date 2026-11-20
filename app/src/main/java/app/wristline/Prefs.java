@@ -95,8 +95,8 @@ final class Prefs {
 
     /**
      * A call on this phone lost the mode-owner war (Android 17: the calling app's audio framework
-     * keeps pulling the voice off the watch): from the next answered call on, Telecom owns the mode
-     * through the carrier call instead. Learned from the call it happened in, never assumed.
+     * keeps pulling the voice off the watch): from the next answered call on, the call is relayed as
+     * a managed call, so Telecom owns the mode. Learned from the call it happened in, never assumed.
      */
     static boolean ownerWar(Context context) {
         return prefs(context).getBoolean("owner_war", false);

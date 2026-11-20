@@ -33,10 +33,6 @@ public class RelayConnection extends Connection {
      * audio framework pulling the voice back), not a real drop: stop fighting at once.
      */
     static final long WAR_WINDOW_MS = 3000;
-    /** How long Telecom gets to make the carrier call before this call falls back to the voice hold. */
-    static final long CARRIER_WAIT_MS = 2000;
-    /** How long after the carrier is made the watch is first checked for still carrying the voice. */
-    static final long CARRIER_CHECK_MS = 1500;
     /** Last audio state Telecom reported for this call. */
     private CallAudioState audioState;
     /** Times the voice fell back from the watch to the phone by itself in this call. */
@@ -57,16 +53,6 @@ public class RelayConnection extends Connection {
     private boolean holdingVoice;
     /** When the voice hold last took, to tell the war from a real drop; 0 when it never took. */
     private long lastTakeAt;
-    /** The carrier call was asked for from this call (Telecom answers it asynchronously). */
-    private boolean carrierAsked;
-    /** Identifies the latest carrier ask, so a timeout for an earlier one changes nothing. */
-    private int carrierAskId;
-    /** While the carrier is up: watches that the watch still carries the voice. */
-    private final Runnable watchCarrier = this::checkCarrier;
-    /** The carrier call made for this call: this connection owns it and ends it. */
-    CarrierConnection myCarrier;
-    /** Telecom refused the carrier call for this call: hold the voice the beta 7 way instead. */
-    private boolean carrierFailedThisCall;
     /** Android 17 and later: keeps the voice on the watch (see {@link VoiceHold}). */
     private final VoiceHold voiceHold;
     /** When this call was created, for reading what Android logged about it afterwards. */
@@ -148,12 +134,10 @@ public class RelayConnection extends Connection {
         Log.i(RelayListener.TAG, toPhone ? "voice moved to the phone" : "voice moved back to the watch");
         Diagnostics.record(connection.context, EventLog.VOICE_MOVED, RelayListener.currentApp, toPhone ? "phone" : "watch");
         if (toPhone) {
-            connection.endCarrier();
             connection.voiceHold.release();
             connection.holdingVoice = false;
             connection.requestRoute(CallAudioState.ROUTE_EARPIECE);
         } else {
-            connection.carrierAsked = false;
             connection.routeToWatch(connection.audioState);
         }
         VoiceControls.update(connection.context);
@@ -463,17 +447,14 @@ public class RelayConnection extends Connection {
         if (state != null) {
             CallAudioState before = audioState;
             audioState = state;
-            if (myCarrier != null) {
-                // The mirror's route is not the call's voice while the carrier is up: Telecom
-                // routes the carrier call, and the watch's link follows the mode it owns.
-            } else if (before != null && before.getRoute() == CallAudioState.ROUTE_BLUETOOTH
+            if (before != null && before.getRoute() == CallAudioState.ROUTE_BLUETOOTH
                     && state.getRoute() != CallAudioState.ROUTE_BLUETOOTH && !voiceOnPhone && isActive()) {
                 boolean war = !managed && !testCall && VoiceHold.needed() && lastTakeAt > 0
                         && android.os.SystemClock.elapsedRealtime() - lastTakeAt < WAR_WINDOW_MS;
                 if (war) {
                     // A fall this soon after the take is the calling app pulling the voice back, not
                     // the watch losing it: fighting over it is what breaks the sound. One gap, then
-                    // the phone keeps the voice — and the next call goes through the carrier.
+                    // the phone keeps the voice — and the next call is relayed as a managed call.
                     giveUpVoice("owner war", true);
                 } else if (++bounces >= MAX_BOUNCES) {
                     // The watch (or the app) keeps refusing the voice: fighting over it breaks the sound.
@@ -494,7 +475,7 @@ public class RelayConnection extends Connection {
     /**
      * The voice left the watch while Wristline held it, with no Telecom route change to show for
      * it (the HyperOS earpiece switch). War-shaped when it came inside the take window: arm the
-     * carrier for the next call. A deliberate move to the phone, or a hold already let go, is not a loss.
+     * the managed relay for the next call. A deliberate move to the phone, or a hold already let go, is not a loss.
      */
     private void onVoiceLost() {
         if (testCall || voiceOnPhone || !holdingVoice) {
@@ -509,7 +490,7 @@ public class RelayConnection extends Connection {
     /**
      * The voice left the watch: stop fighting for this call and keep it on the phone. The war is
      * armed only when the loss is war-shaped (inside the take window); repeated real dropouts are
-     * not a war and must not latch the carrier onto a healthy phone.
+     * not a war and must not latch the managed relay onto a healthy phone.
      */
     private void giveUpVoice(String reason, boolean war) {
         if (war) {
@@ -560,10 +541,7 @@ public class RelayConnection extends Connection {
         // On Android 17 the route alone doesn't keep the calling app's voice there: take it when
         // the call reaches the watch, and again each time the app takes it back to the phone.
         if (!managed && !testCall && VoiceHold.needed() && (!onWatch || !holdingVoice)) {
-            if (engageCarrier()) {
-                // Telecom owns the audio mode through the carrier: the voice stays on the watch
-                // without Wristline fighting the calling app's audio framework for it.
-            } else if (voiceHold.take()) {
+            if (voiceHold.take()) {
                 // Only a take that Android accepted counts: one refused for now (no watch offered
                 // yet) must be tried again when the watch's voice link appears.
                 holdingVoice = true;
@@ -573,143 +551,6 @@ public class RelayConnection extends Connection {
         if (!onWatch) {
             Log.i(RelayListener.TAG, "routing call audio to the watch");
             requestRoute(CallAudioState.ROUTE_BLUETOOTH);
-        }
-    }
-
-    /**
-     * True when the carrier call carries this call's mode ownership: up, or asked for and still
-     * coming. Never asked for on a phone that hasn't lost the mode-owner war, and never re-asked
-     * after Telecom refused it in this call.
-     */
-    private boolean engageCarrier() {
-        if (!Prefs.ownerWar(context) || carrierFailedThisCall) {
-            return false;
-        }
-        if (myCarrier != null) {
-            return true;
-        }
-        if (!carrierAsked) {
-            boolean enabled = RelayListener.carrierEnabled(context);
-            Diagnostics.record(context, EventLog.CARRIER, testCall ? null : RelayListener.currentApp,
-                    "account enabled=" + enabled);
-            if (!enabled) {
-                // A disabled account never places the call: hold the voice now instead of waiting
-                // two seconds for a carrier that cannot come. The report says which it was.
-                Diagnostics.record(context, EventLog.CARRIER, testCall ? null : RelayListener.currentApp,
-                        "disabled");
-                carrierFailedThisCall = true;
-                return false;
-            }
-            carrierAsked = true;
-            final int askId = ++carrierAskId;
-            Log.i(RelayListener.TAG, "asking Telecom to carry the call's audio mode (the owner war)");
-            Diagnostics.record(context, EventLog.CARRIER, testCall ? null : RelayListener.currentApp, "asked");
-            handler.postDelayed(() -> carrierTimedOut(askId), CARRIER_WAIT_MS);
-            try {
-                android.os.Bundle callExtras = new android.os.Bundle();
-                CharSequence caller = getCallerDisplayName();
-                callExtras.putString(RelayListener.EXTRA_CALLER, caller == null ? null : caller.toString());
-                android.os.Bundle extras = new android.os.Bundle();
-                extras.putParcelable(android.telecom.TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE,
-                        RelayListener.carrierHandle(context));
-                extras.putBundle(android.telecom.TelecomManager.EXTRA_OUTGOING_CALL_EXTRAS, callExtras);
-                context.getSystemService(android.telecom.TelecomManager.class).placeCall(getAddress(), extras);
-            } catch (RuntimeException e) {
-                Log.w(RelayListener.TAG, "could not ask for the carrier call", e);
-                Diagnostics.record(context, EventLog.CARRIER, testCall ? null : RelayListener.currentApp, "failed");
-                carrierFailedThisCall = true;
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /** Telecom neither made the carrier nor refused it in time: fall back once, to the voice hold. */
-    private void carrierTimedOut(int askId) {
-        if (askId != carrierAskId || myCarrier != null || carrierFailedThisCall) {
-            return;
-        }
-        failCarrier("timeout");
-    }
-
-    /**
-     * The carrier cannot carry this call's mode (refused, never made, died, or stopped holding the
-     * voice): mark it failed for this call, put it down, and let the voice hold take over. Forward
-     * only — the carrier is never asked again this call, so the two cannot fight in a loop.
-     */
-    private void failCarrier(String why) {
-        carrierFailedThisCall = true;
-        Diagnostics.record(context, EventLog.CARRIER, testCall ? null : RelayListener.currentApp, why);
-        endCarrier();
-        routeToWatch(audioState);
-    }
-
-    /** While the carrier is up: the watch must still carry the voice, or the carrier is not owning the mode. */
-    private void checkCarrier() {
-        if (myCarrier == null || voiceOnPhone) {
-            return;
-        }
-        if (VoiceHold.watchHasVoice(context) == Boolean.FALSE) {
-            failCarrier("unheld");
-            return;
-        }
-        handler.postDelayed(watchCarrier, VoiceHold.WATCH_CHECK_MS);
-    }
-
-    /** Telecom refused the carrier call: this call falls back to holding the voice itself. */
-    static void carrierFailed() {
-        RelayConnection connection = current;
-        if (connection != null) {
-            connection.carrierFailedThisCall = true;
-            connection.routeToWatch(connection.audioState);
-        }
-    }
-
-    /**
-     * Telecom made the carrier call this one asked for. When the call it was asked for is gone, or
-     * its user chose the phone's voice in the meantime, nobody needs the mode owned: put it down
-     * at once, before it can pull the voice anywhere.
-     */
-    static void carrierCreated(CarrierConnection carrier) {
-        RelayConnection connection = current;
-        if (connection == null || connection.testCall || connection.voiceOnPhone || connection.carrierFailedThisCall) {
-            carrier.end(new DisconnectCause(DisconnectCause.CANCELED));
-            if (connection != null) {
-                Diagnostics.record(connection.context, EventLog.CARRIER,
-                        connection.testCall ? null : RelayListener.currentApp, "ended");
-            }
-            return;
-        }
-        connection.myCarrier = carrier;
-        connection.handler.removeCallbacks(connection.watchCarrier);
-        connection.handler.postDelayed(connection.watchCarrier, CARRIER_CHECK_MS);
-    }
-
-    /**
-     * Telecom or the user ended the carrier mid-call: the mode is no longer owned. Fall back once
-     * to the voice hold. endCarrier() nulls myCarrier before ending it, so this identity check keeps
-     * a carrier we put down ourselves from being reported lost a second time.
-     */
-    static void carrierGone(CarrierConnection carrier) {
-        RelayConnection connection = current;
-        if (connection == null || connection.myCarrier != carrier) {
-            return;
-        }
-        connection.myCarrier = null;
-        connection.handler.removeCallbacks(connection.watchCarrier);
-        connection.carrierFailedThisCall = true;
-        Diagnostics.record(connection.context, EventLog.CARRIER,
-                connection.testCall ? null : RelayListener.currentApp, "lost");
-        connection.routeToWatch(connection.audioState);
-    }
-
-    /** The stand-in call is over (the call it stands for may carry on): Telecom gives the mode back. */
-    private void endCarrier() {
-        CarrierConnection carrier = myCarrier;
-        myCarrier = null;
-        if (carrier != null) {
-            carrier.end(new DisconnectCause(DisconnectCause.LOCAL));
-            Diagnostics.record(context, EventLog.CARRIER, testCall ? null : RelayListener.currentApp, "ended");
         }
     }
 
@@ -725,7 +566,6 @@ public class RelayConnection extends Connection {
             current = null;
         }
         awaitingAppAnswer = false;
-        endCarrier();
         stopWatchingRecordings();
         audioLink.stop();
         voiceHold.release();

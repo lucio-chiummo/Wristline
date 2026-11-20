@@ -64,31 +64,8 @@ public class RelayConnectionService extends ConnectionService {
         return connection;
     }
 
-    /** The carrier call: minimal and managed, active at once, its audio on the watch. */
-    private Connection createCarrier(ConnectionRequest request) {
-        CarrierConnection carrier = new CarrierConnection();
-        carrier.setAddress(request.getAddress(), TelecomManager.PRESENTATION_ALLOWED);
-        android.os.Bundle extras = request.getExtras();
-        String caller = extras == null ? null : extras.getString(RelayListener.EXTRA_CALLER);
-        if (caller == null) {
-            caller = getString(R.string.phone_account_label);
-        }
-        carrier.setCallerDisplayName(caller, TelecomManager.PRESENTATION_ALLOWED);
-        Log.i(RelayListener.TAG, "carrier call created");
-        Diagnostics.record(this, EventLog.CARRIER, RelayListener.currentApp, "created");
-        // May refuse it at once when the call it was asked for is over (see carrierCreated).
-        RelayConnection.carrierCreated(carrier);
-        return carrier;
-    }
-
     @Override
     public void onCreateOutgoingConnectionFailed(PhoneAccountHandle account, ConnectionRequest request) {
-        if (RelayListener.isCarrier(account, this)) {
-            Log.w(RelayListener.TAG, "Telecom could not make the carrier call; holding the voice ourselves");
-            Diagnostics.record(this, EventLog.CARRIER, RelayListener.currentApp, "failed");
-            RelayConnection.carrierFailed();
-            return;
-        }
         Log.w(RelayListener.TAG, "Telecom could not create the outgoing mirror; starting the call on the phone only");
         Runnable startApp = RelayConnection.pendingAppStart;
         RelayConnection.pendingAppStart = null;
