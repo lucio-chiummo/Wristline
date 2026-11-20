@@ -415,7 +415,18 @@ public class RelayListener extends NotificationListenerService {
         extras.putBoolean(EXTRA_ANSWERED, true);
         try {
             registerAccount(context);
-            context.getSystemService(TelecomManager.class).addNewIncomingCall(relayHandle(context), extras);
+            PhoneAccountHandle handle = relayHandle(context);
+            if (isCarrier(handle, context)) {
+                // Telecom filters a managed incoming call, and an answered call going active before
+                // the filter ends drops the watch's audio; an outgoing call isn't filtered.
+                Bundle placeExtras = new Bundle();
+                placeExtras.putParcelable(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE, handle);
+                placeExtras.putBundle(TelecomManager.EXTRA_OUTGOING_CALL_EXTRAS, extras);
+                context.getSystemService(TelecomManager.class).placeCall(
+                        android.net.Uri.fromParts(PhoneAccount.SCHEME_SIP, caller, null), placeExtras);
+            } else {
+                context.getSystemService(TelecomManager.class).addNewIncomingCall(handle, extras);
+            }
             // The Telecom call reports the audio itself from here on.
             if (callAudio != null) {
                 callAudio.stop();

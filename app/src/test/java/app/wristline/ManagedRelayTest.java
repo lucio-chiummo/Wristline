@@ -60,6 +60,7 @@ public class ManagedRelayTest {
         VoiceHold.sdk = android.os.Build.VERSION.SDK_INT;
         RelayListener.currentApp = null;
         RelayListener.incomingCall = null;
+        RelayListener.useFullModeForCall = false;
         RelayConnection.current = null;
         Prefs.setOwnerWar(context, false);
     }
@@ -133,6 +134,66 @@ public class ManagedRelayTest {
                 .addAction(new android.app.Notification.Action.Builder(null, "Answer", appAnswer()).build())
                 .build();
         return CallActions.from(n, false);
+    }
+
+    private boolean appAnswered() {
+        for (android.content.Intent sent : shadowOf((android.app.Application) context).getBroadcastIntents()) {
+            if ("test.answer".equals(sent.getAction())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Answer tapped on Wristline's ringing notification, voice through the watch set up. */
+    private boolean answerOnTheNotification() {
+        RelayListener.incomingCall = ringingCall();
+        RelayListener.useFullModeForCall = true;
+        return RelayListener.answerWithVoiceOnWatch(context);
+    }
+
+    @Test
+    public void aNotificationAnswerOnAWarPhonePlacesTheManagedCall() {
+        assertTrue(answerOnTheNotification());
+
+        org.robolectric.shadows.ShadowTelecomManager.OutgoingCallRecord placed = shadowOf(telecom).getOnlyOutgoingCall();
+        assertEquals(RelayListener.carrierHandle(context), placed.phoneAccount);
+        Bundle callExtras = placed.extras.getBundle(TelecomManager.EXTRA_OUTGOING_CALL_EXTRAS);
+        assertTrue(callExtras.getBoolean(RelayListener.EXTRA_ANSWERED));
+        assertTrue(callExtras.containsKey(RelayListener.EXTRA_CALLER));
+        assertTrue("a managed incoming call is filtered before it may go active",
+                shadowOf(telecom).getAllIncomingCalls().isEmpty());
+    }
+
+    @Test
+    public void aNotificationAnswerElsewhereStaysAnIncomingCall() {
+        Prefs.setOwnerWar(context, false);
+
+        assertTrue(answerOnTheNotification());
+
+        assertEquals(RelayListener.accountHandle(context), shadowOf(telecom).getOnlyIncomingCall().phoneAccount);
+        assertTrue(shadowOf(telecom).getAllOutgoingCalls().isEmpty());
+    }
+
+    @Test
+    public void anAnsweredOutgoingRequestOnTheCarrierGoesActiveAndAnswersTheApp() {
+        RelayListener.incomingCall = ringingCall();
+        Bundle extras = new Bundle();
+        extras.putString(RelayListener.EXTRA_CALLER, "WhatsApp · Annaly");
+        extras.putBoolean(RelayListener.EXTRA_ANSWERED, true);
+
+        Connection c = service.onCreateOutgoingConnection(RelayListener.carrierHandle(context),
+                new ConnectionRequest(RelayListener.carrierHandle(context),
+                        Uri.fromParts(PhoneAccount.SCHEME_SIP, "WhatsApp · Annaly", null), extras));
+        org.robolectric.shadows.ShadowLooper.idleMainLooper();
+
+        assertTrue(c instanceof RelayConnection);
+        assertTrue(((RelayConnection) c).managed);
+        assertEquals(Connection.STATE_ACTIVE, c.getState());
+        assertFalse("app answered before the watch's audio link", appAnswered());
+        idle(RelayConnection.ANSWER_DELAY_MS);
+        assertTrue("app never answered", appAnswered());
+        ((RelayConnection) c).onAbort();
     }
 
     /** An answered managed call on the carrier account, with the watch offered for calls. */
