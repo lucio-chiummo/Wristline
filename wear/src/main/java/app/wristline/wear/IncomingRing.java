@@ -6,6 +6,7 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
+import android.os.SystemClock;
 import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
@@ -19,11 +20,15 @@ final class IncomingRing {
     static final int ID = 2;
     private static final String CHANNEL = "incoming_call";
 
+    /** When the ring in progress ends at the latest ({@code elapsedRealtime}); 0 when none rings. */
+    private static volatile long ringingUntil;
+
     private IncomingRing() {
     }
 
     /** Shows the incoming call screen for {@code ring}, which has a caller. */
     static void start(Context context, Protocol.Ring ring) {
+        ringingUntil = SystemClock.elapsedRealtime() + ring.maxMs;
         try {
             NotificationManager manager = context.getSystemService(NotificationManager.class);
             NotificationChannel channel = new NotificationChannel(CHANNEL,
@@ -51,7 +56,9 @@ final class IncomingRing {
                     .setCategory(NotificationCompat.CATEGORY_CALL)
                     .setPriority(NotificationCompat.PRIORITY_MAX)
                     .setOngoing(true)
-                    .setSilent(true)
+                    // Not setSilent: its silent group makes the system drop the full-screen intent.
+                    // The channel is silent already.
+                    .setOnlyAlertOnce(true)
                     .setTimeoutAfter(ring.maxMs)
                     .setContentIntent(open)
                     .setFullScreenIntent(open, true)
@@ -72,10 +79,16 @@ final class IncomingRing {
 
     /** The ring is over (answered, declined, stopped on the phone): no notification, no screen. */
     static void stop(Context context) {
+        ringingUntil = 0;
         context.getSystemService(NotificationManager.class).cancel(ID);
         IncomingActivity screen = IncomingActivity.current;
         if (screen != null) {
             screen.runOnUiThread(screen::finish);
         }
+    }
+
+    /** How long the ring in progress may still go on; 0 when it's over (stopped or past its longest). */
+    static long remainingMs() {
+        return Math.max(0, ringingUntil - SystemClock.elapsedRealtime());
     }
 }

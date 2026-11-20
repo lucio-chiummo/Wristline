@@ -17,10 +17,10 @@ import android.widget.TextView;
 
 /**
  * Wristline's own call screen for calls started from the watch, and for calls answered on
- * {@link IncomingActivity} (the watch's system call screen can't be opened by other apps). Shows who and which app, "Calling…", "Ringing…" until the other
- * side answers, then the call time; one tap on the red button hangs up. Swipe-to-dismiss is off
- * (it hid the screen without hanging up): "Minimise" leaves it, opening Wristline brings it back.
- * The crown changes the call volume. Closes when the phone says the call ended.
+ * {@link IncomingActivity} (the watch's system call screen can't be opened by other apps). Shows
+ * who and which app, "Calling…", "Ringing…" until the other side answers, then the call time;
+ * one tap on the red button hangs up. Swipe-to-dismiss is off (it hid the screen without hanging
+ * up): "Minimise" leaves it, opening Wristline brings it back. The crown changes the call volume. Closes when the phone says the call ended.
  */
 public class InCallActivity extends Activity {
     static final String EXTRA_NAME = "name";
@@ -77,6 +77,8 @@ public class InCallActivity extends Activity {
         answered = getIntent().getBooleanExtra(EXTRA_ANSWERED, false);
         if (answered) {
             status.setText(R.string.connecting);
+            // Answered over a locked watch: the call follows the incoming screen over the lock screen.
+            setShowWhenLocked(true);
         }
         timer = findViewById(R.id.timer);
         mute = findViewById(R.id.mute);

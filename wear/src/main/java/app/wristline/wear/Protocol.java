@@ -128,7 +128,10 @@ final class Protocol {
         return ring == null ? -1 : ring.maxMs;
     }
 
-    /** A "start|<ms>[|<app>|<name>]" ring message; null for "stop" and anything else. The name is last and may hold "|". */
+    /**
+     * A "start|<ms>[|<app>|<name>]" ring message; null for "stop" and anything else. The name is
+     * last and may hold "|".
+     */
     static Ring parseRing(String payload) {
         if (payload == null || !payload.startsWith("start|")) {
             return null;
