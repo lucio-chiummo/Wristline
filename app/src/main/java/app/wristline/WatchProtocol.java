@@ -27,6 +27,9 @@ final class WatchProtocol {
      * {@code <state>} is {@link #callState}'s "<kind>;<ms since connected>;<mute>".
      */
     static final String PATH_CALL_STATE = "/wristline/callstate";
+    /** Message the phone sends so the watch app vibrates for a ringing call: {@link #ringStartPayload} or {@link #RING_STOP}. */
+    static final String PATH_RING = "/wristline/ring";
+    static final String RING_STOP = "stop";
     static final String STATE_CALLING = "calling";
     /** The app shows its in-call notification but the other side hasn't answered yet. */
     static final String STATE_RINGING = "ringing";
@@ -73,6 +76,11 @@ final class WatchProtocol {
     /** The full call-state message payload. */
     static byte[] callStatePayload(String state, String app, String name) {
         return (state + "|" + app + "|" + name).getBytes(StandardCharsets.UTF_8);
+    }
+
+    /** "start|<most ms the watch may vibrate>": the watch also stops by itself after that long. */
+    static byte[] ringStartPayload(long maxMs) {
+        return ("start|" + maxMs).getBytes(StandardCharsets.UTF_8);
     }
 
     /** A call the watch asked for. */

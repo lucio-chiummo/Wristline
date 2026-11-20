@@ -49,6 +49,9 @@ final class WatchRing {
                 }
             };
             repeat = ring;
+            // The watch's notification bridge alerts once for re-posts of one notification, so
+            // Wristline's watch app vibrates for the whole ring itself.
+            WatchSync.ring(app, maxMs);
             ring.run();
         });
     }
@@ -79,8 +82,22 @@ final class WatchRing {
     }
 
     private static void stopNow(Context context) {
+        NotificationManager nm = context.getSystemService(NotificationManager.class);
+        boolean rang = repeat != null || showing(nm);
         cancelRepeat();
-        context.getSystemService(NotificationManager.class).cancel(StatusNotifications.ID_INCOMING_FALLBACK);
+        nm.cancel(StatusNotifications.ID_INCOMING_FALLBACK);
+        if (rang) {
+            WatchSync.stopRing(context);
+        }
+    }
+
+    private static boolean showing(NotificationManager nm) {
+        for (android.service.notification.StatusBarNotification n : nm.getActiveNotifications()) {
+            if (n.getId() == StatusNotifications.ID_INCOMING_FALLBACK) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static void post(Context context, String title, String text, long timeoutMs) {

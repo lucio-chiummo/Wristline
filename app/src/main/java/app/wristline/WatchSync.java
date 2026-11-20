@@ -16,7 +16,37 @@ import java.util.concurrent.TimeUnit;
 
 /** Publishes the callable contacts to the watch app (names and apps only, never numbers). */
 final class WatchSync {
+    /** Sends a message to every connected watch; replaced in tests. */
+    interface Sender {
+        void send(Context context, String path, byte[] payload);
+    }
+
+    /** The real sender: own thread, fire and forget. */
+    static final Sender WATCH_SENDER = (context, path, payload) -> new Thread(() -> {
+        try {
+            for (com.google.android.gms.wearable.Node node : Tasks.await(
+                    Wearable.getNodeClient(context).getConnectedNodes())) {
+                Wearable.getMessageClient(context).sendMessage(node.getId(), path, payload);
+            }
+        } catch (Exception e) {
+            Log.w(RelayListener.TAG, "could not send " + path + " to the watch", e);
+        }
+    }, "watch-message").start();
+
+    static volatile Sender sender = WATCH_SENDER;
+
     private WatchSync() {
+    }
+
+    /** Tells the watch app to vibrate like a ringing call, for at most {@code maxMs}. */
+    static void ring(Context context, long maxMs) {
+        sender.send(context, WatchProtocol.PATH_RING, WatchProtocol.ringStartPayload(maxMs));
+    }
+
+    /** Tells the watch app to stop vibrating. */
+    static void stopRing(Context context) {
+        sender.send(context, WatchProtocol.PATH_RING,
+                WatchProtocol.RING_STOP.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 
     /** Off the main thread. Tells the watch whether relaying is on (for its tile's Pause/Resume). */

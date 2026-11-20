@@ -46,4 +46,11 @@ public class WatchProtocolTest {
                 WatchProtocol.callState(WatchProtocol.STATE_CALLING, -1, null), "com.whatsapp", "A | B"),
                 java.nio.charset.StandardCharsets.UTF_8));
     }
+
+    @Test
+    public void ringPayloads() {
+        assertEquals("start|60000", new String(WatchProtocol.ringStartPayload(60_000), java.nio.charset.StandardCharsets.UTF_8));
+        assertEquals("/wristline/ring", WatchProtocol.PATH_RING);
+        assertEquals("stop", WatchProtocol.RING_STOP);
+    }
 }
