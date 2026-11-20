@@ -230,9 +230,14 @@ public class RelayConnection extends Connection {
 
     /**
      * Already answered on our ringing notification: no Answer to wait for from the watch. Goes
-     * active so Telecom opens the watch's audio link, then answers the app into it.
+     * active so Telecom opens the watch's audio link, then answers the app into it. On a war phone
+     * the app was answered before this call was placed ({@code appAnswered}): it only goes active.
      */
-    void startAnswered() {
+    void startAnswered(boolean appAnswered) {
+        if (appAnswered) {
+            startAppAnswered();
+            return;
+        }
         awaitingAppAnswer = true;
         // Once Telecom has the connection: it is still being created here.
         handler.post(() -> {
@@ -249,6 +254,41 @@ public class RelayConnection extends Connection {
         });
     }
 
+    private void startAppAnswered() {
+        awaitingAppAnswer = false;
+        // Once Telecom has the connection: it is still being created here.
+        handler.post(() -> {
+            if (RelayListener.incomingCall == null && RelayListener.ongoingCall == null) {
+                end(new DisconnectCause(DisconnectCause.CANCELED));
+                return;
+            }
+            Log.i(RelayListener.TAG, "answered on the notification, app first (managed)");
+            handler.postDelayed(() -> {
+                setActive();
+                routeToWatch(null);
+                VoiceControls.update(context);
+                handler.postDelayed(() -> {
+                    if (noWatchRoute()) {
+                        stepAside();
+                    }
+                }, ANSWER_DELAY_MS);
+            }, ANSWER_DELAY_MS);
+        });
+    }
+
+    /** Telecom reported its routes and the watch's Bluetooth isn't one of them. */
+    private boolean noWatchRoute() {
+        CallAudioState state = audioState;
+        return state != null && (state.getSupportedRouteMask() & CallAudioState.ROUTE_BLUETOOTH) == 0;
+    }
+
+    /** No watch to carry the voice: the app's call stays on the phone and this call steps aside. */
+    private void stepAside() {
+        Log.w(RelayListener.TAG, "no Bluetooth route: the call is answered on the phone");
+        Diagnostics.record(context, EventLog.AUDIO_NO_WATCH, RelayListener.currentApp, "answered on the phone");
+        end(new DisconnectCause(DisconnectCause.ANSWERED_ELSEWHERE));
+    }
+
     /**
      * Answers the app into the watch's audio link. When Telecom offers no Bluetooth route there is
      * no such link, and an active call with no watch to carry it leaves the app's microphone
@@ -257,14 +297,12 @@ public class RelayConnection extends Connection {
     private void answerApp(CallActions call) {
         awaitingAppAnswer = false;
         CallAudioState state = audioState;
-        boolean noWatch = state != null && (state.getSupportedRouteMask() & CallAudioState.ROUTE_BLUETOOTH) == 0;
+        boolean noWatch = noWatchRoute();
         RelayListener.send(context, call.answer);
         Diagnostics.record(context, EventLog.APP_ANSWERED, RelayListener.currentApp,
                 state == null ? "route=unknown" : "route=" + AudioRoute.names(state.getRoute()));
         if (noWatch) {
-            Log.w(RelayListener.TAG, "no Bluetooth route: the call is answered on the phone");
-            Diagnostics.record(context, EventLog.AUDIO_NO_WATCH, RelayListener.currentApp, "answered on the phone");
-            end(new DisconnectCause(DisconnectCause.ANSWERED_ELSEWHERE));
+            stepAside();
         }
     }
 

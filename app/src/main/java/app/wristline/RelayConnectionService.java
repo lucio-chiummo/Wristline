@@ -29,7 +29,7 @@ public class RelayConnectionService extends ConnectionService {
             Diagnostics.record(this, EventLog.CARRIER, testCall ? null : RelayListener.currentApp, "managed relay");
         }
         if (request.getExtras().getBoolean(RelayListener.EXTRA_ANSWERED)) {
-            connection.startAnswered();
+            connection.startAnswered(false);
         }
         Log.i(RelayListener.TAG, "mirrored call created");
         Diagnostics.record(this, EventLog.CALL_CREATED, testCall ? null : RelayListener.currentApp,
@@ -67,7 +67,7 @@ public class RelayConnectionService extends ConnectionService {
         RelayConnection.current = connection;
         if (answered) {
             // Answered on the notification of a war phone: placed, not rung, so no call filtering.
-            connection.startAnswered();
+            connection.startAnswered(extras.getBoolean(RelayListener.EXTRA_APP_ANSWERED));
         } else {
             connection.startOutgoing(extras != null && extras.getBoolean(RelayListener.EXTRA_FULL_MODE));
         }
@@ -87,7 +87,9 @@ public class RelayConnectionService extends ConnectionService {
         }
         android.os.Bundle extras = request == null ? null : request.getExtras();
         if (extras != null && extras.getBoolean(RelayListener.EXTRA_ANSWERED)) {
-            if (RelayListener.claimAnsweredPlace(extras.getLong(RelayListener.EXTRA_ANSWER_ID))) {
+            // An app answered before the call was placed keeps its voice on the phone.
+            if (RelayListener.claimAnsweredPlace(extras.getLong(RelayListener.EXTRA_ANSWER_ID))
+                    && !extras.getBoolean(RelayListener.EXTRA_APP_ANSWERED)) {
                 answerOnThePhone(this);
             }
             return;
