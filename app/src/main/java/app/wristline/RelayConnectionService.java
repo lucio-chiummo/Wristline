@@ -72,6 +72,15 @@ public class RelayConnectionService extends ConnectionService {
     @Override
     public void onCreateOutgoingConnectionFailed(PhoneAccountHandle account, ConnectionRequest request) {
         Log.w(RelayListener.TAG, "Telecom could not create the outgoing mirror; starting the call on the phone only");
+        if (RelayListener.isCarrier(account, this)) {
+            // HyperOS drops a managed call at once while any self-managed call is on.
+            Diagnostics.record(this, EventLog.CARRIER, RelayListener.currentApp, "telecom refused");
+        }
+        if (request != null && request.getExtras() != null
+                && request.getExtras().getBoolean(RelayListener.EXTRA_ANSWERED)) {
+            answerOnThePhone();
+            return;
+        }
         Runnable startApp = RelayConnection.pendingAppStart;
         RelayConnection.pendingAppStart = null;
         if (startApp != null) {
@@ -86,9 +95,13 @@ public class RelayConnectionService extends ConnectionService {
         Diagnostics.record(this, EventLog.CALL_NOT_CREATED, testCall ? null : RelayListener.currentApp,
                 testCall ? "test call" : "");
         if (request != null && request.getExtras().getBoolean(RelayListener.EXTRA_ANSWERED)) {
-            // Already answered on the watch: don't lose the call, take it on the phone.
-            CallActions call = RelayListener.incomingCall;
-            RelayListener.send(this, call == null ? null : call.answer);
+            answerOnThePhone();
         }
+    }
+
+    /** Already answered on the watch: don't lose the call, take it on the phone. */
+    private void answerOnThePhone() {
+        CallActions call = RelayListener.incomingCall;
+        RelayListener.send(this, call == null ? null : call.answer);
     }
 }
