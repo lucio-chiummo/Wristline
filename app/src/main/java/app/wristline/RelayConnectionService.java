@@ -34,7 +34,7 @@ public class RelayConnectionService extends ConnectionService {
 
     @Override
     public Connection onCreateOutgoingConnection(PhoneAccountHandle account, ConnectionRequest request) {
-        if (account != null && RelayListener.carrierHandle(this).getId().equals(account.getId())) {
+        if (RelayListener.isCarrier(account, this)) {
             return createCarrier(request);
         }
         android.os.Bundle extras = request.getExtras();
@@ -70,7 +70,7 @@ public class RelayConnectionService extends ConnectionService {
 
     @Override
     public void onCreateOutgoingConnectionFailed(PhoneAccountHandle account, ConnectionRequest request) {
-        if (account != null && RelayListener.carrierHandle(this).getId().equals(account.getId())) {
+        if (RelayListener.isCarrier(account, this)) {
             Log.w(RelayListener.TAG, "Telecom could not make the carrier call; holding the voice ourselves");
             Diagnostics.record(this, EventLog.CARRIER, RelayListener.currentApp, "failed");
             RelayConnection.carrierFailed();

@@ -82,6 +82,20 @@ public class RelayListener extends NotificationListenerService {
     }
 
     /**
+     * The account a relayed call rings on, decided here and nowhere else: the carrier on a phone
+     * that lost the mode-owner war and whose user enabled it, otherwise the self-managed relay.
+     */
+    static PhoneAccountHandle relayHandle(Context context) {
+        return Prefs.ownerWar(context) && carrierEnabled(context)
+                ? carrierHandle(context) : accountHandle(context);
+    }
+
+    /** Whether {@code account} is the carrier account; the service routes by the account's id. */
+    static boolean isCarrier(PhoneAccountHandle account, Context context) {
+        return account != null && carrierHandle(context).getId().equals(account.getId());
+    }
+
+    /**
      * Whether Telecom will let the carrier place a call. A managed account registered by an app
      * that isn't the dialer starts <em>disabled</em> (seen on Android 17: the self-managed relay
      * account is enabled, the carrier is not), and only the user can enable it in Calling accounts.
@@ -306,7 +320,7 @@ public class RelayListener extends NotificationListenerService {
         extras.putBoolean(TestCall.EXTRA, true);
         try {
             registerAccount(context);
-            context.getSystemService(TelecomManager.class).addNewIncomingCall(accountHandle(context), extras);
+            context.getSystemService(TelecomManager.class).addNewIncomingCall(relayHandle(context), extras);
             Log.i(TAG, "test call started");
             Diagnostics.record(context, EventLog.TEST_CALL, "", "started");
             return true;
@@ -348,7 +362,7 @@ public class RelayListener extends NotificationListenerService {
                 : getString(R.string.caller_with_app, app.label, caller));
         try {
             registerAccount(this);
-            getSystemService(TelecomManager.class).addNewIncomingCall(accountHandle(this), extras);
+            getSystemService(TelecomManager.class).addNewIncomingCall(relayHandle(this), extras);
         } catch (RuntimeException e) {
             Log.w(TAG, "Telecom refused the mirrored call; falling back to a notification", e);
             Diagnostics.record(this, EventLog.TELECOM_REFUSED, app, e.getClass().getSimpleName());
@@ -401,7 +415,7 @@ public class RelayListener extends NotificationListenerService {
         extras.putBoolean(EXTRA_ANSWERED, true);
         try {
             registerAccount(context);
-            context.getSystemService(TelecomManager.class).addNewIncomingCall(accountHandle(context), extras);
+            context.getSystemService(TelecomManager.class).addNewIncomingCall(relayHandle(context), extras);
             // The Telecom call reports the audio itself from here on.
             if (callAudio != null) {
                 callAudio.stop();
@@ -524,7 +538,7 @@ public class RelayListener extends NotificationListenerService {
         callExtras.putString(EXTRA_CALLER, getString(R.string.caller_with_app, app.label, name));
         callExtras.putBoolean(EXTRA_FULL_MODE, useFullModeForCall);
         Bundle extras = new Bundle();
-        extras.putParcelable(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE, accountHandle(this));
+        extras.putParcelable(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE, relayHandle(this));
         extras.putBundle(TelecomManager.EXTRA_OUTGOING_CALL_EXTRAS, callExtras);
         RelayConnection.pendingAppStart = startApp;
         try {
