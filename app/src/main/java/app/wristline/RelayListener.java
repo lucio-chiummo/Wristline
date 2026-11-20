@@ -88,9 +88,28 @@ public class RelayListener extends NotificationListenerService {
      * Asking while it is disabled buys nothing but silence, so the call holds the voice itself.
      */
     static boolean carrierEnabled(Context context) {
-        PhoneAccount account = context.getSystemService(TelecomManager.class)
-                .getPhoneAccount(carrierHandle(context));
-        return account != null && account.isEnabled();
+        TelecomManager telecom = context.getSystemService(TelecomManager.class);
+        PhoneAccountHandle handle = carrierHandle(context);
+        try {
+            PhoneAccount account = telecom.getPhoneAccount(handle);
+            return account != null && account.isEnabled();
+        } catch (SecurityException refused) {
+            // vivo on Android 17 wants READ_PHONE_NUMBERS even for the app's own account; the
+            // home screen crashed on open. The app's own accounts stay readable from API 35.
+        }
+        if (android.os.Build.VERSION.SDK_INT < 35) {
+            return false;
+        }
+        try {
+            for (PhoneAccount account : telecom.getRegisteredPhoneAccounts()) {
+                if (handle.equals(account.getAccountHandle())) {
+                    return account.isEnabled();
+                }
+            }
+        } catch (RuntimeException refused) {
+            // Unreadable: report it off, so the card offers the enable screen.
+        }
+        return false;
     }
 
     static void registerAccount(Context context) {
