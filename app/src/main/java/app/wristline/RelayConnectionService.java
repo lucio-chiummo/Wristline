@@ -55,8 +55,13 @@ public class RelayConnectionService extends ConnectionService {
         RelayConnection connection = new RelayConnection(this, managed);
         connection.setAddress(request.getAddress(), TelecomManager.PRESENTATION_ALLOWED);
         connection.setCallerDisplayName(caller, TelecomManager.PRESENTATION_ALLOWED);
-        connection.startOutgoing(extras != null && extras.getBoolean(RelayListener.EXTRA_FULL_MODE));
         RelayConnection.current = connection;
+        if (extras != null && extras.getBoolean(RelayListener.EXTRA_ANSWERED)) {
+            // Answered on the notification of a war phone: placed, not rung, so no call filtering.
+            connection.startAnswered();
+        } else {
+            connection.startOutgoing(extras != null && extras.getBoolean(RelayListener.EXTRA_FULL_MODE));
+        }
         if (managed) {
             Diagnostics.record(this, EventLog.CARRIER, RelayListener.currentApp, "managed relay");
         }
