@@ -309,14 +309,17 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Calling accounts is where the carrier is enabled. Skins hide or move that screen, so try the
-     * two public ways in and, if neither opens, say where to look instead of leaving a dead button.
+     * Calling accounts is where the carrier is enabled. Skins hide or move that screen, so try
+     * Telecom's enable screen, then the two public ways in and, if none opens, say where to look
+     * instead of leaving a dead button.
      */
-    private void openCallingAccounts() {
+    void openCallingAccounts() {
         // The public action lands on the SIM-only screen on some skins (vivo, Android 17), which
         // lists no third-party account at all. Telecom's own enable screen is the one that shows
-        // the carrier switch, under two known component names.
+        // the carrier switch, under known component names: HyperOS ships it in its own TelecomUi
+        // package, vivo inside Telecom.
         String[][] components = {
+                {"com.android.server.telecomui", "com.android.server.telecomui.settings.EnableAccountPreferenceActivity"},
                 {"com.android.server.telecom", "com.android.server.telecomui.settings.EnableAccountPreferenceActivity"},
                 {"com.android.server.telecom", "com.android.server.telecom.settings.EnableAccountPreferenceActivity"},
         };
@@ -324,8 +327,8 @@ public class MainActivity extends Activity {
             try {
                 startActivity(new Intent().setClassName(component[0], component[1]));
                 return;
-            } catch (android.content.ActivityNotFoundException ignored) {
-                // Not on this skin: try the next way in.
+            } catch (RuntimeException ignored) {
+                // Not on this skin, or not exported or guarded by a permission: try the next way in.
             }
         }
         String[] actions = {
@@ -336,8 +339,8 @@ public class MainActivity extends Activity {
             try {
                 startActivity(new Intent(action));
                 return;
-            } catch (android.content.ActivityNotFoundException ignored) {
-                // Not on this skin: try the next screen.
+            } catch (RuntimeException ignored) {
+                // Not on this skin, or refused: try the next screen.
             }
         }
         Toast.makeText(this, R.string.carrier_manual, Toast.LENGTH_LONG).show();
