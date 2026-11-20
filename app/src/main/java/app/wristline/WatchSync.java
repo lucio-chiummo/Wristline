@@ -8,10 +8,14 @@ import com.google.android.gms.wearable.CapabilityClient;
 import com.google.android.gms.wearable.CapabilityInfo;
 import com.google.android.gms.wearable.DataMap;
 import com.google.android.gms.wearable.PutDataMapRequest;
+import com.google.android.gms.wearable.Node;
 import com.google.android.gms.wearable.Wearable;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 /** Publishes the callable contacts to the watch app (names and apps only, never numbers). */
@@ -21,32 +25,57 @@ final class WatchSync {
         void send(Context context, String path, byte[] payload);
     }
 
-    /** The real sender: own thread, fire and forget. */
-    static final Sender WATCH_SENDER = (context, path, payload) -> new Thread(() -> {
+    /** The real sender: blocking (Play services); {@link #ring} and {@link #stopRing} run it off the main thread. */
+    static final Sender WATCH_SENDER = (context, path, payload) -> {
         try {
-            for (com.google.android.gms.wearable.Node node : Tasks.await(
-                    Wearable.getNodeClient(context).getConnectedNodes())) {
+            for (Node node : Tasks.await(Wearable.getNodeClient(context).getConnectedNodes(),
+                    5, TimeUnit.SECONDS)) {
                 Wearable.getMessageClient(context).sendMessage(node.getId(), path, payload);
             }
         } catch (Exception e) {
             Log.w(RelayListener.TAG, "could not send " + path + " to the watch", e);
         }
-    }, "watch-message").start();
+    };
 
     static volatile Sender sender = WATCH_SENDER;
+
+    /** Ring messages go through one thread, so a quick start then stop reach the watch in that order. */
+    private static volatile ExecutorService ringQueue = newRingQueue();
+
+    private static ExecutorService newRingQueue() {
+        return Executors.newSingleThreadExecutor(r -> {
+            Thread thread = new Thread(r, "watch-ring");
+            thread.setDaemon(true);
+            return thread;
+        });
+    }
 
     private WatchSync() {
     }
 
-    /** Tells the watch app to vibrate like a ringing call, for at most {@code maxMs}. */
+    /** Tells the watch app to vibrate like a ringing call, for at most {@code maxMs}. Fire and forget. */
     static void ring(Context context, long maxMs) {
-        sender.send(context, WatchProtocol.PATH_RING, WatchProtocol.ringStartPayload(maxMs));
+        queue(context, WatchProtocol.ringStartPayload(maxMs));
     }
 
-    /** Tells the watch app to stop vibrating. */
+    /** Tells the watch app to stop vibrating. Fire and forget. */
     static void stopRing(Context context) {
-        sender.send(context, WatchProtocol.PATH_RING,
-                WatchProtocol.RING_STOP.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        queue(context, WatchProtocol.RING_STOP.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static void queue(Context context, byte[] payload) {
+        ringQueue.execute(() -> sender.send(context, WatchProtocol.PATH_RING, payload));
+    }
+
+    /** Waits until every ring message queued so far has been handed to the sender (tests). */
+    static void flushRing() throws Exception {
+        ringQueue.submit(() -> { }).get(5, TimeUnit.SECONDS);
+    }
+
+    /** A fresh queue: drops anything stuck on an earlier test's real send (tests). */
+    static void resetRingQueue() {
+        ringQueue.shutdownNow();
+        ringQueue = newRingQueue();
     }
 
     /** Off the main thread. Tells the watch whether relaying is on (for its tile's Pause/Resume). */

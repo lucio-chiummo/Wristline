@@ -21,6 +21,10 @@ import org.robolectric.RuntimeEnvironment;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLooper;
 
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /** Ringing the watch with Wristline's own notification, for watches whose call screen loses Answer. */
@@ -32,14 +36,15 @@ public class WatchRingTest {
 
     @Before
     public void setUp() {
+        WatchSync.resetRingQueue();
         context = RuntimeEnvironment.getApplication();
         nm = context.getSystemService(NotificationManager.class);
         StatusNotifications.createChannels(context);
         WatchSync.sender = (c, path, payload) ->
-                sent.add(path + " " + new String(payload, java.nio.charset.StandardCharsets.UTF_8));
+                sent.add(path + " " + new String(payload, StandardCharsets.UTF_8));
     }
 
-    private final java.util.List<String> sent = new java.util.ArrayList<>();
+    private final List<String> sent = new ArrayList<>();
 
     @After
     public void tearDown() {
@@ -49,6 +54,10 @@ public class WatchRingTest {
 
     private Notification shown() {
         return shadowOf(nm).getNotification(StatusNotifications.ID_INCOMING_FALLBACK);
+    }
+
+    private void flush() throws Exception {
+        WatchSync.flushRing();
     }
 
     private void pass(long ms) {
@@ -130,38 +139,66 @@ public class WatchRingTest {
     }
 
     @Test
-    public void aRingTellsTheWatchToStartOnce() {
+    public void aRingTellsTheWatchToStartOnce() throws Exception {
         WatchRing.start(context, "Corvan", "Incoming WhatsApp call", WatchRing.MAX_MS);
         pass(3 * WatchRing.REPEAT_MS);
+        flush();
 
-        assertEquals(java.util.List.of("/wristline/ring start|60000"), sent);
+        assertEquals(List.of("/wristline/ring start|60000"), sent);
     }
 
     @Test
-    public void stoppingARingTellsTheWatchToStop() {
+    public void stoppingARingTellsTheWatchToStop() throws Exception {
         WatchRing.start(context, "Corvan", "Incoming WhatsApp call", WatchRing.MAX_MS);
+        flush();
         sent.clear();
 
         WatchRing.stop(context);
         WatchRing.stop(context);
+        flush();
 
-        assertEquals(java.util.List.of("/wristline/ring stop"), sent);
+        assertEquals(List.of("/wristline/ring stop"), sent);
     }
 
     @Test
-    public void stoppingWhenNothingRangSendsNothing() {
+    public void stoppingWhenNothingRangSendsNothing() throws Exception {
         WatchRing.stop(context);
+        flush();
 
         assertTrue(sent.isEmpty());
     }
 
     @Test
-    public void aRingThatTimesOutTellsTheWatchToStop() {
+    public void aRingThatTimesOutTellsTheWatchToStop() throws Exception {
         WatchRing.start(context, "Corvan", "Incoming WhatsApp call", 10_000);
+        flush();
         sent.clear();
 
         pass(12_000);
+        flush();
 
-        assertEquals(java.util.List.of("/wristline/ring stop"), sent);
+        assertEquals(List.of("/wristline/ring stop"), sent);
+    }
+
+    @Test
+    public void aQuickStartThenStopReachTheWatchInOrder() throws Exception {
+        List<String> order = Collections.synchronizedList(new ArrayList<>());
+        WatchSync.sender = (c, path, payload) -> {
+            if (order.isEmpty()) {
+                // The first send is slow, like waiting for the connected nodes.
+                try {
+                    Thread.sleep(200);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+            order.add(new String(payload, StandardCharsets.UTF_8));
+        };
+
+        WatchRing.start(context, "Corvan", "Incoming WhatsApp call", WatchRing.MAX_MS);
+        WatchRing.stop(context);
+        flush();
+
+        assertEquals(List.of("start|60000", "stop"), order);
     }
 }

@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
+import android.service.notification.StatusBarNotification;
 
 /**
  * Rings the watch with Wristline's own Answer/Decline notification, alerting again every few
@@ -92,7 +93,7 @@ final class WatchRing {
     }
 
     private static boolean showing(NotificationManager nm) {
-        for (android.service.notification.StatusBarNotification n : nm.getActiveNotifications()) {
+        for (StatusBarNotification n : nm.getActiveNotifications()) {
             if (n.getId() == StatusNotifications.ID_INCOMING_FALLBACK) {
                 return true;
             }
