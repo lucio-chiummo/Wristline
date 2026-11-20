@@ -446,3 +446,31 @@ Costs seen, accepted for war phones only:
 
 Replaces the carrier-beside-the-mirror design of §§1–13 and the R1 path of §14. Plan:
 `docs/superpowers/plans/2026-11-20-managed-relay.md`.
+
+## 16. Managed relay rehearsed on the vivo (2026-11-20), and the last round's script
+
+Plan code (`notification-voice` through `ff6c02b`) with only `Prefs.ownerWar` forced true on a
+throwaway branch (`spike-managed-r2`, deleted), release build, carrier account enabled, Pixel
+Watch 5 on HFP:
+
+| # | Call | Result |
+|---|---|---|
+| 1 | "Ring my watch", answered with the headset key | On "Wristline — voice on watch", no confirmation; `setMode(MODE_IN_COMMUNICATION)` from Telecom at answer; BT route |
+| 2 | Real WhatsApp incoming, answered on the watch | Same; WhatsApp `src:VOICE_COMMUNICATION not silenced`; owner: heard both ways |
+| 3 | WhatsApp call-out from the watch | `MO - outgoing` on the carrier account → `DIALING` → `ACTIVE` → BT; WhatsApp capture not silenced; owner: works both ways |
+| 4 | Carrier account switched off | Not rehearsed on hardware (the switch is the owner's, in Telecom's screen); `RelayHandleTest` covers the fallback to the self-managed relay |
+
+The vivo cannot show the war; what HyperOS does with a privileged Telecom owner is the round's bet
+(§15).
+
+Round script for the POCO tester (replaces §11 and §13's):
+
+1. Install beta 9 (phone and watch), open Wristline, all setup green.
+2. **Call A:** a WhatsApp call to the POCO, answer on the watch. On HyperOS the war is expected:
+   the voice comes to the phone. That is what arms the managed relay. Finish the call on the phone.
+3. Open Wristline: a card asks to enable "Wristline — voice on watch". Tap it, flip the switch,
+   come back until the card clears. If it never clears, stop and send the report.
+4. **Call B:** a WhatsApp call to the POCO, answer on the watch, talk 20 s both ways. The phone's
+   dialer showing the call, and the phone ringing too, are expected.
+5. **Call C:** call out from the watch on WhatsApp, talk 20 s both ways.
+6. Send the report.
