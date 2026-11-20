@@ -29,19 +29,28 @@ final class WatchBuzz {
         vibrator.cancel();
         // One waveform that doesn't repeat: if the phone's "stop" never arrives, it ends by itself.
         VibrationEffect effect = VibrationEffect.createWaveform(timings(maxMs), -1);
+        vibrateAsRingtone(vibrator, effect);
+    }
+
+    /**
+     * Stops the ring. {@code cancel()} only reaches a vibration this process instance started, so a
+     * buzz left by an earlier run of the app would go on; a silent ringtone-usage vibration replaces it.
+     */
+    static void stop(Context context) {
+        Vibrator vibrator = context.getSystemService(Vibrator.class);
+        if (vibrator != null) {
+            vibrator.cancel();
+            vibrateAsRingtone(vibrator, VibrationEffect.createWaveform(new long[]{1}, new int[]{0}, -1));
+        }
+    }
+
+    private static void vibrateAsRingtone(Vibrator vibrator, VibrationEffect effect) {
         if (Build.VERSION.SDK_INT >= 33) {
             // Ringtone usage: silent mode and Do Not Disturb are respected.
             vibrator.vibrate(effect, VibrationAttributes.createForUsage(VibrationAttributes.USAGE_RINGTONE));
         } else {
             vibrator.vibrate(effect, new AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE).build());
-        }
-    }
-
-    static void stop(Context context) {
-        Vibrator vibrator = context.getSystemService(Vibrator.class);
-        if (vibrator != null) {
-            vibrator.cancel();
         }
     }
 
