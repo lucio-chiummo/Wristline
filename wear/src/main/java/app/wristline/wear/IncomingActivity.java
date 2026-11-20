@@ -4,17 +4,20 @@ import android.animation.ObjectAnimator;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
 import android.view.WindowManager;
+import android.window.OnBackInvokedDispatcher;
 
 /**
  * Wristline's incoming call screen while the phone rings by notification: who and which app, a red
  * Decline and a green Answer, over the lock screen. Answer and Decline do what the phone
  * notification's buttons do; after Answer the call goes on in {@link InCallActivity}. Opened by
- * {@link IncomingRing}'s full-screen intent, closed when the ring stops.
+ * {@link IncomingRing}'s full-screen intent, closed when the ring stops. On a Pixel Watch the
+ * double pinch answers and the wrist turn declines; Back declines too, rather than hiding the ring.
  */
 public class IncomingActivity extends Activity {
     private static final String EXTRA_NAME = "name";
@@ -32,6 +35,8 @@ public class IncomingActivity extends Activity {
     private final Runnable timeout = this::finish;
     /** Answered or declined: further presses (screen or notification) do nothing. */
     private boolean done;
+    /** The watch's gestures while the screen is in front: {@link WatchGestures}. */
+    private Object gestures;
 
     static Intent intent(Context context, Protocol.Ring ring) {
         return new Intent(context, IncomingActivity.class)
@@ -51,8 +56,32 @@ public class IncomingActivity extends Activity {
         findViewById(R.id.status).setVisibility(View.GONE);
         findViewById(R.id.answer).setOnClickListener(v -> answer());
         findViewById(R.id.decline).setOnClickListener(v -> decline());
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+                    OnBackInvokedDispatcher.PRIORITY_DEFAULT, this::decline);
+        }
         current = this;
         show(getIntent());
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        gestures = WatchGestures.listen(this, this::answer, this::decline);
+    }
+
+    @Override
+    protected void onPause() {
+        WatchGestures.stop(this, gestures);
+        gestures = null;
+        super.onPause();
+    }
+
+    /** Back before Android 13. */
+    @Override
+    @SuppressWarnings("deprecation")
+    public void onBackPressed() {
+        decline();
     }
 
     @Override

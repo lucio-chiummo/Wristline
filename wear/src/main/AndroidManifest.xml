@@ -16,6 +16,11 @@
         android:label="@string/app_name"
         android:theme="@android:style/Theme.DeviceDefault">
 
+        <!-- The Pixel Watch's double pinch and wrist turn (WatchGestures); other watches lack it. -->
+        <uses-library
+            android:name="wear-sdk"
+            android:required="false" />
+
         <!-- Needs the phone app: it reads contacts and starts the calls. -->
         <meta-data
             android:name="com.google.android.wearable.standalone"
