@@ -196,6 +196,37 @@ public class ManagedRelayTest {
         ((RelayConnection) c).onAbort();
     }
 
+    @Test
+    public void aRefusedAnsweredManagedCallAnswersTheAppOnThePhone() {
+        RelayListener.incomingCall = ringingCall();
+        Bundle extras = new Bundle();
+        extras.putString(RelayListener.EXTRA_CALLER, "WhatsApp · Annaly");
+        extras.putBoolean(RelayListener.EXTRA_ANSWERED, true);
+
+        service.onCreateOutgoingConnectionFailed(RelayListener.carrierHandle(context),
+                new ConnectionRequest(RelayListener.carrierHandle(context), null, extras));
+
+        assertTrue("an answered call refused by Telecom must still be answered", appAnswered());
+        assertNull(RelayConnection.current);
+        assertEquals("telecom refused", latest(EventLog.CARRIER).detail);
+    }
+
+    @Test
+    public void aRefusedWatchCallOutStillStartsTheApp() {
+        boolean[] started = {false};
+        RelayConnection.pendingAppStart = () -> started[0] = true;
+        Bundle extras = new Bundle();
+        extras.putString(RelayListener.EXTRA_CALLER, "WhatsApp · Annaly");
+        extras.putBoolean(RelayListener.EXTRA_FULL_MODE, true);
+
+        service.onCreateOutgoingConnectionFailed(RelayListener.carrierHandle(context),
+                new ConnectionRequest(RelayListener.carrierHandle(context), null, extras));
+
+        assertTrue(started[0]);
+        assertNull(RelayConnection.pendingAppStart);
+        assertEquals("telecom refused", latest(EventLog.CARRIER).detail);
+    }
+
     /** An answered managed call on the carrier account, with the watch offered for calls. */
     private RelayConnection answeredManagedCall() {
         RelayListener.incomingCall = ringingCall();
