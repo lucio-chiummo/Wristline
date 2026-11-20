@@ -94,6 +94,61 @@ public class RelayHandleTest {
         assertEquals(RelayListener.carrierHandle(context), call.phoneAccount);
     }
 
+    /** A ringing call the way WhatsApp posts it: call category, full-screen intent, two buttons. */
+    private android.service.notification.StatusBarNotification whatsAppRinging() {
+        android.app.PendingIntent tap = android.app.PendingIntent.getBroadcast(context, 1,
+                new android.content.Intent("test.tap"), android.app.PendingIntent.FLAG_IMMUTABLE);
+        android.app.Notification n = new android.app.Notification.Builder(context, "calls")
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentTitle("Corvan")
+                .setCategory(android.app.Notification.CATEGORY_CALL)
+                .setFullScreenIntent(tap, true)
+                .addAction(new android.app.Notification.Action.Builder(null, "Decline", tap).build())
+                .addAction(new android.app.Notification.Action.Builder(null, "Answer", tap).build())
+                .build();
+        try {
+            return android.service.notification.StatusBarNotification.class
+                    .getConstructor(String.class, String.class, int.class, String.class, int.class, int.class,
+                            android.app.Notification.class, android.os.UserHandle.class, String.class, long.class)
+                    .newInstance("com.whatsapp", "com.whatsapp", 1, "k1", 1000, 1, n,
+                            android.os.Process.myUserHandle(), null, 0L);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    @Test
+    public void aRelayedCallOnAWarPhoneRingsOnTheCarrier() {
+        Prefs.setOwnerWar(context, true);
+        carrierAccountEnabled(true);
+        RelayListener listener = org.robolectric.Robolectric.buildService(RelayListener.class).create().get();
+        try {
+            listener.onNotificationPosted(whatsAppRinging());
+
+            assertEquals(RelayListener.carrierHandle(context), shadowOf(telecom).getOnlyIncomingCall().phoneAccount);
+        } finally {
+            RelayListener.clearCall(context);
+            listener.onListenerDisconnected();
+        }
+    }
+
+    @Test
+    public void aWatchCallOutOnAWarPhoneIsPlacedOnTheCarrier() {
+        Prefs.setOwnerWar(context, true);
+        carrierAccountEnabled(true);
+        RelayListener listener = org.robolectric.Robolectric.buildService(RelayListener.class).create().get();
+        listener.onListenerConnected();
+        try {
+            assertTrue(RelayListener.startOutgoing(context, SupportedApp.WHATSAPP, "Corvan", () -> { }));
+
+            assertEquals(RelayListener.carrierHandle(context), shadowOf(telecom).getOnlyOutgoingCall().phoneAccount);
+        } finally {
+            RelayConnection.pendingAppStart = null;
+            RelayListener.clearCall(context);
+            listener.onListenerDisconnected();
+        }
+    }
+
     @Test
     public void isCarrierMatchesOnlyTheCarrierHandle() {
         assertTrue(RelayListener.isCarrier(RelayListener.carrierHandle(context), context));
