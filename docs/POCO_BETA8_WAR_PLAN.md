@@ -368,3 +368,44 @@ registration, nothing about the war.
 Known cost of `CAPABILITY_CALL_PROVIDER`: once enabled, the account can appear in the dialer's
 outgoing-account chooser. A dialer-originated call on it would create a stand-in; refusing
 requests without Wristline's own caller extra is a follow-up, not in this round.
+
+## 14. R1 rehearsed on the vivo (2026-11-20, Android 17): Telecom asks the user, the carrier is never created
+
+Throwaway branch `spike-carrier-r1` (owner war forced on, test call allowed to engage the carrier),
+release build, carrier account `[X]` enabled, Pixel Watch 5 HFP-connected. Never merged.
+
+First, a beta 9 crash the rehearsal surfaced before any call: `carrierEnabled()` →
+`TelecomManager.getPhoneAccount` throws `SecurityException` (READ_PHONE_NUMBERS) on vivo Android 17
+even for Wristline's own account, so Home crashed on open. Fixed on `notification-voice`
+(`getRegisteredPhoneAccounts` fallback, unit-tested); with the fix Home opens and shows "Ready",
+i.e. the carrier is read as enabled.
+
+The run (test call answered from the phone with the headset key — `onAnswer` is the same path as a
+watch answer; the watch was charging and never got the answer within the 30 s ring twice):
+
+```
+17:31:26.698 test call answered on the watch
+17:31:26.738 asking Telecom to carry the call's audio mode (the owner war)
+Telecom CallTC@65 (MO - outgoing), target "Wristline — voice on watch", selfMgd:false
+  17:31:26.745 CREATED
+  17:31:26.867 USER_CONFIRMATION   → ConfirmCallDialogActivity:
+               "Placing this call will end your Wristline call."  [OK] [Cancel]
+  17:32:18.962 USER_CANCELLED (dialog cancelled by hand)
+```
+
+`onCreateOutgoingConnection` was never reached: no `CARRIER created`, no `CARRIER failed`.
+
+**R1 fails, and not in a way HyperOS can rescue.** This is stock Telecom: a managed outgoing call
+placed while a self-managed call is up needs the user to confirm, and confirming disconnects the
+self-managed call. In a real war call the self-managed calls are Wristline's relay and WhatsApp's
+own; OK would end the very call the carrier is meant to carry, Cancel leaves the war as it was. The
+POCO would show the same dialog (wording "…will end your WhatsApp call" or "…Wristline call").
+
+Consequence: beta 9 as built must not go to the POCO tester. On a war phone with the account
+enabled, every call would pop that dialog over the call screen. The carrier-as-outgoing-call
+design is dead; a different way to get Telecom to own the mode (e.g. a managed *incoming* call, if
+answering it does not end self-managed calls, or nothing at all) is a planning question for the
+next plan, not a tweak for this round.
+
+Not measured, because the carrier never existed: `dumpsys telecom` / audio mode owner with the
+carrier up.
