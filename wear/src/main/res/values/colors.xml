@@ -18,6 +18,7 @@
     <color name="favourites_button">#3A3320</color>
     <color name="on_badge">#0F1115</color>
     <color name="hang_up">#E5484D</color>
+    <color name="answer">#30A46C</color>
     <color name="star">#FDD663</color>
 
     <!-- Avatar circles: dark tones with light initials, readable on the black ground. -->

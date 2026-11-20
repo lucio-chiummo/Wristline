@@ -49,16 +49,27 @@ public class CallStateService extends WearableListenerService {
         QuickCallComplicationService.refresh(context);
     }
 
+    /**
+     * The phone rings the watch by notification: buzz, and with a caller (newer phone apps) show the
+     * incoming call screen. Anything but a start ends both.
+     */
+    static void onRing(android.content.Context context, String payload) {
+        Protocol.Ring ring = Protocol.parseRing(payload);
+        if (ring == null) {
+            WatchBuzz.stop(context);
+            IncomingRing.stop(context);
+            return;
+        }
+        WatchBuzz.start(context, ring.maxMs);
+        if (ring.name != null) {
+            IncomingRing.start(context, ring);
+        }
+    }
+
     @Override
     public void onMessageReceived(MessageEvent event) {
         if (Protocol.PATH_RING.equals(event.getPath())) {
-            String payload = new String(event.getData(), StandardCharsets.UTF_8);
-            long maxMs = Protocol.ringMaxMs(payload);
-            if (maxMs > 0) {
-                WatchBuzz.start(this, maxMs);
-            } else {
-                WatchBuzz.stop(this);
-            }
+            onRing(this, new String(event.getData(), StandardCharsets.UTF_8));
             return;
         }
         if (!Protocol.PATH_CALL_STATE.equals(event.getPath())) {

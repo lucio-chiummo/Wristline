@@ -6,6 +6,8 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Vibrates for a call the phone rings the watch for. -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Opens the incoming call screen over everything while the phone rings. -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
     <application
         android:allowBackup="false"
@@ -54,6 +56,17 @@
             android:launchMode="singleTop"
             android:taskAffinity=""
             android:theme="@style/InCall" />
+
+        <!-- Over the lock screen, its own task, gone from the recents once the ring is over. -->
+        <activity
+            android:name=".IncomingActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:showWhenLocked="true"
+            android:taskAffinity=""
+            android:theme="@style/InCall"
+            android:turnScreenOn="true" />
 
         <service
             android:name=".CallStateService"

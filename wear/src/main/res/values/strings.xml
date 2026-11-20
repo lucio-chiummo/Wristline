@@ -47,4 +47,8 @@
     <string name="recent_incoming">Call from %1$s, %2$s, %3$s</string>
     <string name="recent_missed">Missed call from %1$s, %2$s, %3$s</string>
     <string name="already_on_call">Already on a call — hang up first</string>
+    <string name="answer">Answer</string>
+    <string name="decline">Decline</string>
+    <string name="connecting">Connecting…</string>
+    <string name="channel_incoming_call">Incoming calls</string>
 </resources>

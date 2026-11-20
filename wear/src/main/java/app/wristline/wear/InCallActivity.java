@@ -1,12 +1,9 @@
 package app.wristline.wear;
 
 import android.animation.ObjectAnimator;
-import android.animation.PropertyValuesHolder;
-import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
-import android.content.res.ColorStateList;
 import android.media.AudioManager;
 import android.os.Bundle;
 import android.os.SystemClock;
@@ -19,15 +16,17 @@ import android.widget.ImageButton;
 import android.widget.TextView;
 
 /**
- * Wristline's own call screen for calls started from the watch (the watch's system call screen
- * can't be opened by other apps). Shows who and which app, "Calling…", "Ringing…" until the other
+ * Wristline's own call screen for calls started from the watch, and for calls answered on
+ * {@link IncomingActivity} (the watch's system call screen can't be opened by other apps). Shows who and which app, "Calling…", "Ringing…" until the other
  * side answers, then the call time; one tap on the red button hangs up. Swipe-to-dismiss is off
  * (it hid the screen without hanging up): "Minimise" leaves it, opening Wristline brings it back.
  * The crown changes the call volume. Closes when the phone says the call ended.
  */
 public class InCallActivity extends Activity {
-    private static final String EXTRA_NAME = "name";
-    private static final String EXTRA_APP = "app";
+    static final String EXTRA_NAME = "name";
+    static final String EXTRA_APP = "app";
+    /** Set for a call answered on the watch: "Connecting…" instead of "Calling…" and "Ringing…". */
+    private static final String EXTRA_ANSWERED = "answered";
     /** Crown rotation (in AXIS_SCROLL units) per volume step. */
     private static final float CROWN_STEP = 1f;
 
@@ -39,12 +38,19 @@ public class InCallActivity extends Activity {
     private ImageButton mute;
     private ObjectAnimator pulse;
     private float crown;
+    /** Answered on the watch: stays "Connecting…" until the call is active. */
+    private boolean answered;
 
     static Intent intent(Context context, String name, String app) {
         return new Intent(context, InCallActivity.class)
                 .putExtra(EXTRA_NAME, name)
                 .putExtra(EXTRA_APP, app)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+    }
+
+    /** The call screen for a call just answered from {@link IncomingActivity}. */
+    static Intent answered(Context context, String name, String app) {
+        return intent(context, name, app).putExtra(EXTRA_ANSWERED, true);
     }
 
     /** Brings back a minimised call screen; false when there's no call. */
@@ -65,16 +71,13 @@ public class InCallActivity extends Activity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         String name = getIntent().getStringExtra(EXTRA_NAME);
         String app = getIntent().getStringExtra(EXTRA_APP);
-        ((TextView) findViewById(R.id.name)).setText(name);
-        ((TextView) findViewById(R.id.app)).setText(Protocol.label(app));
-        Ui.avatar(findViewById(R.id.avatar), name);
+        pulse = Ui.callHeader(this, name, app);
         CallIndicator.show(this, name, app);
-        ColorStateList appColor = ColorStateList.valueOf(Ui.appColor(this, app));
-        findViewById(R.id.app_dot).setBackgroundTintList(appColor);
-        View ring = findViewById(R.id.ring);
-        ring.setBackgroundTintList(appColor);
-        pulse = pulse(ring);
         status = findViewById(R.id.status);
+        answered = getIntent().getBooleanExtra(EXTRA_ANSWERED, false);
+        if (answered) {
+            status.setText(R.string.connecting);
+        }
         timer = findViewById(R.id.timer);
         mute = findViewById(R.id.mute);
         findViewById(R.id.hang_up).setOnClickListener(v -> {
@@ -94,18 +97,6 @@ public class InCallActivity extends Activity {
         startActivity(new Intent(Intent.ACTION_MAIN)
                 .addCategory(Intent.CATEGORY_HOME)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-    }
-
-    /** The ring breathes out and fades while the call is connecting. */
-    private static ObjectAnimator pulse(View ring) {
-        ObjectAnimator animator = ObjectAnimator.ofPropertyValuesHolder(ring,
-                PropertyValuesHolder.ofFloat(View.SCALE_X, 0.82f, 1f),
-                PropertyValuesHolder.ofFloat(View.SCALE_Y, 0.82f, 1f),
-                PropertyValuesHolder.ofFloat(View.ALPHA, 1f, 0.15f));
-        animator.setDuration(1100);
-        animator.setRepeatCount(ValueAnimator.INFINITE);
-        animator.start();
-        return animator;
     }
 
     /** Connected: the ring stops pulsing and stays, quieter. */
@@ -157,7 +148,8 @@ public class InCallActivity extends Activity {
                 finish();
                 return;
             }
-            if (Protocol.STATE_RINGING.equals(state.kind) && timer.getVisibility() != View.VISIBLE) {
+            // An answered call's "ringing" is the app still connecting, not the other side ringing.
+            if (Protocol.STATE_RINGING.equals(state.kind) && timer.getVisibility() != View.VISIBLE && !answered) {
                 status.setText(R.string.ringing);
             } else if (Protocol.STATE_ACTIVE.equals(state.kind) && timer.getVisibility() != View.VISIBLE) {
                 status.setVisibility(View.GONE);
