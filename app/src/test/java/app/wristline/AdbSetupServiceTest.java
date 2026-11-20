@@ -11,6 +11,7 @@ import android.app.Application;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.content.Intent;
+import android.content.pm.ServiceInfo;
 import android.net.ConnectivityManager;
 
 import org.junit.After;
@@ -67,11 +68,16 @@ public class AdbSetupServiceTest {
     }
 
     @Test
-    public void startGoesToTheForegroundWithTheProgressNotification() {
+    public void startGoesToTheForegroundWithTheProgressNotification() throws InterruptedException {
         start();
+        // Without Wi-Fi the worker fails at once and removes the notification, which clears
+        // Robolectric's copy of it; wait for that so the check doesn't race the worker. The id
+        // and the service type outlive the removal.
+        awaitFinished();
 
-        assertNotNull(shadowOf(controller.get()).getLastForegroundNotification());
         assertEquals(StatusNotifications.ID_PAIRING, shadowOf(controller.get()).getLastForegroundNotificationId());
+        assertEquals(ServiceInfo.FOREGROUND_SERVICE_TYPE_SHORT_SERVICE, controller.get().getForegroundServiceType());
+        assertTrue(shadowOf(controller.get()).isForegroundStopped());
     }
 
     @Test
