@@ -19,7 +19,8 @@ final class SetupStatus {
 
     /**
      * @param reachedWatch a call (test or real) has rung on the watch since setup
-     * @param carrierNeeded this phone lost the mode-owner war, so calls go through the carrier
+     * @param carrierNeeded this phone lost the mode-owner war, so relayed calls ring as a managed
+     *     call on the carrier account instead of a self-managed one
      * @param carrierEnabled the user has enabled the carrier account in Calling accounts
      */
     static Kind decide(boolean relayOn, int missingSteps, boolean listenerUnbound, int brokenApps,
