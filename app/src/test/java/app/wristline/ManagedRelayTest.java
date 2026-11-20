@@ -331,6 +331,9 @@ public class ManagedRelayTest {
 
         assertEquals(Connection.STATE_DISCONNECTED, c.getState());
         assertEquals(DisconnectCause.ERROR, c.getDisconnectCause().getCode());
+        assertEquals("Wristline can't place phone calls", c.getDisconnectCause().getLabel().toString());
+        assertEquals("Wristline can't place phone calls", c.getDisconnectCause().getDescription().toString());
+        assertEquals("not placed by Wristline", c.getDisconnectCause().getReason());
         assertNull(RelayConnection.current);
     }
 

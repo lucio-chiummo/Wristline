@@ -45,6 +45,7 @@
     <string name="carrier_desc">Questo telefono si riprende la voce dall\'orologio durante la chiamata. Wristline la tiene lì con un account di chiamata, che Android lascia disattivato finché non lo attivi tu. Tocca qui sotto, attiva \"Wristline — voce sull\'orologio\", poi torna qui.</string>
     <string name="carrier_open">Apri account di chiamata</string>
     <string name="carrier_manual">Nelle Impostazioni del telefono cerca Account di chiamata (o Impostazioni chiamate) e attiva \"Wristline — voce sull\'orologio\".</string>
+    <string name="carrier_refused">Wristline non può fare chiamate telefoniche</string>
     <string name="master_switch">Inoltra le chiamate all\'orologio</string>
     <string name="section_apps">App</string>
     <string name="apps_count">%1$d di %2$d attive</string>
