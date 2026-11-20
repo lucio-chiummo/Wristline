@@ -229,6 +229,86 @@ public class ManagedRelayTest {
         assertEquals("telecom refused", latest(EventLog.CARRIER).detail);
     }
 
+    private int appAnswers() {
+        int n = 0;
+        for (android.content.Intent sent : shadowOf((android.app.Application) context).getBroadcastIntents()) {
+            if ("test.answer".equals(sent.getAction())) {
+                n++;
+            }
+        }
+        return n;
+    }
+
+    /** What Telecom hands the service for the call answerWithVoiceOnWatch placed. */
+    private ConnectionRequest placedRequest() {
+        org.robolectric.shadows.ShadowTelecomManager.OutgoingCallRecord placed = shadowOf(telecom).getOnlyOutgoingCall();
+        return new ConnectionRequest(RelayListener.carrierHandle(context), placed.address,
+                placed.extras.getBundle(TelecomManager.EXTRA_OUTGOING_CALL_EXTRAS));
+    }
+
+    @Test
+    public void aManagedAnswerTelecomNeverMakesFallsBackToThePhoneAfterTheWait() {
+        assertTrue(answerOnTheNotification());
+        idle(RelayListener.ANSWERED_PLACE_WAIT_MS - 1);
+        assertEquals(0, appAnswers());
+
+        idle(1);
+
+        assertEquals("answered once, on the phone", 1, appAnswers());
+        assertEquals("telecom never made the call", latest(EventLog.CARRIER).detail);
+        assertNull(RelayConnection.current);
+    }
+
+    @Test
+    public void aManagedAnswerMadeInTimeDisarmsTheWait() {
+        assertTrue(answerOnTheNotification());
+
+        RelayConnection c = (RelayConnection) service.onCreateOutgoingConnection(
+                RelayListener.carrierHandle(context), placedRequest());
+        idle(RelayListener.ANSWERED_PLACE_WAIT_MS + RelayConnection.ANSWER_DELAY_MS);
+
+        assertEquals(Connection.STATE_ACTIVE, c.getState());
+        assertEquals("answered once, by the connection", 1, appAnswers());
+        assertFalse(recorded(EventLog.CARRIER, "telecom never made the call"));
+        c.onAbort();
+    }
+
+    @Test
+    public void aConnectionArrivingAfterTheWaitEndsItself() {
+        assertTrue(answerOnTheNotification());
+        idle(RelayListener.ANSWERED_PLACE_WAIT_MS);
+
+        Connection late = service.onCreateOutgoingConnection(RelayListener.carrierHandle(context), placedRequest());
+        idle(RelayConnection.ANSWER_DELAY_MS * 2);
+
+        assertEquals(Connection.STATE_DISCONNECTED, late.getState());
+        assertEquals(DisconnectCause.CANCELED, late.getDisconnectCause().getCode());
+        assertFalse(late instanceof RelayConnection);
+        assertNull(RelayConnection.current);
+        assertEquals("the app must not be answered twice", 1, appAnswers());
+    }
+
+    @Test
+    public void aRefusalAfterTheWaitDoesNotAnswerTwice() {
+        assertTrue(answerOnTheNotification());
+        idle(RelayListener.ANSWERED_PLACE_WAIT_MS);
+
+        service.onCreateOutgoingConnectionFailed(RelayListener.carrierHandle(context), placedRequest());
+
+        assertEquals(1, appAnswers());
+    }
+
+    @Test
+    public void aRefusalInTimeDisarmsTheWait() {
+        assertTrue(answerOnTheNotification());
+
+        service.onCreateOutgoingConnectionFailed(RelayListener.carrierHandle(context), placedRequest());
+        idle(RelayListener.ANSWERED_PLACE_WAIT_MS);
+
+        assertEquals(1, appAnswers());
+        assertFalse(recorded(EventLog.CARRIER, "telecom never made the call"));
+    }
+
     /** An answered managed call on the carrier account, with the watch offered for calls. */
     private RelayConnection answeredManagedCall() {
         RelayListener.incomingCall = ringingCall();

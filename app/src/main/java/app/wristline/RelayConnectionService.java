@@ -50,6 +50,13 @@ public class RelayConnectionService extends ConnectionService {
             return Connection.createFailedConnection(
                     new DisconnectCause(DisconnectCause.ERROR, why, why, "not placed by Wristline"));
         }
+        boolean answered = extras != null && extras.getBoolean(RelayListener.EXTRA_ANSWERED);
+        if (answered && !RelayListener.claimAnsweredPlace(extras.getLong(RelayListener.EXTRA_ANSWER_ID))) {
+            // Past the wait the app was answered on the phone: this call must not answer it again.
+            Log.w(RelayListener.TAG, "the answered call came after the wait; ending it");
+            Diagnostics.record(this, EventLog.CARRIER, RelayListener.currentApp, "telecom made the call too late");
+            return Connection.createCanceledConnection();
+        }
         String caller = extras == null ? null : extras.getString(RelayListener.EXTRA_CALLER);
         if (caller == null) {
             caller = getString(R.string.phone_account_label);
@@ -58,7 +65,7 @@ public class RelayConnectionService extends ConnectionService {
         connection.setAddress(request.getAddress(), TelecomManager.PRESENTATION_ALLOWED);
         connection.setCallerDisplayName(caller, TelecomManager.PRESENTATION_ALLOWED);
         RelayConnection.current = connection;
-        if (extras != null && extras.getBoolean(RelayListener.EXTRA_ANSWERED)) {
+        if (answered) {
             // Answered on the notification of a war phone: placed, not rung, so no call filtering.
             connection.startAnswered();
         } else {
@@ -78,9 +85,11 @@ public class RelayConnectionService extends ConnectionService {
             // HyperOS drops a managed call at once while any self-managed call is on.
             Diagnostics.record(this, EventLog.CARRIER, RelayListener.currentApp, "telecom refused");
         }
-        if (request != null && request.getExtras() != null
-                && request.getExtras().getBoolean(RelayListener.EXTRA_ANSWERED)) {
-            answerOnThePhone();
+        android.os.Bundle extras = request == null ? null : request.getExtras();
+        if (extras != null && extras.getBoolean(RelayListener.EXTRA_ANSWERED)) {
+            if (RelayListener.claimAnsweredPlace(extras.getLong(RelayListener.EXTRA_ANSWER_ID))) {
+                answerOnThePhone(this);
+            }
             return;
         }
         Runnable startApp = RelayConnection.pendingAppStart;
@@ -97,13 +106,13 @@ public class RelayConnectionService extends ConnectionService {
         Diagnostics.record(this, EventLog.CALL_NOT_CREATED, testCall ? null : RelayListener.currentApp,
                 testCall ? "test call" : "");
         if (request != null && request.getExtras().getBoolean(RelayListener.EXTRA_ANSWERED)) {
-            answerOnThePhone();
+            answerOnThePhone(this);
         }
     }
 
     /** Already answered on the watch: don't lose the call, take it on the phone. */
-    private void answerOnThePhone() {
+    static void answerOnThePhone(android.content.Context context) {
         CallActions call = RelayListener.incomingCall;
-        RelayListener.send(this, call == null ? null : call.answer);
+        RelayListener.send(context, call == null ? null : call.answer);
     }
 }
