@@ -51,6 +51,16 @@ public class CallStateService extends WearableListenerService {
 
     @Override
     public void onMessageReceived(MessageEvent event) {
+        if (Protocol.PATH_RING.equals(event.getPath())) {
+            String payload = new String(event.getData(), StandardCharsets.UTF_8);
+            long maxMs = Protocol.ringMaxMs(payload);
+            if (maxMs > 0) {
+                WatchBuzz.start(this, maxMs);
+            } else {
+                WatchBuzz.stop(this);
+            }
+            return;
+        }
         if (!Protocol.PATH_CALL_STATE.equals(event.getPath())) {
             return;
         }

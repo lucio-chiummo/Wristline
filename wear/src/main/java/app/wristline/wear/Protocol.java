@@ -23,6 +23,8 @@ final class Protocol {
      * {@code <state>} is "<kind>;<ms since connected>;<mute>" ({@link CallState#parse}).
      */
     static final String PATH_CALL_STATE = "/wristline/callstate";
+    /** Message from the phone: "start|<most ms to vibrate>" or "stop" ({@link #ringMaxMs}). */
+    static final String PATH_RING = "/wristline/ring";
     static final String STATE_CALLING = "calling";
     static final String STATE_RINGING = "ringing";
     static final String STATE_ACTIVE = "active";
@@ -96,6 +98,19 @@ final class Protocol {
     /** "<contact id>|<app package>" */
     static byte[] callPayload(long contactId, String app) {
         return (contactId + "|" + app).getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    }
+
+    /** The most ms to vibrate for a "start|<ms>" ring message; -1 for "stop" and anything else. */
+    static long ringMaxMs(String payload) {
+        if (payload == null || !payload.startsWith("start|")) {
+            return -1;
+        }
+        try {
+            long ms = Long.parseLong(payload.substring("start|".length()));
+            return ms > 0 ? ms : -1;
+        } catch (NumberFormatException e) {
+            return -1;
+        }
     }
 
     static String label(String app) {
