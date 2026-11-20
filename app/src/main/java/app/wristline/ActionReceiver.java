@@ -24,7 +24,14 @@ public class ActionReceiver extends BroadcastReceiver {
             }
             return;
         }
-        boolean answer = ANSWER.equals(action);
+        handleRingAnswer(context, ANSWER.equals(action));
+    }
+
+    /**
+     * Answer or Decline on the ringing call: from Wristline's ringing notification or from the
+     * watch app's incoming screen. Main thread.
+     */
+    static void handleRingAnswer(Context context, boolean answer) {
         if (TestCall.notificationRinging) {
             TestCall.notificationTestTapped(context, answer);
             return;
@@ -36,6 +43,9 @@ public class ActionReceiver extends BroadcastReceiver {
         }
         // Answered or declined here: not a missed call.
         RelayListener.incomingHandledOnWatch();
+        if (answer) {
+            RelayListener.showCallOnWatch();
+        }
         boolean voiceOnWatch = answer && RelayListener.answerWithVoiceOnWatch(context);
         Diagnostics.record(context, answer ? EventLog.ANSWERED_ON_WATCH : EventLog.DECLINED_ON_WATCH,
                 RelayListener.currentApp, voiceOnWatch ? "notification, voice on watch" : "notification");

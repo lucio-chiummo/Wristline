@@ -363,7 +363,8 @@ public class RelayListener extends NotificationListenerService {
             Log.i(TAG, "incoming call (" + app.packageName + ", ringing by notification)");
             Diagnostics.record(this, EventLog.INCOMING, app, "notification");
             watchCallAudio(this);
-            WatchRing.start(this, caller, getString(R.string.incoming_call, app.label), WatchRing.MAX_MS);
+            WatchRing.start(this, caller, getString(R.string.incoming_call, app.label), app.packageName,
+                    WatchRing.MAX_MS);
             return;
         }
         Log.i(TAG, "incoming call (" + app.packageName
@@ -378,7 +379,8 @@ public class RelayListener extends NotificationListenerService {
         } catch (RuntimeException e) {
             Log.w(TAG, "Telecom refused the mirrored call; falling back to a notification", e);
             Diagnostics.record(this, EventLog.TELECOM_REFUSED, app, e.getClass().getSimpleName());
-            WatchRing.start(this, caller, getString(R.string.incoming_call, app.label), WatchRing.MAX_MS);
+            WatchRing.start(this, caller, getString(R.string.incoming_call, app.label), app.packageName,
+                    WatchRing.MAX_MS);
         }
     }
 
@@ -596,8 +598,17 @@ public class RelayListener extends NotificationListenerService {
         return RelayConnection.isRelayingCall() || (ongoingCall != null && currentApp != null);
     }
 
-    /** The call in progress was started from the watch: keep the watch's call screen informed. */
+    /**
+     * The call shown on the watch app's call screen (started or answered there): keep that screen
+     * informed. Null when the watch app shows no call.
+     */
     private static volatile String outgoingName;
+
+    /** The ringing call was answered from the watch: its call screen follows the call from now on. */
+    static void showCallOnWatch() {
+        outgoingName = incomingCaller;
+        toldWatch = null;
+    }
 
     /** Telecom refusing the call, for a missing permission too, is caught below and leaves the call on the phone. */
     @SuppressLint("MissingPermission")

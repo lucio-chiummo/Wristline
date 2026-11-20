@@ -53,9 +53,12 @@ final class WatchSync {
     private WatchSync() {
     }
 
-    /** Tells the watch app to vibrate like a ringing call, for at most {@code maxMs}. Fire and forget. */
-    static void ring(Context context, long maxMs) {
-        queue(context, WatchProtocol.ringStartPayload(maxMs));
+    /**
+     * Tells the watch app to vibrate like a ringing call, for at most {@code maxMs}, and who is
+     * calling with which app (null when unknown) for its incoming screen. Fire and forget.
+     */
+    static void ring(Context context, long maxMs, String appPackage, String name) {
+        queue(context, WatchProtocol.ringStartPayload(maxMs, appPackage, name));
     }
 
     /** Tells the watch app to stop vibrating. Fire and forget. */
@@ -140,18 +143,9 @@ final class WatchSync {
 
     /** As above, with how long ago the call connected (ms, -1 unknown) and the mute state. */
     static void callState(Context context, String kind, long connectedMs, String mute, SupportedApp app, String name) {
-        new Thread(() -> {
-            try {
-                byte[] payload = WatchProtocol.callStatePayload(WatchProtocol.callState(kind, connectedMs, mute),
-                        app.packageName, name);
-                for (com.google.android.gms.wearable.Node node : com.google.android.gms.tasks.Tasks.await(
-                        Wearable.getNodeClient(context).getConnectedNodes())) {
-                    Wearable.getMessageClient(context).sendMessage(node.getId(), WatchProtocol.PATH_CALL_STATE, payload);
-                }
-            } catch (Exception e) {
-                Log.w(RelayListener.TAG, "could not tell the watch about the call", e);
-            }
-        }, "watch-call-state").start();
+        byte[] payload = WatchProtocol.callStatePayload(WatchProtocol.callState(kind, connectedMs, mute),
+                app.packageName, name);
+        new Thread(() -> sender.send(context, WatchProtocol.PATH_CALL_STATE, payload), "watch-call-state").start();
     }
 
     /**

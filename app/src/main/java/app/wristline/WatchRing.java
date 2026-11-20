@@ -28,8 +28,12 @@ final class WatchRing {
     private WatchRing() {
     }
 
-    /** Rings until {@link #stop} or for {@code maxMs}; a ring already going is replaced. */
-    static void start(Context context, String title, String text, long maxMs) {
+    /**
+     * Rings until {@link #stop} or for {@code maxMs}; a ring already going is replaced. The watch
+     * app's incoming screen shows {@code title} as the caller and {@code appPackage}'s app (null:
+     * none, like the test call).
+     */
+    static void start(Context context, String title, String text, String appPackage, long maxMs) {
         Context app = context.getApplicationContext();
         onMain(() -> {
             cancelRepeat();
@@ -52,7 +56,7 @@ final class WatchRing {
             repeat = ring;
             // The watch's notification bridge alerts once for re-posts of one notification, so
             // Wristline's watch app vibrates for the whole ring itself.
-            WatchSync.ring(app, maxMs);
+            WatchSync.ring(app, maxMs, appPackage, title);
             ring.run();
         });
     }
