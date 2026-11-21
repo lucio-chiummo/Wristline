@@ -5,6 +5,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
 import android.app.Activity;
 import android.view.Window;
@@ -16,6 +17,8 @@ import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
+import org.robolectric.shadows.ShadowLog;
+import org.robolectric.util.ReflectionHelpers;
 
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
@@ -42,6 +45,13 @@ public class WatchGesturesTest {
 
         public void removeGestureEventListener(Consumer<Object> listener) {
             removed = listener;
+        }
+    }
+
+    /** A watch that has the library but refuses the subscription. */
+    public static class RefusingManager {
+        public void addGestureEventListener(int[] actions, Window window, Executor executor, Consumer<Object> listener) {
+            throw new SecurityException("not allowed for this window");
         }
     }
 
@@ -126,5 +136,26 @@ public class WatchGesturesTest {
 
         assertSame(manager.listener, manager.removed);
         assertSame(handle, manager.removed);
+    }
+
+    /** The only diagnostic for a refused subscription: its cause, not the reflection wrapper. */
+    @Test
+    public void aRefusedSubscriptionLogsItsCause() {
+        ReflectionHelpers.setStaticField(WatchGestures.class, "logged", false);
+        WatchGestures.manager = a -> new RefusingManager();
+        WatchGestures.eventClass = FakeEvent.class.getName();
+        ShadowLog.clear();
+
+        assertNull(WatchGestures.listen(activity, () -> primary++, null));
+
+        ShadowLog.LogItem item = null;
+        for (ShadowLog.LogItem logged : ShadowLog.getLogsForTag(PhoneLink.TAG)) {
+            if (logged.msg.startsWith("no watch gestures")) {
+                item = logged;
+            }
+        }
+        assertNotNull(item);
+        assertTrue(item.msg, item.msg.contains("not allowed for this window"));
+        assertTrue("the cause is logged with its stack", item.throwable instanceof SecurityException);
     }
 }

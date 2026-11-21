@@ -5,6 +5,7 @@ import android.content.Context;
 import android.util.Log;
 import android.view.Window;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
@@ -63,7 +64,9 @@ final class WatchGestures {
         } catch (ReflectiveOperationException | RuntimeException | LinkageError e) {
             if (!logged) {
                 logged = true;
-                Log.i(PhoneLink.TAG, "no watch gestures: " + e);
+                // A refused subscription comes wrapped: its cause is what the watch said.
+                Throwable cause = e instanceof InvocationTargetException && e.getCause() != null ? e.getCause() : e;
+                Log.i(PhoneLink.TAG, "no watch gestures: " + cause, cause);
             }
             return null;
         }
