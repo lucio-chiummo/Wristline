@@ -131,8 +131,11 @@ public class IncomingActivity extends Activity {
         done = true;
         new Thread(() -> PhoneLink.answer(getApplicationContext())).start();
         ringOver();
-        // The phone then sends the call's state, which the call screen shows.
-        startActivity(InCallActivity.answered(this, name(), app()));
+        // Only the phone's "Ring my watch" test rings without an app: no call follows its Answer.
+        if (app() != null) {
+            // The phone then sends the call's state, which the call screen shows.
+            startActivity(InCallActivity.answered(this, name(), app()));
+        }
         finish();
     }
 
