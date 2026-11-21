@@ -224,4 +224,25 @@ public class WatchAnswerTest {
         ShadowLooper.idleMainLooper(CallTracker.GRACE_MS + 1, TimeUnit.MILLISECONDS);
         assertEquals("ended;;|com.whatsapp|Corvan", callState(WatchProtocol.STATE_ENDED + ";"));
     }
+
+    @Test
+    public void aHangUpFromTheWatchWithNoTelecomCallRunsTheAppsHangUp() {
+        ringing();
+        fromWatch(WatchProtocol.PATH_ANSWER);
+        listener.onNotificationPosted(ongoing());
+
+        fromWatch(WatchProtocol.PATH_HANGUP);
+
+        assertTrue("the app's Hang up wasn't sent", appGot("test.4"));
+        assertFalse(appGot("test.2"));
+    }
+
+    @Test
+    public void aHangUpFromTheWatchBeforeTheCallConnectsDeclinesIt() {
+        ringing();
+
+        fromWatch(WatchProtocol.PATH_HANGUP);
+
+        assertTrue("the app's Decline wasn't sent", appGot("test.2"));
+    }
 }

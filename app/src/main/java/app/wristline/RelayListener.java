@@ -575,17 +575,30 @@ public class RelayListener extends NotificationListenerService {
         });
     }
 
-    /** Hang-up on Wristline's own call screen on the watch. */
-    static void hangUpFromWatch() {
-        RelayListener listener = instance;
-        if (listener == null) {
-            return;
-        }
-        listener.handler.post(() -> {
+    /**
+     * Hang-up on Wristline's own call screen on the watch. With no Telecom call (basic mode, or a
+     * managed call that was refused, never placed or stepped aside) the app's own hang-up is sent,
+     * as {@link RelayConnection#onDisconnect} does.
+     */
+    static void hangUpFromWatch(Context context) {
+        new Handler(Looper.getMainLooper()).post(() -> {
             RelayConnection connection = RelayConnection.current;
             if (connection != null) {
                 connection.onDisconnect();
+                return;
             }
+            CallActions ongoing = ongoingCall;
+            CallActions incoming = incomingCall;
+            if (ongoing != null && ongoing.hangUp != null) {
+                send(context, ongoing.hangUp);
+            } else if (incoming != null && incoming.decline != null) {
+                send(context, incoming.decline);
+            } else {
+                Log.w(TAG, "hang-up asked from the watch, but no call to end");
+                return;
+            }
+            Log.i(TAG, "hung up from the watch");
+            Diagnostics.record(context, EventLog.HUNG_UP_ON_WATCH, currentApp, "");
         });
     }
 
