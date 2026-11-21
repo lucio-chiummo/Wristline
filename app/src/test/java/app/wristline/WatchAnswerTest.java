@@ -245,4 +245,45 @@ public class WatchAnswerTest {
 
         assertTrue("the app's Decline wasn't sent", appGot("test.2"));
     }
+
+    private int appGotCount(String action) {
+        int n = 0;
+        for (Intent sent : shadowOf((android.app.Application) context).getBroadcastIntents()) {
+            if (action.equals(sent.getAction())) {
+                n++;
+            }
+        }
+        return n;
+    }
+
+    @Test
+    public void aSecondAnswerFromTheWatchDoesNothing() {
+        ringing();
+        fromWatch(WatchProtocol.PATH_ANSWER);
+
+        fromWatch(WatchProtocol.PATH_ANSWER);
+
+        assertEquals("the app was answered twice", 1, appGotCount("test.3"));
+    }
+
+    @Test
+    public void aLateDeclineAfterAnAnswerDoesNothing() {
+        ringing();
+        fromWatch(WatchProtocol.PATH_ANSWER);
+
+        fromWatch(WatchProtocol.PATH_DECLINE);
+
+        assertFalse("a stale Decline reached the answered call", appGot("test.2"));
+        assertEquals(null, detail(EventLog.DECLINED_ON_WATCH));
+    }
+
+    @Test
+    public void aDeclineFromTheWatchAfterAnAnswerOnThePhoneDoesNothing() {
+        ringing();
+        listener.onNotificationPosted(ongoing());
+
+        fromWatch(WatchProtocol.PATH_DECLINE);
+
+        assertFalse("a stale Decline reached the answered call", appGot("test.2"));
+    }
 }
