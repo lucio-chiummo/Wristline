@@ -45,6 +45,9 @@ final class PhoneLink {
     /** Sample contacts for the screenshot tests (no phone there); null in the app. */
     static volatile Contacts preview;
 
+    /** Stands in for the Data Layer in tests: gets every message instead of the phone; null in the app. */
+    static volatile java.util.function.BiPredicate<String, byte[]> sender;
+
     private PhoneLink() {
     }
 
@@ -148,7 +151,21 @@ final class PhoneLink {
         send(context, Protocol.PATH_MUTE, new byte[0]);
     }
 
+    /** Answers the call ringing by notification, like the phone notification's Answer button. */
+    static void answer(Context context) {
+        send(context, Protocol.PATH_ANSWER, new byte[0]);
+    }
+
+    /** Declines the call ringing by notification, like the phone notification's Decline button. */
+    static void decline(Context context) {
+        send(context, Protocol.PATH_DECLINE, new byte[0]);
+    }
+
     private static boolean send(Context context, String path, byte[] payload) {
+        java.util.function.BiPredicate<String, byte[]> stand = sender;
+        if (stand != null) {
+            return stand.test(path, payload);
+        }
         try {
             List<Node> nodes = Tasks.await(Wearable.getNodeClient(context).getConnectedNodes(), TIMEOUT_S, TimeUnit.SECONDS);
             for (Node node : nodes) {

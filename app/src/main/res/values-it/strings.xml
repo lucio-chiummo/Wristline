@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="no_supported_app">Nessuna delle app supportate da Wristline è installata. Funziona con WhatsApp, Telegram, Instagram e Signal.</string>
+    <string name="carrier_account_label">Wristline — voce sull\'orologio</string>
 
     <string name="step_listener_title">Accesso alle notifiche</string>
     <string name="step_listener_desc">Rileva le chiamate in arrivo dalle app che hai attivato.</string>
@@ -38,6 +39,13 @@
     <string name="status_repair_title">La voce va riparata</string>
     <string name="status_repair_sub">Le chiamate %1$s si sentono sul telefono finché non viene riparata</string>
     <string name="repair">Ripara</string>
+    <string name="status_carrier_title">Manca un interruttore per la voce</string>
+    <string name="status_carrier_sub">Attiva Wristline in Account di chiamata per tenere la voce sull\'orologio</string>
+    <string name="carrier_title">Attiva l\'account di chiamata di Wristline</string>
+    <string name="carrier_desc">Questo telefono si riprende la voce dall\'orologio durante la chiamata. Wristline la tiene lì con un account di chiamata, che Android lascia disattivato finché non lo attivi tu. Tocca qui sotto, attiva \"Wristline — voce sull\'orologio\", poi torna qui.</string>
+    <string name="carrier_open">Apri account di chiamata</string>
+    <string name="carrier_manual">Nelle Impostazioni del telefono cerca Account di chiamata (o Impostazioni chiamate) e attiva \"Wristline — voce sull\'orologio\".</string>
+    <string name="carrier_refused">Wristline non può fare chiamate telefoniche</string>
     <string name="master_switch">Inoltra le chiamate all\'orologio</string>
     <string name="section_apps">App</string>
     <string name="apps_count">%1$d di %2$d attive</string>
@@ -76,7 +84,7 @@
     <string name="rules_explain">Come funziona</string>
     <string name="dnd_on">Segue il telefono: le chiamate che silenzia non fanno squillare l\'orologio</string>
     <string name="dnd_off">Ignorato: le chiamate fanno squillare l\'orologio anche in Non disturbare</string>
-    <string name="dnd_message">Quando il telefono è in Non disturbare (o Riposo), Wristline può seguirlo: una chiamata che il telefono silenzierebbe non fa squillare nemmeno l\'orologio, e una che lascia passare (contatti preferiti, chiamate ripetute) sì. Scegli chi può passare nelle impostazioni Non disturbare del telefono.\n\n\"Non mentre uso il telefono\": quando il telefono è sbloccato con lo schermo acceso, la chiamata squilla solo sul telefono, non sull\'orologio.\n\n\"Squilla con una notifica\": per gli orologi dove Rispondi sulla schermata di chiamata non fa nulla. L\'orologio vibra ogni pochi secondi con Rispondi e Rifiuta; parli al telefono.</string>
+    <string name="dnd_message">Quando il telefono è in Non disturbare (o Riposo), Wristline può seguirlo: una chiamata che il telefono silenzierebbe non fa squillare nemmeno l\'orologio, e una che lascia passare (contatti preferiti, chiamate ripetute) sì. Scegli chi può passare nelle impostazioni Non disturbare del telefono.\n\n\"Non mentre uso il telefono\": quando il telefono è sbloccato con lo schermo acceso, la chiamata squilla solo sul telefono, non sull\'orologio.\n\n\"Squilla con una notifica\": per gli orologi dove Rispondi sulla schermata di chiamata non fa nulla. L\'orologio vibra ogni pochi secondi con Rispondi e Rifiuta. Parli dall\'orologio se la voce dall\'orologio è configurata, altrimenti al telefono.</string>
     <string name="ring_by_notification">Squilla con una notifica</string>
     <string name="ring_question_title">L\'orologio ha squillato?</string>
     <string name="ring_question_text">Se ha squillato ma Rispondi non ha fatto nulla, Wristline può far squillare l\'orologio con una notifica. Vibra ogni pochi secondi, con Rispondi e Rifiuta.</string>
@@ -96,7 +104,7 @@
     <string name="row_licence">Licenza</string>
     <string name="licence_open">Apri la pagina del progetto</string>
     <string name="licence_notice">Wristline\nCopyright © 2026 Lucio Chiummo\n\nConcesso in licenza secondo la PolyForm Noncommercial License 1.0.0: puoi usarlo, modificarlo e condividerlo solo per scopi non commerciali. Ogni altro uso richiede il permesso dell\'autore. È fornito così com\'è, SENZA ALCUNA GARANZIA, nei limiti consentiti dalla legge.\n\nUna copia della licenza e delle sue note è nell\'app. Questi testi, le licenze di terze parti e il codice sorgente sono anche sulla pagina del progetto.</string>
-    <string name="report_sub">Configurazione, eventi recenti (compreso quando sono avvenute le chiamate), modelli di telefono e orologio e le app di questo telefono che passano le chiamate a un orologio. Nomi e numeri di chi chiama sono esclusi. Inviato solo se lo condividi: controllalo prima di pubblicarlo.</string>
+    <string name="report_sub">Configurazione, eventi recenti (compreso quando sono avvenute le chiamate), modelli di telefono e orologio e le app di questo telefono che passano le chiamate a un orologio. Con la voce configurata dal telefono e il debug wireless attivo, anche ciò che Android ha registrato su audio e Bluetooth dell\'ultima chiamata. Nomi e numeri di chi chiama sono esclusi. Inviato solo se lo condividi: controllalo prima di pubblicarlo.</string>
     <string name="report_subject">Rapporto diagnostico di Wristline</string>
     <string name="report_preparing">Preparo il rapporto…</string>
     <string name="unreadable_title">Una chiamata %1$s non è arrivata all\'orologio</string>

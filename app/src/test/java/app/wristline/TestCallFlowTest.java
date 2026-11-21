@@ -45,7 +45,7 @@ public class TestCallFlowTest {
     }
 
     private RelayConnection ringingTestCall() {
-        RelayConnection connection = new RelayConnection(context);
+        RelayConnection connection = new RelayConnection(context, false);
         connection.setRinging();
         connection.markTestCall();
         RelayConnection.current = connection;

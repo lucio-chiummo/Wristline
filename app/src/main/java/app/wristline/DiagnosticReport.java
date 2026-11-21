@@ -36,6 +36,17 @@ final class DiagnosticReport {
         String locale = "";
         /** A Bluetooth call-audio output (SCO or LE headset) exists; null when it can't be told. */
         Boolean bluetoothCallAudio;
+        /** Android 17 and later: Wristline has to hold the voice on the watch itself. */
+        boolean voiceHoldNeeded;
+        /** This phone lost the mode-owner war: calls are meant to be relayed as managed calls. */
+        boolean ownerWar;
+        /** The carrier account is enabled in Calling accounts; Telecom starts it disabled. */
+        boolean carrierEnabled;
+        /** MODIFY_AUDIO_SETTINGS, which the voice hold needs. */
+        boolean audioSettingsGranted = true;
+        boolean powerSaver;
+        /** Kinds of audio devices when the report was made: "outputs=... inputs=... offered=...". */
+        String audioDevices = "";
         boolean relayOn;
         /** The watch is rung with Wristline's own notification instead of a phone call. */
         boolean ringByNotification;
@@ -52,6 +63,8 @@ final class DiagnosticReport {
         String defaultDialer = "unknown";
         List<CallBridges.Bridge> bridges = new ArrayList<>();
         List<String> companions = new ArrayList<>();
+        /** What Android logged about the last call's audio ({@link SystemLog}); null when not captured. */
+        String systemLog;
     }
 
     private DiagnosticReport() {
@@ -77,8 +90,19 @@ final class DiagnosticReport {
                 .append(" · Calling from the watch: ").append(f.watchCalling ? "on" : "off").append('\n');
         out.append("Ring by notification: ").append(f.ringByNotification ? "on" : "off").append('\n');
         out.append("adb key present: ").append(f.keyPresent ? "yes" : "no").append('\n');
+        out.append("System log: ").append(f.systemLog != null ? "included at the end"
+                : f.keyPresent ? "not captured (keep Wireless debugging on during the call)"
+                : "not captured (voice not set up on the phone)").append('\n');
         out.append("Bluetooth call audio device: ").append(f.bluetoothCallAudio == null ? "unknown"
                 : f.bluetoothCallAudio ? "yes" : "no").append('\n');
+        out.append("Voice hold (Android 17+): ").append(f.voiceHoldNeeded ? "needed" : "not needed")
+                .append(" · audio settings permission: ").append(f.audioSettingsGranted ? "granted" : "MISSING").append('\n');
+        out.append("Mode-owner war: ").append(f.ownerWar ? "lost (managed relay)" : "not seen")
+                .append(" · carrier account: ").append(f.carrierEnabled ? "enabled" : "DISABLED").append('\n');
+        out.append("Power saver: ").append(f.powerSaver ? "on" : "off").append('\n');
+        if (!f.audioDevices.isEmpty()) {
+            out.append("Audio devices now: ").append(f.audioDevices).append('\n');
+        }
         out.append("Missing permissions: ")
                 .append(f.missingPermissions.isEmpty() ? "none" : String.join(", ", f.missingPermissions)).append('\n');
         out.append('\n').append("Apps:").append('\n');
@@ -121,6 +145,9 @@ final class DiagnosticReport {
         }
         for (EventLog.Entry e : f.events) {
             out.append(EventLog.format(e)).append('\n');
+        }
+        if (f.systemLog != null) {
+            out.append('\n').append(f.systemLog);
         }
         return out.toString();
     }

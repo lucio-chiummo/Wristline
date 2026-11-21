@@ -43,4 +43,8 @@
     <string name="recent_outgoing">Hai chiamato %1$s, %2$s, %3$s</string>
     <string name="recent_incoming">Chiamata da %1$s, %2$s, %3$s</string>
     <string name="recent_missed">Chiamata persa da %1$s, %2$s, %3$s</string>
+    <string name="answer">Rispondi</string>
+    <string name="decline">Rifiuta</string>
+    <string name="connecting">Connessione…</string>
+    <string name="channel_incoming_call">Chiamate in arrivo</string>
 </resources>

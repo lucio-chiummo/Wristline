@@ -33,6 +33,8 @@ public class CallDiagnosticsTest {
     @Before
     public void setUp() {
         context = RuntimeEnvironment.getApplication();
+        // Each test is a new call: not answered or declined yet (startCall's reset).
+        org.robolectric.util.ReflectionHelpers.setStaticField(RelayListener.class, "incomingHandled", false);
     }
 
     @After
@@ -40,6 +42,16 @@ public class CallDiagnosticsTest {
         RelayListener.currentApp = null;
         RelayListener.incomingCall = null;
         RelayConnection.current = null;
+        VoiceHold.sdk = android.os.Build.VERSION.SDK_INT;
+    }
+
+    private EventLog.Entry latest(String code, String detailPrefix) {
+        for (EventLog.Entry e : Prefs.events(context)) {
+            if (e.code.equals(code) && e.detail.startsWith(detailPrefix)) {
+                return e;
+            }
+        }
+        throw new AssertionError("no " + code + " " + detailPrefix + " recorded");
     }
 
     private EventLog.Entry newest() {
@@ -63,6 +75,250 @@ public class CallDiagnosticsTest {
         extras.putString(RelayListener.EXTRA_CALLER, "WhatsApp · Annaly");
         extras.putBoolean(TestCall.EXTRA, testCall);
         return new ConnectionRequest(null, null, extras);
+    }
+
+    private ConnectionRequest answeredRequest() {
+        Bundle extras = new Bundle();
+        extras.putString(RelayListener.EXTRA_CALLER, "WhatsApp · Annaly");
+        extras.putBoolean(RelayListener.EXTRA_ANSWERED, true);
+        return new ConnectionRequest(null, null, extras);
+    }
+
+    private android.app.PendingIntent appAnswer() {
+        return android.app.PendingIntent.getBroadcast(context, 7, new android.content.Intent("test.answer"),
+                android.app.PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    private CallActions ringingCall() {
+        android.app.PendingIntent other = android.app.PendingIntent.getBroadcast(context, 8,
+                new android.content.Intent("test.other"), android.app.PendingIntent.FLAG_IMMUTABLE);
+        android.app.Notification n = new android.app.Notification.Builder(context, "calls")
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentTitle("Annaly")
+                .setCategory(android.app.Notification.CATEGORY_CALL)
+                .setFullScreenIntent(other, true)
+                .addAction(new android.app.Notification.Action.Builder(null, "Decline", other).build())
+                .addAction(new android.app.Notification.Action.Builder(null, "Answer", appAnswer()).build())
+                .build();
+        return CallActions.from(n, false);
+    }
+
+    private boolean appAnswered() {
+        for (android.content.Intent sent : org.robolectric.Shadows.shadowOf((android.app.Application) context).getBroadcastIntents()) {
+            if ("test.answer".equals(sent.getAction())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Test
+    public void anAnsweredCallGoesActiveThenAnswersTheApp() {
+        RelayListener.currentApp = SupportedApp.WHATSAPP;
+        RelayListener.incomingCall = ringingCall();
+        RelayConnectionService service = Robolectric.buildService(RelayConnectionService.class).create().get();
+
+        android.telecom.Connection connection = service.onCreateIncomingConnection(null, answeredRequest());
+        org.robolectric.shadows.ShadowLooper.idleMainLooper();
+
+        assertEquals(android.telecom.Connection.STATE_ACTIVE, connection.getState());
+        assertTrue(RelayConnection.isAwaitingAppAnswer());
+        assertTrue("app answered before the watch's audio link", !appAnswered());
+
+        org.robolectric.shadows.ShadowLooper.idleMainLooper(RelayConnection.ANSWER_DELAY_MS, java.util.concurrent.TimeUnit.MILLISECONDS);
+
+        assertTrue("app never answered", appAnswered());
+        assertTrue(!RelayConnection.isAwaitingAppAnswer());
+        RelayConnection.current.onAbort();
+    }
+
+    private static android.telecom.CallAudioState audio(int route, int supported) {
+        return new android.telecom.CallAudioState(false, route, supported);
+    }
+
+    private static final int EARPIECE = android.telecom.CallAudioState.ROUTE_EARPIECE;
+    private static final int BLUETOOTH = android.telecom.CallAudioState.ROUTE_BLUETOOTH;
+    private static final int SPEAKER = android.telecom.CallAudioState.ROUTE_SPEAKER;
+
+    private RelayConnection answeredCall() {
+        RelayListener.currentApp = SupportedApp.WHATSAPP;
+        RelayListener.incomingCall = ringingCall();
+        RelayConnectionService service = Robolectric.buildService(RelayConnectionService.class).create().get();
+        RelayConnection connection = (RelayConnection) service.onCreateIncomingConnection(null, answeredRequest());
+        org.robolectric.shadows.ShadowLooper.idleMainLooper();
+        return connection;
+    }
+
+    @Test
+    public void anAnsweredCallWithNoWatchRouteIsAnsweredOnThePhone() {
+        RelayConnection connection = answeredCall();
+        connection.onCallAudioStateChanged(audio(EARPIECE, EARPIECE | SPEAKER));
+
+        org.robolectric.shadows.ShadowLooper.idleMainLooper(RelayConnection.ANSWER_DELAY_MS, java.util.concurrent.TimeUnit.MILLISECONDS);
+
+        assertTrue("app never answered", appAnswered());
+        assertEquals("our call must step aside or the app's microphone stays silent",
+                android.telecom.Connection.STATE_DISCONNECTED, connection.getState());
+        assertEquals("answered on the phone", latest(EventLog.AUDIO_NO_WATCH).detail);
+    }
+
+    @Test
+    public void anAnsweredCallWithAWatchRouteStaysActive() {
+        RelayConnection connection = answeredCall();
+        connection.onCallAudioStateChanged(audio(BLUETOOTH, EARPIECE | BLUETOOTH | SPEAKER));
+
+        org.robolectric.shadows.ShadowLooper.idleMainLooper(RelayConnection.ANSWER_DELAY_MS, java.util.concurrent.TimeUnit.MILLISECONDS);
+
+        assertTrue(appAnswered());
+        assertEquals(android.telecom.Connection.STATE_ACTIVE, connection.getState());
+        connection.onAbort();
+    }
+
+    private void offerWatchToApps() {
+        android.media.AudioManager audio = context.getSystemService(android.media.AudioManager.class);
+        org.robolectric.Shadows.shadowOf(audio).setAvailableCommunicationDevices(java.util.List.of(
+                org.robolectric.shadows.AudioDeviceInfoBuilder.newBuilder()
+                        .setType(android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO).build()));
+    }
+
+    private int audioMode() {
+        return context.getSystemService(android.media.AudioManager.class).getMode();
+    }
+
+    @Test
+    public void onAndroid17TheCallHoldsTheVoiceOnTheWatchItself() {
+        VoiceHold.sdk = 37;
+        offerWatchToApps();
+        RelayConnection connection = answeredCall();
+
+        connection.onCallAudioStateChanged(audio(BLUETOOTH, EARPIECE | BLUETOOTH | SPEAKER));
+
+        assertEquals(android.media.AudioManager.MODE_IN_COMMUNICATION, audioMode());
+        assertEquals("hold=taken", latest(EventLog.AUDIO_LINK, "hold=").detail);
+        connection.onAbort();
+        assertEquals("hold not released with the call", android.media.AudioManager.MODE_NORMAL, audioMode());
+    }
+
+    @Test
+    public void onAndroid17AFallBackToThePhoneTakesTheVoiceAgain() {
+        VoiceHold.sdk = 37;
+        offerWatchToApps();
+        RelayConnection connection = answeredCall();
+        int all = EARPIECE | BLUETOOTH | SPEAKER;
+        connection.onCallAudioStateChanged(audio(BLUETOOTH, all));
+        // A real drop, not the war: later than the window where a fall means the mode owner pulled it.
+        org.robolectric.shadows.ShadowLooper.idleMainLooper(RelayConnection.WAR_WINDOW_MS + 500,
+                java.util.concurrent.TimeUnit.MILLISECONDS);
+
+        connection.onCallAudioStateChanged(audio(EARPIECE, all));
+
+        assertEquals("hold=retaken", latest(EventLog.AUDIO_LINK, "hold=").detail);
+        connection.onAbort();
+    }
+
+    @Test
+    public void onAndroid17AFallRightAfterTheTakeGivesUpAtOnce() {
+        VoiceHold.sdk = 37;
+        offerWatchToApps();
+        RelayConnection connection = answeredCall();
+        int all = EARPIECE | BLUETOOTH | SPEAKER;
+        connection.onCallAudioStateChanged(audio(BLUETOOTH, all));
+
+        connection.onCallAudioStateChanged(audio(EARPIECE, all));
+
+        assertEquals("a fall within the war window is the owner war, not a drop",
+                "owner war", latest(EventLog.AUDIO_GAVE_UP).detail);
+        assertEquals("fighting the war is what made beta 7 fail", Boolean.FALSE, RelayConnection.voiceOnWatch());
+        assertTrue("the war phone must use the carrier from the next call on", Prefs.ownerWar(context));
+        for (EventLog.Entry e : Prefs.events(context)) {
+            assertTrue("no re-taking the voice it just lost to the war: " + e.detail,
+                    !e.code.equals(EventLog.AUDIO_LINK) || !e.detail.equals("hold=retaken"));
+        }
+        connection.onAbort();
+    }
+
+    @Test
+    public void onAndroid17NoWatchOfferedAtAnswerIsRetriedWhenItAppears() {
+        VoiceHold.sdk = 37;
+        RelayConnection connection = answeredCall();
+        connection.onCallAudioStateChanged(audio(BLUETOOTH, EARPIECE | BLUETOOTH | SPEAKER));
+        assertEquals("hold=no watch offered", latest(EventLog.AUDIO_LINK, "hold=").detail);
+
+        // The watch's voice link comes up a moment later.
+        offerWatchToApps();
+        android.media.AudioManager audio = context.getSystemService(android.media.AudioManager.class);
+        org.robolectric.Shadows.shadowOf(audio).addOutputDevice(
+                org.robolectric.shadows.AudioDeviceInfoBuilder.newBuilder()
+                        .setType(android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO).build(), true);
+        org.robolectric.shadows.ShadowLooper.idleMainLooper();
+
+        assertEquals("hold=taken", latest(EventLog.AUDIO_LINK, "hold=").detail);
+        assertEquals(android.media.AudioManager.MODE_IN_COMMUNICATION, audioMode());
+        connection.onAbort();
+    }
+
+    @Test
+    public void onAndroid17MovingTheVoiceToThePhoneLetsGo() {
+        VoiceHold.sdk = 37;
+        offerWatchToApps();
+        RelayConnection connection = answeredCall();
+        connection.onCallAudioStateChanged(audio(BLUETOOTH, EARPIECE | BLUETOOTH | SPEAKER));
+
+        RelayConnection.moveVoice(true);
+
+        assertEquals(android.media.AudioManager.MODE_NORMAL, audioMode());
+        connection.onAbort();
+    }
+
+    @Test
+    public void onAndroid16TheCallLeavesTheAudioModeAlone() {
+        VoiceHold.sdk = 36;
+        offerWatchToApps();
+        RelayConnection connection = answeredCall();
+
+        connection.onCallAudioStateChanged(audio(BLUETOOTH, EARPIECE | BLUETOOTH | SPEAKER));
+
+        assertEquals(android.media.AudioManager.MODE_NORMAL, audioMode());
+        connection.onAbort();
+    }
+
+    @Test
+    public void stopsMovingTheVoiceWhenItKeepsLeavingTheWatch() {
+        RelayConnection connection = answeredCall();
+        int all = EARPIECE | BLUETOOTH | SPEAKER;
+
+        for (int i = 0; i < RelayConnection.MAX_BOUNCES; i++) {
+            connection.onCallAudioStateChanged(audio(BLUETOOTH, all));
+            connection.onCallAudioStateChanged(audio(EARPIECE, all));
+        }
+
+        assertEquals("left the watch 3 times", latest(EventLog.AUDIO_GAVE_UP).detail);
+        assertEquals(Boolean.FALSE, RelayConnection.voiceOnWatch());
+        connection.onAbort();
+    }
+
+    @Test
+    public void oneFallBackToThePhoneIsNotGivingUp() {
+        RelayConnection connection = answeredCall();
+        int all = EARPIECE | BLUETOOTH | SPEAKER;
+
+        connection.onCallAudioStateChanged(audio(BLUETOOTH, all));
+        connection.onCallAudioStateChanged(audio(EARPIECE, all));
+        connection.onCallAudioStateChanged(audio(BLUETOOTH, all));
+
+        assertEquals(Boolean.TRUE, RelayConnection.voiceOnWatch());
+        connection.onAbort();
+    }
+
+    @Test
+    public void anAnsweredCallTelecomCannotCreateStillAnswersTheApp() {
+        RelayListener.currentApp = SupportedApp.WHATSAPP;
+        RelayListener.incomingCall = ringingCall();
+        RelayConnectionService service = Robolectric.buildService(RelayConnectionService.class).create().get();
+
+        service.onCreateIncomingConnectionFailed(null, answeredRequest());
+
+        assertTrue("call lost", appAnswered());
     }
 
     @Test
@@ -103,7 +359,7 @@ public class CallDiagnosticsTest {
 
     @Test
     public void testCallAnswerIsRecordedApartFromDecline() {
-        RelayConnection connection = new RelayConnection(context);
+        RelayConnection connection = new RelayConnection(context, false);
         connection.setRinging();
         connection.markTestCall();
         RelayConnection.current = connection;
@@ -117,7 +373,7 @@ public class CallDiagnosticsTest {
 
     @Test
     public void testCallDeclineIsRecorded() {
-        RelayConnection connection = new RelayConnection(context);
+        RelayConnection connection = new RelayConnection(context, false);
         connection.setRinging();
         connection.markTestCall();
         RelayConnection.current = connection;
@@ -168,7 +424,7 @@ public class CallDiagnosticsTest {
     @Test
     public void telecomStateChangesAreRecorded() {
         RelayListener.currentApp = SupportedApp.WHATSAPP;
-        RelayConnection connection = new RelayConnection(context);
+        RelayConnection connection = new RelayConnection(context, false);
 
         connection.setRinging();
         connection.setActive();
@@ -183,7 +439,7 @@ public class CallDiagnosticsTest {
 
     @Test
     public void audioStateIsRecordedOncePerChange() {
-        RelayConnection connection = new RelayConnection(context);
+        RelayConnection connection = new RelayConnection(context, false);
         CallAudioState earpiece = new CallAudioState(false, CallAudioState.ROUTE_EARPIECE,
                 CallAudioState.ROUTE_EARPIECE | CallAudioState.ROUTE_SPEAKER);
 
@@ -200,7 +456,7 @@ public class CallDiagnosticsTest {
 
     @Test
     public void missingBluetoothRouteWhileActiveIsRecordedOnce() {
-        RelayConnection connection = new RelayConnection(context);
+        RelayConnection connection = new RelayConnection(context, false);
         connection.setActive();
         CallAudioState noBluetooth = new CallAudioState(false, CallAudioState.ROUTE_EARPIECE,
                 CallAudioState.ROUTE_EARPIECE | CallAudioState.ROUTE_SPEAKER);
@@ -216,7 +472,7 @@ public class CallDiagnosticsTest {
 
     @Test
     public void bluetoothRouteAvailableIsNotReportedMissing() {
-        RelayConnection connection = new RelayConnection(context);
+        RelayConnection connection = new RelayConnection(context, false);
         connection.setActive();
 
         connection.onCallAudioStateChanged(new CallAudioState(false, CallAudioState.ROUTE_BLUETOOTH,
@@ -228,7 +484,7 @@ public class CallDiagnosticsTest {
 
     @Test
     public void otherTelecomSignalsAreRecorded() {
-        RelayConnection connection = new RelayConnection(context);
+        RelayConnection connection = new RelayConnection(context, false);
 
         connection.onSilence();
         connection.onHold();
@@ -245,7 +501,7 @@ public class CallDiagnosticsTest {
 
     @Test
     public void holdIsOnlyObserved() {
-        RelayConnection connection = new RelayConnection(context);
+        RelayConnection connection = new RelayConnection(context, false);
         connection.setActive();
 
         connection.onHold();
@@ -256,7 +512,7 @@ public class CallDiagnosticsTest {
 
     @Test
     public void dtmfIsRecordedWithoutItsDigit() {
-        RelayConnection connection = new RelayConnection(context);
+        RelayConnection connection = new RelayConnection(context, false);
 
         connection.onPlayDtmfTone('7');
 
@@ -265,7 +521,7 @@ public class CallDiagnosticsTest {
 
     @Test
     public void changedExtrasAreRecordedByKeyOnly() {
-        RelayConnection connection = new RelayConnection(context);
+        RelayConnection connection = new RelayConnection(context, false);
         Bundle extras = new Bundle();
         extras.putString("zeta", "+39 333 123 4567");
         extras.putString("alpha", "Corvan");
@@ -279,7 +535,7 @@ public class CallDiagnosticsTest {
 
     @Test
     public void answerWithVideoStateIsRecordedAsItArrives() {
-        RelayConnection connection = new RelayConnection(context);
+        RelayConnection connection = new RelayConnection(context, false);
         connection.setRinging();
         RelayConnection.current = connection;
 
@@ -300,7 +556,7 @@ public class CallDiagnosticsTest {
     @Test
     public void recordingChangesAreRecordedOncePerChangeWhileActive() {
         RelayListener.currentApp = SupportedApp.WHATSAPP;
-        RelayConnection connection = new RelayConnection(context);
+        RelayConnection connection = new RelayConnection(context, false);
         connection.setActive();
         android.media.AudioManager am = context.getSystemService(android.media.AudioManager.class);
 
@@ -321,7 +577,7 @@ public class CallDiagnosticsTest {
 
     @Test
     public void recordingsAreNotWatchedBeforeTheCallIsActive() {
-        RelayConnection connection = new RelayConnection(context);
+        RelayConnection connection = new RelayConnection(context, false);
         connection.setRinging();
         android.media.AudioManager am = context.getSystemService(android.media.AudioManager.class);
 
@@ -334,7 +590,7 @@ public class CallDiagnosticsTest {
 
     @Test
     public void recordingsAreNotWatchedAfterTheCallEnds() {
-        RelayConnection connection = new RelayConnection(context);
+        RelayConnection connection = new RelayConnection(context, false);
         connection.setActive();
         connection.onAbort();
         android.media.AudioManager am = context.getSystemService(android.media.AudioManager.class);
@@ -347,7 +603,7 @@ public class CallDiagnosticsTest {
 
     @Test
     public void testCallsDoNotWatchRecordings() {
-        RelayConnection connection = new RelayConnection(context);
+        RelayConnection connection = new RelayConnection(context, false);
         connection.setRinging();
         connection.markTestCall();
         RelayConnection.current = connection;
@@ -371,5 +627,26 @@ public class CallDiagnosticsTest {
         new ActionReceiver().onReceive(context, new Intent(ActionReceiver.ANSWER));
 
         assertEquals(before, Prefs.events(context).size());
+    }
+
+    @Test
+    public void answeringTheAppIsLoggedWithTheRouteAtThatMoment() {
+        RelayConnection connection = answeredCall();
+        connection.onCallAudioStateChanged(audio(BLUETOOTH, EARPIECE | BLUETOOTH | SPEAKER));
+
+        org.robolectric.shadows.ShadowLooper.idleMainLooper(RelayConnection.ANSWER_DELAY_MS, java.util.concurrent.TimeUnit.MILLISECONDS);
+
+        assertEquals("route=bluetooth", latest(EventLog.APP_ANSWERED).detail);
+        connection.onAbort();
+    }
+
+    @Test
+    public void aMutedCallSaysSoInItsRoute() {
+        RelayConnection connection = answeredCall();
+
+        connection.onCallAudioStateChanged(new android.telecom.CallAudioState(true, BLUETOOTH, EARPIECE | BLUETOOTH | SPEAKER));
+
+        assertTrue(latest(EventLog.AUDIO_ROUTE).detail.endsWith(" muted"));
+        connection.onAbort();
     }
 }

@@ -27,13 +27,20 @@ import java.util.Collections;
 
 /**
  * Watches the call notifications of the supported apps and mirrors each incoming call as a
- * self-managed Telecom call. The Pixel Watch companion bridges self-managed Telecom calls to the
- * watch as real calls (ringing screen, Answer/Decline), which these apps don't do themselves.
+ * self-managed Telecom call, or as a managed one on the carrier account on a phone that lost the
+ * mode-owner war (see {@link #relayHandle}). The watch's companion bridges these Telecom calls to
+ * the watch as real calls (ringing screen, Answer/Decline), which these apps don't do themselves.
  */
 public class RelayListener extends NotificationListenerService {
     static final String TAG = "Wristline";
     static final String EXTRA_CALLER = "app.wristline.CALLER";
     static final String EXTRA_FULL_MODE = "app.wristline.FULL_MODE";
+    /** A call answered on our ringing notification: it goes active at once, to carry the voice. */
+    static final String EXTRA_ANSWERED = "app.wristline.ANSWERED";
+    /** Which notification answer a placed managed call is; 0 for any other call. */
+    static final String EXTRA_ANSWER_ID = "app.wristline.ANSWER_ID";
+    /** A placed managed call whose app was answered already: the call must not answer it again. */
+    static final String EXTRA_APP_ANSWERED = "app.wristline.APP_ANSWERED";
 
     static volatile CallActions incomingCall;
     static volatile CallActions ongoingCall;
@@ -55,6 +62,13 @@ public class RelayListener extends NotificationListenerService {
     private static volatile RelayListener instance;
     /** If the app hasn't shown its in-call notification by then, the call didn't start. */
     private static final long OUTGOING_START_MS = 20_000;
+    /**
+     * HyperOS refuses an answered managed call before it binds the service (a confirmation dialog,
+     * or a self-managed call already on), so no callback says so: past this, answer on the phone.
+     */
+    static final long ANSWERED_PLACE_WAIT_MS = 2000;
+    /** From the app's answer to placing the managed call, so its call is up before ours exists. */
+    static final long MANAGED_PLACE_DELAY_MS = 1500;
     private final Handler handler = new Handler(Looper.getMainLooper());
 
     @Override
@@ -70,13 +84,76 @@ public class RelayListener extends NotificationListenerService {
         return new PhoneAccountHandle(new ComponentName(context, RelayConnectionService.class), "relay");
     }
 
-    private static void registerAccount(Context context) {
-        PhoneAccount account = PhoneAccount.builder(accountHandle(context), context.getString(R.string.phone_account_label))
+    /**
+     * The carrier: a managed Telecom account. The relayed call itself rings on it, so Telecom owns
+     * the audio mode, which a self-managed call can't get on HyperOS (see docs/BETA8_HYPEROS_FIX.md).
+     * Only used on a phone that has lost the mode-owner war; the service routes by the account's id.
+     */
+    static PhoneAccountHandle carrierHandle(Context context) {
+        return new PhoneAccountHandle(new ComponentName(context, RelayConnectionService.class), "carrier");
+    }
+
+    /**
+     * The account a relayed call rings on, decided here and nowhere else: the carrier on a phone
+     * that lost the mode-owner war and whose user enabled it, otherwise the self-managed relay.
+     */
+    static PhoneAccountHandle relayHandle(Context context) {
+        return Prefs.ownerWar(context) && carrierEnabled(context)
+                ? carrierHandle(context) : accountHandle(context);
+    }
+
+    /** Whether {@code account} is the carrier account; the service routes by the account's id. */
+    static boolean isCarrier(PhoneAccountHandle account, Context context) {
+        return account != null && carrierHandle(context).getId().equals(account.getId());
+    }
+
+    /**
+     * Whether Telecom will let the carrier account carry a call. A managed account registered by an app
+     * that isn't the dialer starts <em>disabled</em> (seen on Android 17: the self-managed relay
+     * account is enabled, the carrier is not), and only the user can enable it in Calling accounts.
+     * A disabled carrier rings nothing, so the call stays on the self-managed relay.
+     */
+    static boolean carrierEnabled(Context context) {
+        TelecomManager telecom = context.getSystemService(TelecomManager.class);
+        PhoneAccountHandle handle = carrierHandle(context);
+        try {
+            PhoneAccount account = telecom.getPhoneAccount(handle);
+            return account != null && account.isEnabled();
+        } catch (SecurityException refused) {
+            // vivo on Android 17 wants READ_PHONE_NUMBERS even for the app's own account; the
+            // home screen crashed on open. The app's own accounts stay readable from API 35.
+        }
+        if (android.os.Build.VERSION.SDK_INT < 35) {
+            return false;
+        }
+        try {
+            for (PhoneAccount account : telecom.getRegisteredPhoneAccounts()) {
+                if (handle.equals(account.getAccountHandle())) {
+                    return account.isEnabled();
+                }
+            }
+        } catch (RuntimeException refused) {
+            // Unreadable: report it off, so the card offers the enable screen.
+        }
+        return false;
+    }
+
+    static void registerAccount(Context context) {
+        TelecomManager telecom = context.getSystemService(TelecomManager.class);
+        PhoneAccount relay = PhoneAccount.builder(accountHandle(context), context.getString(R.string.phone_account_label))
                 .setCapabilities(PhoneAccount.CAPABILITY_SELF_MANAGED)
                 .setSupportedUriSchemes(Collections.singletonList(PhoneAccount.SCHEME_SIP))
                 .setIcon(Icon.createWithResource(context, R.drawable.ic_notification))
                 .build();
-        context.getSystemService(TelecomManager.class).registerPhoneAccount(account);
+        telecom.registerPhoneAccount(relay);
+        PhoneAccount carrier = PhoneAccount.builder(carrierHandle(context), context.getString(R.string.carrier_account_label))
+                // tel as well as sip: the Calling accounts enable screen lists tel-scheme accounts,
+                // and a SIP-only account never appears there, so the user could not enable it.
+                .setSupportedUriSchemes(java.util.Arrays.asList(PhoneAccount.SCHEME_TEL, PhoneAccount.SCHEME_SIP))
+                .setCapabilities(PhoneAccount.CAPABILITY_CALL_PROVIDER)
+                .setIcon(Icon.createWithResource(context, R.drawable.ic_notification))
+                .build();
+        telecom.registerPhoneAccount(carrier);
     }
 
     /** Contacts changed: refresh the watch's list (debounced; a sync touches many rows). */
@@ -255,7 +332,7 @@ public class RelayListener extends NotificationListenerService {
         extras.putBoolean(TestCall.EXTRA, true);
         try {
             registerAccount(context);
-            context.getSystemService(TelecomManager.class).addNewIncomingCall(accountHandle(context), extras);
+            context.getSystemService(TelecomManager.class).addNewIncomingCall(relayHandle(context), extras);
             Log.i(TAG, "test call started");
             Diagnostics.record(context, EventLog.TEST_CALL, "", "started");
             return true;
@@ -282,11 +359,12 @@ public class RelayListener extends NotificationListenerService {
         WatchSync.recordCall(this, false, app, -1, caller, incomingStartedAt);
         if (Prefs.ringByNotification(this)) {
             // The watch's companion loses Answer on a call screen: ring with our own notification.
-            // The app answers on the phone, so no voice through the watch for this call.
-            useFullModeForCall = false;
+            // Answered there, the voice still goes through the watch (see answerWithVoiceOnWatch).
             Log.i(TAG, "incoming call (" + app.packageName + ", ringing by notification)");
             Diagnostics.record(this, EventLog.INCOMING, app, "notification");
-            WatchRing.start(this, caller, getString(R.string.incoming_call, app.label), WatchRing.MAX_MS);
+            watchCallAudio(this);
+            WatchRing.start(this, caller, getString(R.string.incoming_call, app.label), app.packageName,
+                    WatchRing.MAX_MS);
             return;
         }
         Log.i(TAG, "incoming call (" + app.packageName
@@ -297,11 +375,12 @@ public class RelayListener extends NotificationListenerService {
                 : getString(R.string.caller_with_app, app.label, caller));
         try {
             registerAccount(this);
-            getSystemService(TelecomManager.class).addNewIncomingCall(accountHandle(this), extras);
+            getSystemService(TelecomManager.class).addNewIncomingCall(relayHandle(this), extras);
         } catch (RuntimeException e) {
             Log.w(TAG, "Telecom refused the mirrored call; falling back to a notification", e);
             Diagnostics.record(this, EventLog.TELECOM_REFUSED, app, e.getClass().getSimpleName());
-            WatchRing.start(this, caller, getString(R.string.incoming_call, app.label), WatchRing.MAX_MS);
+            WatchRing.start(this, caller, getString(R.string.incoming_call, app.label), app.packageName,
+                    WatchRing.MAX_MS);
         }
     }
 
@@ -329,6 +408,113 @@ public class RelayListener extends NotificationListenerService {
     }
 
     /** The watch answered or declined the ringing call: it isn't a missed call. */
+    /**
+     * Answer was tapped on our ringing notification. With voice through the watch set up for the
+     * app and a watch that carries call audio, opens a Telecom call that is already answered: it
+     * goes active, Telecom opens the watch's audio link, and only then the app is answered. On a
+     * war phone the app is answered first and the managed call placed after it.
+     * Returns false when the caller should answer the app directly (voice on the phone).
+     */
+    @SuppressLint("MissingPermission") // Telecom refusing is caught below
+    static boolean answerWithVoiceOnWatch(Context context) {
+        SupportedApp app = currentApp;
+        CallActions call = incomingCall;
+        if (app == null || call == null || !useFullModeForCall) {
+            return false;
+        }
+        // Whether the watch can carry the call is only known once Telecom offers its routes:
+        // the connection checks before it answers the app (RelayConnection.answerApp).
+        Bundle extras = new Bundle();
+        String caller = incomingCaller == null ? app.label : incomingCaller;
+        extras.putString(EXTRA_CALLER, context.getString(R.string.caller_with_app, app.label, caller));
+        extras.putBoolean(EXTRA_ANSWERED, true);
+        try {
+            registerAccount(context);
+            PhoneAccountHandle handle = relayHandle(context);
+            if (isCarrier(handle, context)) {
+                // Telecom filters a managed incoming call, and an answered call going active before
+                // the filter ends drops the watch's audio; an outgoing call isn't filtered. WhatsApp
+                // rings once a managed call exists while it isn't answered: answer it first.
+                send(context, call.answer);
+                extras.putBoolean(EXTRA_APP_ANSWERED, true);
+                Context appContext = context.getApplicationContext();
+                new Handler(Looper.getMainLooper()).postDelayed(
+                        () -> placeAnswered(appContext, app, call, handle, caller, extras), MANAGED_PLACE_DELAY_MS);
+            } else {
+                context.getSystemService(TelecomManager.class).addNewIncomingCall(handle, extras);
+            }
+            // The Telecom call reports the audio itself from here on.
+            if (callAudio != null) {
+                callAudio.stop();
+            }
+            return true;
+        } catch (RuntimeException e) {
+            Log.w(TAG, "Telecom refused the answered call; answering on the phone", e);
+            Diagnostics.record(context, EventLog.TELECOM_REFUSED, app, "answered " + e.getClass().getSimpleName());
+            return false;
+        }
+    }
+
+    /** Places the managed call for an app answered on the notification, unless that call is over. */
+    @SuppressLint("MissingPermission") // Telecom refusing is caught below
+    private static void placeAnswered(Context context, SupportedApp app, CallActions call,
+            PhoneAccountHandle handle, String caller, Bundle extras) {
+        if (incomingCall != call && ongoingCall == null) {
+            Log.i(TAG, "the call ended before the managed call was placed");
+            return;
+        }
+        long id = armAnsweredPlace();
+        extras.putLong(EXTRA_ANSWER_ID, id);
+        Bundle placeExtras = new Bundle();
+        placeExtras.putParcelable(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE, handle);
+        placeExtras.putBundle(TelecomManager.EXTRA_OUTGOING_CALL_EXTRAS, extras);
+        try {
+            context.getSystemService(TelecomManager.class).placeCall(
+                    android.net.Uri.fromParts(PhoneAccount.SCHEME_SIP, caller, null), placeExtras);
+        } catch (RuntimeException e) {
+            // The app is answered already: its voice stays on the phone.
+            Log.w(TAG, "Telecom refused the answered call; the voice stays on the phone", e);
+            Diagnostics.record(context, EventLog.TELECOM_REFUSED, app, "answered " + e.getClass().getSimpleName());
+            claimAnsweredPlace(id);
+            return;
+        }
+        new Handler(Looper.getMainLooper()).postDelayed(() -> answeredPlaceTimedOut(context, id), ANSWERED_PLACE_WAIT_MS);
+    }
+
+    private static long lastAnswerId;
+    /** The placed answered call Telecom hasn't made or refused yet; 0 when none is awaited. */
+    private static long awaitedAnswerId;
+
+    private static synchronized long armAnsweredPlace() {
+        awaitedAnswerId = ++lastAnswerId;
+        return awaitedAnswerId;
+    }
+
+    /**
+     * Exactly one of Telecom's connection, its refusal and the wait may take an answered placed
+     * call; false for the others, so the app is never answered twice. Any other call (id 0) passes.
+     */
+    static synchronized boolean claimAnsweredPlace(long id) {
+        if (id == 0) {
+            return true;
+        }
+        if (awaitedAnswerId != id) {
+            return false;
+        }
+        awaitedAnswerId = 0;
+        return true;
+    }
+
+    private static void answeredPlaceTimedOut(Context context, long id) {
+        if (!claimAnsweredPlace(id)) {
+            // Telecom made or refused it in time.
+            return;
+        }
+        // The app is answered already (its ringing call is gone): the voice stays on the phone.
+        Log.w(TAG, "Telecom never made the answered call; the voice stays on the phone");
+        Diagnostics.record(context, EventLog.CARRIER, currentApp, "telecom never made the call");
+    }
+
     static void incomingHandledOnWatch() {
         incomingHandled = true;
     }
@@ -389,22 +575,53 @@ public class RelayListener extends NotificationListenerService {
         });
     }
 
-    /** Hang-up on Wristline's own call screen on the watch. */
-    static void hangUpFromWatch() {
-        RelayListener listener = instance;
-        if (listener == null) {
-            return;
-        }
-        listener.handler.post(() -> {
+    /**
+     * Hang-up on Wristline's own call screen on the watch. With no Telecom call (basic mode, or a
+     * managed call that was refused, never placed or stepped aside) the app's own hang-up is sent,
+     * as {@link RelayConnection#onDisconnect} does.
+     */
+    static void hangUpFromWatch(Context context) {
+        new Handler(Looper.getMainLooper()).post(() -> {
             RelayConnection connection = RelayConnection.current;
             if (connection != null) {
                 connection.onDisconnect();
+                return;
             }
+            CallActions ongoing = ongoingCall;
+            CallActions incoming = incomingCall;
+            if (ongoing != null && ongoing.hangUp != null) {
+                send(context, ongoing.hangUp);
+            } else if (incoming != null && incoming.decline != null) {
+                send(context, incoming.decline);
+            } else {
+                Log.w(TAG, "hang-up asked from the watch, but no call to end");
+                return;
+            }
+            Log.i(TAG, "hung up from the watch");
+            Diagnostics.record(context, EventLog.HUNG_UP_ON_WATCH, currentApp, "");
         });
     }
 
-    /** The call in progress was started from the watch: keep the watch's call screen informed. */
+    /**
+     * A relayed call is on, by the mirror or by the app's in-call notification. The tracker can be
+     * idle while the mirror lives (its ringing notification went at answer), so the mirror itself
+     * is the authority: a call-out now would be ignored by an app already in a call.
+     */
+    static boolean relayedCallInProgress() {
+        return RelayConnection.isRelayingCall() || (ongoingCall != null && currentApp != null);
+    }
+
+    /**
+     * The call shown on the watch app's call screen (started or answered there): keep that screen
+     * informed. Null when the watch app shows no call.
+     */
     private static volatile String outgoingName;
+
+    /** The ringing call was answered from the watch: its call screen follows the call from now on. */
+    static void showCallOnWatch() {
+        outgoingName = incomingCaller;
+        toldWatch = null;
+    }
 
     /** Telecom refusing the call, for a missing permission too, is caught below and leaves the call on the phone. */
     @SuppressLint("MissingPermission")
@@ -413,6 +630,8 @@ public class RelayListener extends NotificationListenerService {
             Log.i(TAG, "not starting a watch call: another call is being relayed");
             return false;
         }
+        // A call from the watch replaces a test ring that is still on.
+        TestCall.endNotificationTest(this);
         currentApp = app;
         incomingCall = null;
         ongoingCall = null;
@@ -428,7 +647,7 @@ public class RelayListener extends NotificationListenerService {
         callExtras.putString(EXTRA_CALLER, getString(R.string.caller_with_app, app.label, name));
         callExtras.putBoolean(EXTRA_FULL_MODE, useFullModeForCall);
         Bundle extras = new Bundle();
-        extras.putParcelable(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE, accountHandle(this));
+        extras.putParcelable(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE, relayHandle(this));
         extras.putBundle(TelecomManager.EXTRA_OUTGOING_CALL_EXTRAS, callExtras);
         RelayConnection.pendingAppStart = startApp;
         try {
@@ -525,7 +744,26 @@ public class RelayListener extends NotificationListenerService {
         }
     }
 
+    /**
+     * With no Telecom call (ringing by notification) nothing else tells the report where the
+     * calling app puts the voice: watch the phone's audio for the length of the call.
+     */
+    private static AudioLink.Watcher callAudio;
+
+    private static void watchCallAudio(Context context) {
+        Context app = context.getApplicationContext();
+        if (callAudio != null) {
+            callAudio.stop();
+        }
+        callAudio = new AudioLink.Watcher(app, new Handler(Looper.getMainLooper()),
+                detail -> Diagnostics.record(app, EventLog.AUDIO_LINK, currentApp, detail));
+        callAudio.start();
+    }
+
     static void clearCall(Context context) {
+        if (callAudio != null) {
+            callAudio.stop();
+        }
         currentApp = null;
         incomingCall = null;
         ongoingCall = null;

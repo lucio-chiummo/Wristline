@@ -58,7 +58,8 @@ Also:
   repeat callers your phone lets through still do (Home → **When the watch rings** to turn it off).
 - **Ring with a notification** (Home → **When the watch rings**): for watches where Answer on the
   call screen does nothing (seen with OPPO's OHealth). The watch buzzes every few seconds with
-  Answer and Decline, and you talk on the phone. Offered when **Ring my watch** goes unanswered.
+  Answer and Decline. With voice through the watch set up and a watch that carries call audio, you
+  talk on the watch; otherwise on the phone. Offered when **Ring my watch** goes unanswered.
 - **Pause from anywhere**: Home's switch, a Quick Settings tile, or the chip on the watch tile.
 - **Not while I'm using the phone** (optional): calls ring only the phone while it's unlocked in your hand.
 - **Share diagnostic report** (Home): setup, recent events, your phone and watch models, and the
@@ -140,7 +141,7 @@ You can set this up on the phone alone, or with a computer. Either way it's once
 4. Type the 6-digit code into Wristline's notification.
 5. When Wristline says it's done, turn Wireless debugging off.
 
-Wristline pairs with your phone's own Wireless debugging, keeps the key it paired with in the phone's Keystore (where the Keystore can't hold it, in Wristline's private storage, protected by a Keystore key where possible), and runs only `appops set --uid <package> READ_PHONE_STATE ignore` (or `allow` to undo) and `am kill <package>`. Apps you set up this way are repaired silently after an update when Wireless debugging is on and the key is still authorised. Turning voice off for the last app deletes the key. **Forget this phone's key** on the Voice screen deletes it too.
+Wristline pairs with your phone's own Wireless debugging, keeps the key it paired with in the phone's Keystore (where the Keystore can't hold it, in Wristline's private storage, protected by a Keystore key where possible), and runs only `appops set --uid <package> READ_PHONE_STATE ignore` (or `allow` to undo), `am kill <package>`, and, after a call while Wireless debugging is on, three read-only commands for the diagnostic report (`logcat`, `dumpsys audio` and `dumpsys bluetooth_manager`, filtered to lines about call audio and the Bluetooth voice link). Apps you set up this way are repaired silently after an update when Wireless debugging is on and the key is still authorised. Turning voice off for the last app deletes the key. **Forget this phone's key** on the Voice screen deletes it too.
 
 **With a computer**
 

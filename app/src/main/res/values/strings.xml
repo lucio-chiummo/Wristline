@@ -2,6 +2,8 @@
 <resources>
     <string name="app_name" translatable="false">Wristline</string>
     <string name="phone_account_label" translatable="false">Wristline</string>
+    <!-- The carrier's own name in Calling accounts: two accounts share the app, so the user can tell which to enable. -->
+    <string name="carrier_account_label">Wristline — voice on watch</string>
 
     <string name="no_supported_app">None of the apps Wristline supports is installed. It works with WhatsApp, Telegram, Instagram and Signal.</string>
 
@@ -43,6 +45,13 @@
     <string name="status_repair_title">Voice needs repair</string>
     <string name="status_repair_sub">%1$s calls play on the phone until it\'s repaired</string>
     <string name="repair">Repair</string>
+    <string name="status_carrier_title">One switch left for the voice</string>
+    <string name="status_carrier_sub">Enable Wristline in Calling accounts so calls stay on the watch</string>
+    <string name="carrier_title">Turn on Wristline\'s calling account</string>
+    <string name="carrier_desc">This phone pulls the voice off the watch during a call. Wristline keeps it there with a calling account, which Android leaves off until you enable it. Tap below, turn on \"Wristline — voice on watch\", then come back here.</string>
+    <string name="carrier_open">Open calling accounts</string>
+    <string name="carrier_manual">In the phone\'s Settings, look for Calling accounts (or Call settings) and enable \"Wristline — voice on watch\".</string>
+    <string name="carrier_refused">Wristline can\'t place phone calls</string>
     <string name="master_switch">Relay calls to my watch</string>
     <string name="section_apps">Apps</string>
     <string name="apps_count">%1$d of %2$d on</string>
@@ -81,7 +90,7 @@
     <string name="rules_explain">How it works</string>
     <string name="dnd_on">Follows your phone: calls it silences don\'t ring the watch</string>
     <string name="dnd_off">Ignored: calls ring the watch even in Do Not Disturb</string>
-    <string name="dnd_message">When your phone is in Do Not Disturb (or Bedtime), Wristline can follow it: a call your phone would silence doesn\'t ring the watch either, and one it lets through (favourite contacts, repeat callers) still does. Change who gets through in your phone\'s Do Not Disturb settings.\n\n\"Not while I\'m using the phone\": when the phone is unlocked with the screen on, a call rings only the phone, not the watch.\n\n\"Ring with a notification\": for watches where Answer on the call screen does nothing. The watch buzzes every few seconds with Answer and Decline; you talk on the phone.</string>
+    <string name="dnd_message">When your phone is in Do Not Disturb (or Bedtime), Wristline can follow it: a call your phone would silence doesn\'t ring the watch either, and one it lets through (favourite contacts, repeat callers) still does. Change who gets through in your phone\'s Do Not Disturb settings.\n\n\"Not while I\'m using the phone\": when the phone is unlocked with the screen on, a call rings only the phone, not the watch.\n\n\"Ring with a notification\": for watches where Answer on the call screen does nothing. The watch buzzes every few seconds with Answer and Decline. You talk on the watch when voice through the watch is set up, otherwise on the phone.</string>
     <string name="ring_by_notification">Ring with a notification</string>
     <string name="ring_question_title">Did the watch ring?</string>
     <string name="ring_question_text">If it rang but Answer did nothing, Wristline can ring your watch with a notification instead. It buzzes every few seconds, with Answer and Decline.</string>
@@ -102,7 +111,7 @@
     <string name="licence_sub" translatable="false">PolyForm Noncommercial 1.0.0</string>
     <string name="licence_open">Open project page</string>
     <string name="licence_notice">Wristline\nCopyright © 2026 Lucio Chiummo\n\nLicensed under the PolyForm Noncommercial License 1.0.0: you can use, change and share it for noncommercial purposes only. Any other use needs the author\'s permission. It comes as is, with NO WARRANTY, as far as the law allows.\n\nA copy of the licence and its notices is inside the app. They, the third-party licences and the source code are also on the project page.</string>
-    <string name="report_sub">Setup, recent events (including when calls happened), your phone and watch models, and the apps on this phone that pass calls to a watch. Caller names and numbers are left out. Only sent if you share it: check it before posting it publicly.</string>
+    <string name="report_sub">Setup, recent events (including when calls happened), your phone and watch models, and the apps on this phone that pass calls to a watch. With voice set up on the phone and Wireless debugging on, also what Android logged about the last call\'s audio and Bluetooth. Caller names and numbers are left out. Only sent if you share it: check it before posting it publicly.</string>
     <string name="report_subject">Wristline diagnostic report</string>
     <string name="report_preparing">Preparing report…</string>
     <string name="unreadable_title">A %1$s call didn\'t reach the watch</string>

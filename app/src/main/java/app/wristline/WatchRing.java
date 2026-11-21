@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
+import android.service.notification.StatusBarNotification;
 
 /**
  * Rings the watch with Wristline's own Answer/Decline notification, alerting again every few
@@ -27,8 +28,12 @@ final class WatchRing {
     private WatchRing() {
     }
 
-    /** Rings until {@link #stop} or for {@code maxMs}; a ring already going is replaced. */
-    static void start(Context context, String title, String text, long maxMs) {
+    /**
+     * Rings until {@link #stop} or for {@code maxMs}; a ring already going is replaced. The watch
+     * app's incoming screen shows {@code title} as the caller and {@code appPackage}'s app (null:
+     * none, like the test call).
+     */
+    static void start(Context context, String title, String text, String appPackage, long maxMs) {
         Context app = context.getApplicationContext();
         onMain(() -> {
             cancelRepeat();
@@ -49,6 +54,9 @@ final class WatchRing {
                 }
             };
             repeat = ring;
+            // The watch's notification bridge alerts once for re-posts of one notification, so
+            // Wristline's watch app vibrates for the whole ring itself.
+            WatchSync.ring(app, maxMs, appPackage, title);
             ring.run();
         });
     }
@@ -79,8 +87,22 @@ final class WatchRing {
     }
 
     private static void stopNow(Context context) {
+        NotificationManager nm = context.getSystemService(NotificationManager.class);
+        boolean rang = repeat != null || showing(nm);
         cancelRepeat();
-        context.getSystemService(NotificationManager.class).cancel(StatusNotifications.ID_INCOMING_FALLBACK);
+        nm.cancel(StatusNotifications.ID_INCOMING_FALLBACK);
+        if (rang) {
+            WatchSync.stopRing(context);
+        }
+    }
+
+    private static boolean showing(NotificationManager nm) {
+        for (StatusBarNotification n : nm.getActiveNotifications()) {
+            if (n.getId() == StatusNotifications.ID_INCOMING_FALLBACK) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static void post(Context context, String title, String text, long timeoutMs) {
@@ -94,6 +116,9 @@ final class WatchRing {
                 .setTimeoutAfter(timeoutMs)
                 .addAction(action(context, context.getString(R.string.answer), ActionReceiver.ANSWER, 1))
                 .addAction(action(context, context.getString(R.string.decline), ActionReceiver.DECLINE, 2))
+                // Wristline's watch app opts this tag out of bridging, so a watch that shows its own
+                // incoming screen doesn't also get this notification; other watches still do.
+                .extend(new Notification.WearableExtender().setBridgeTag(WatchProtocol.RING_BRIDGE_TAG))
                 .build();
         context.getSystemService(NotificationManager.class).notify(StatusNotifications.ID_INCOMING_FALLBACK, ring);
     }

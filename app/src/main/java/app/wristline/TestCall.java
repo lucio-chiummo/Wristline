@@ -54,7 +54,7 @@ final class TestCall {
     static void startNotificationTest(Context context) {
         Context app = context.getApplicationContext();
         notificationRinging = true;
-        WatchRing.start(app, app.getString(R.string.test_call_caller), app.getString(R.string.test_call_text), RING_MS);
+        WatchRing.start(app, app.getString(R.string.test_call_caller), app.getString(R.string.test_call_text), null, RING_MS);
         Handler handler = new Handler(Looper.getMainLooper());
         handler.post(() -> {
             cancelTimeout(handler);
