@@ -302,4 +302,19 @@ public class IncomingRingTest {
         assertTrue(screen.isFinishing());
         assertEquals(0, shadowOf(manager).size());
     }
+
+    /** Wristline's "Ring my watch" test has a caller but no app, and no call follows its Answer. */
+    @Test
+    public void answeringTheTestRingOpensNoCallScreen() throws InterruptedException {
+        Protocol.Ring test = Protocol.parseRing("start|60000||Wristline · Test");
+        IncomingRing.start(context, test);
+        IncomingActivity screen = open(IncomingActivity.intent(context, test));
+
+        screen.findViewById(R.id.answer).performClick();
+
+        assertEquals("the phone ends its test ring", Protocol.PATH_ANSWER, sent.poll(5, TimeUnit.SECONDS));
+        assertNull("no call screen stuck on Connecting", shadowOf(screen).getNextStartedActivity());
+        assertTrue(screen.isFinishing());
+        assertEquals(0, shadowOf(manager).size());
+    }
 }
