@@ -317,4 +317,17 @@ public class IncomingRingTest {
         assertTrue(screen.isFinishing());
         assertEquals(0, shadowOf(manager).size());
     }
+
+    /** Back (or a wrist turn) in the moment between the ring's stop and the screen closing. */
+    @Test
+    public void backAfterTheRingStoppedDoesNotDecline() throws InterruptedException {
+        IncomingRing.start(context, ring);
+        IncomingActivity screen = openIncomingScreen();
+        IncomingRing.stop(context);
+        assertTrue(screen.isFinishing());
+
+        screen.onBackPressed();
+
+        assertNull("no Decline for a call that's over or answered on the phone", sent.poll(300, TimeUnit.MILLISECONDS));
+    }
 }

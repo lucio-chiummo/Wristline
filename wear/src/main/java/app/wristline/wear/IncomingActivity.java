@@ -33,7 +33,10 @@ public class IncomingActivity extends Activity {
     private ObjectAnimator pulse;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable timeout = this::finish;
-    /** Answered or declined: further presses (screen or notification) do nothing. */
+    /**
+     * Answered or declined: further presses (screen or notification) do nothing. A screen already
+     * closing (the ring stopped) takes no press either: Back or a gesture then must not decline.
+     */
     private boolean done;
     /** The watch's gestures while the screen is in front: {@link WatchGestures}. */
     private Object gestures;
@@ -125,7 +128,7 @@ public class IncomingActivity extends Activity {
     }
 
     private void answer() {
-        if (done) {
+        if (done || isFinishing()) {
             return;
         }
         done = true;
@@ -140,7 +143,7 @@ public class IncomingActivity extends Activity {
     }
 
     private void decline() {
-        if (done) {
+        if (done || isFinishing()) {
             return;
         }
         done = true;
