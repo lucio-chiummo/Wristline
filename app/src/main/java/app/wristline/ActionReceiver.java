@@ -24,12 +24,40 @@ public class ActionReceiver extends BroadcastReceiver {
             }
             return;
         }
-        StatusNotifications.cancel(context, StatusNotifications.ID_INCOMING_FALLBACK);
-        boolean answer = ANSWER.equals(action);
+        handleRingAnswer(context, ANSWER.equals(action));
+    }
+
+    /**
+     * Answer or Decline on the ringing call: from Wristline's ringing notification or from the
+     * watch app's incoming screen. Main thread.
+     */
+    static void handleRingAnswer(Context context, boolean answer) {
+        if (TestCall.notificationRinging) {
+            TestCall.notificationTestTapped(context, answer);
+            return;
+        }
+        WatchRing.stop(context);
+        if (RelayListener.currentApp == null) {
+            // The watch can still show the buttons of a call that is over.
+            return;
+        }
+        if (RelayListener.isIncomingHandled()) {
+            // Once only: this call was answered or declined already, here, on the watch or on the
+            // phone. A second surface's late Decline must not reach the app's stale ring action.
+            return;
+        }
         // Answered or declined here: not a missed call.
         RelayListener.incomingHandledOnWatch();
+        if (answer) {
+            RelayListener.showCallOnWatch();
+        }
+        boolean voiceOnWatch = answer && RelayListener.answerWithVoiceOnWatch(context);
         Diagnostics.record(context, answer ? EventLog.ANSWERED_ON_WATCH : EventLog.DECLINED_ON_WATCH,
-                RelayListener.currentApp, "notification");
+                RelayListener.currentApp, voiceOnWatch ? "notification, voice on watch" : "notification");
+        if (voiceOnWatch) {
+            // The answered Telecom call answers the app once the watch's audio link is up.
+            return;
+        }
         CallActions call = RelayListener.incomingCall;
         if (call != null) {
             RelayListener.send(context, answer ? call.answer : call.decline);

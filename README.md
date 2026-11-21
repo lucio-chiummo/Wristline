@@ -2,7 +2,16 @@
 
 Take WhatsApp, Telegram, Instagram and Signal calls on your Wear OS watch: ring, answer, decline, hang up, and optionally talk through the watch.
 
-Wristline is a small Android app for the **phone**. It exists because these apps don't ring on the watch on their own. WhatsApp's watch app even stops the phone from forwarding call notifications while its servers never send the calls to the watch, and the Pixel Watch app drops Instagram's call notifications. So calls ring nowhere on the watch.
+Wristline is a small Android app for the **phone**, with an optional app for the watch. It exists because these apps don't ring on the watch on their own. WhatsApp's watch app even stops the phone from forwarding call notifications while its servers never send the calls to the watch, and the Pixel Watch app drops Instagram's call notifications. So calls ring nowhere on the watch.
+
+## What's in this repository
+
+Two Android apps, built together and released together:
+
+- **The phone app** (`app/`). This is Wristline itself. It notices a call from WhatsApp, Telegram, Instagram or Signal, makes the watch ring, presses the app's own Answer, Decline and Hang up buttons for you, and, if you want, moves the call's voice to the watch.
+- **The watch app** (`wear/`), optional. It shows a full-screen incoming call with Answer and Decline, its own call screen, and lets you call your contacts from the watch.
+
+Also here: the step-by-step guide and design notes (`docs/`), and a script that records how a calling app behaves during a call, used when adding a new app (`tools/`). Everything runs on your phone and watch. There's no server and no account.
 
 **New here? Follow the [step-by-step guide](docs/HOW_TO.md).** It covers installing, setup, everyday use and what to do if something goes wrong.
 
@@ -10,9 +19,9 @@ Wristline is a small Android app for the **phone**. It exists because these apps
 
 **When someone calls you**
 
-- Your watch rings like a normal phone call, showing the app and who's calling.
-- Answer, decline or hang up from your wrist.
-- Talk through the watch's own speaker and microphone, without touching your phone. This needs a one-time setup, on the phone or with a computer.
+- Your watch rings like a normal phone call, showing the app and who's calling. With the watch app, it shows a full-screen incoming call and vibrates for the whole ring.
+- Answer, decline or hang up from your wrist. On a Pixel Watch, a double pinch answers or hangs up and turning your wrist declines.
+- Talk through the watch's own speaker and microphone, without touching your phone. This needs a one-time setup, on the phone or with a computer. It also works on phones that keep pulling the voice back to the phone, such as Xiaomi and POCO phones with HyperOS: see [Phones that pull the voice back](#phones-that-pull-the-voice-back).
 - Move the voice between the watch and the phone during a call.
 - See missed calls on the watch, with **Call back** for contacts.
 
@@ -56,10 +65,15 @@ Also:
   notifications never reach the watch).
 - **Follows Do Not Disturb**: a call your phone would silence doesn't ring the watch; favourites and
   repeat callers your phone lets through still do (Home → **When the watch rings** to turn it off).
+- **Ring with a notification** (Home → **When the watch rings**): for watches where Answer on the
+  call screen does nothing (seen with OPPO's OHealth). The watch buzzes every few seconds with
+  Answer and Decline. With voice through the watch set up and a watch that carries call audio, you
+  talk on the watch; otherwise on the phone. Offered when **Ring my watch** goes unanswered.
 - **Pause from anywhere**: Home's switch, a Quick Settings tile, or the chip on the watch tile.
 - **Not while I'm using the phone** (optional): calls ring only the phone while it's unlocked in your hand.
-- **Share diagnostic report** (Home): setup and recent events, without caller names or numbers,
-  through the share sheet only. It shows when recent calls happened, so check it before posting it
+- **Share diagnostic report** (Home): setup, recent events, your phone and watch models, and the
+  apps on the phone that pass calls to a watch, without caller names or numbers, through the share
+  sheet only. It shows when recent calls happened, so check it before posting it
   in a public issue.
 
 ### Calling from the watch (1.2)
@@ -73,21 +87,37 @@ Wristline also has a **watch app**. Turn on **Call from the watch** on the phone
 
 Telegram contacts appear only if Telegram's **Sync contacts** is on. Instagram can't start calls from outside the app.
 
+## Where it works
+
+Wristline needs Android 12 or newer on the phone and a Wear OS watch. It has been tested on these devices:
+
+| Phone | Android | Watch | Companion app | What works |
+|---|---|---|---|---|
+| vivo X300 Pro | 17 | Pixel Watch 5 | Pixel Watch | Everything: ringing, answering, voice through the watch, calling from the watch, with WhatsApp, Telegram, Instagram and Signal |
+| POCO F8 Pro (HyperOS) | 17 | OPPO Watch (OWWE261) | OHealth | Ringing, answering on the watch's full screen, voice through the watch both ways, and calling from the watch, with WhatsApp. Needs **Ring with a notification** and the [Wristline — voice on watch](#phones-that-pull-the-voice-back) calling account |
+
+Other phones and watches should work but haven't been tested. Two things vary between brands:
+
+- **The companion app.** It decides how a call shows on the watch. The Pixel Watch app shows Wristline's call as a real call. OPPO's OHealth loses the Answer button, so turn on **Ring with a notification** there.
+- **The phone's software.** Some phones close Wristline in the background or move the call's voice back to the phone. Wristline tells you when it sees this and what to change.
+
+If you try another phone or watch, please open an issue and say what worked, with a diagnostic report if something didn't.
+
 ## Requirements
 
 - Android 12 or newer, with WhatsApp, Telegram, Instagram or Signal installed.
-- A Wear OS watch connected through its companion app. Tested with the **Pixel Watch app**. Other companion apps are untested.
+- A Wear OS watch connected through its companion app. See [Where it works](#where-it-works) for the ones tested.
 - The watch's **Call audio** Bluetooth profile switched on (phone Settings → Bluetooth → your watch).
 
 ## Install
 
 Download the APKs from the [latest release](https://github.com/lucio-chiummo/Wristline/releases/latest). Wristline isn't on Google Play yet.
 
-**Phone (required).** Open `wristline-phone-1.3.apk` on your phone and allow installing from that source when Android asks. Play Protect may warn that it doesn't know the developer. Then follow [Setup](#setup). This is all you need for calls to ring on the watch, and to answer them there.
+**Phone (required).** Open `wristline-phone-1.5.apk` on your phone and allow installing from that source when Android asks. Play Protect may warn that it doesn't know the developer. Then follow [Setup](#setup). This is all you need for calls to ring on the watch, and to answer them there.
 
 Android blocks Notification access for apps installed from a file. If the switch is greyed out: App info → ⋮ (top right) → **Allow restricted settings**, then try again.
 
-**Watch (optional).** Only needed for [calling from the watch](#calling-from-the-watch-12). Wear OS has no file installer, so this takes a computer with [adb](https://developer.android.com/tools/releases/platform-tools):
+**Watch (optional).** Needed for the full-screen incoming call and for [calling from the watch](#calling-from-the-watch-12). Wear OS has no file installer, so this takes a computer with [adb](https://developer.android.com/tools/releases/platform-tools):
 
 1. On the watch: Settings → System → About, then tap **Build number** 7 times.
 2. In Developer options, turn on **ADB debugging** and **Wireless debugging**, then tap **Pair new device**.
@@ -96,7 +126,7 @@ Android blocks Notification access for apps installed from a file. If the switch
    ```sh
    adb pair <ip>:<pairing-port> <code>
    adb connect <ip>:<port>
-   adb -s <ip>:<port> install wristline-watch-1.3.apk
+   adb -s <ip>:<port> install wristline-watch-1.5.apk
    ```
 
 4. Turn Wireless debugging off again.
@@ -107,7 +137,7 @@ Install both APKs from the same release. They only talk to each other when signe
 
 Wristline asks for sensitive access, including your call notifications, so only install APKs from this repository's releases. Copies from anywhere else may have been changed.
 
-Each release lists the SHA-256 hash of its APKs. To check a file, compare the hash from `shasum -a 256 wristline-phone-1.3.apk` with that list. To check who signed it, run `apksigner verify --print-certs wristline-phone-1.3.apk` (`apksigner` is in the Android SDK build-tools). The certificate's SHA-256 digest must be:
+Each release lists the SHA-256 hash of its APKs. To check a file, compare the hash from `shasum -a 256 wristline-phone-1.5.apk` with that list. To check who signed it, run `apksigner verify --print-certs wristline-phone-1.5.apk` (`apksigner` is in the Android SDK build-tools). The certificate's SHA-256 digest must be:
 
 ```text
 290f69c60854208f97f093ee80aaa8e1bd73fea6c01be69dde8ec9e02dcb2ef4
@@ -136,7 +166,7 @@ You can set this up on the phone alone, or with a computer. Either way it's once
 4. Type the 6-digit code into Wristline's notification.
 5. When Wristline says it's done, turn Wireless debugging off.
 
-Wristline pairs with your phone's own Wireless debugging, keeps the key it paired with in the phone's Keystore (where the Keystore can't hold it, in Wristline's private storage, protected by a Keystore key where possible), and runs only `appops set --uid <package> READ_PHONE_STATE ignore` (or `allow` to undo) and `am kill <package>`. Apps you set up this way are repaired silently after an update when Wireless debugging is on and the key is still authorised. Turning voice off for the last app deletes the key. **Forget this phone's key** on the Voice screen deletes it too.
+Wristline pairs with your phone's own Wireless debugging, keeps the key it paired with in the phone's Keystore (where the Keystore can't hold it, in Wristline's private storage, protected by a Keystore key where possible), and runs only `appops set --uid <package> READ_PHONE_STATE ignore` (or `allow` to undo), `am kill <package>`, and, after a call while Wireless debugging is on, three read-only commands for the diagnostic report (`logcat`, `dumpsys audio` and `dumpsys bluetooth_manager`, filtered to lines about call audio and the Bluetooth voice link). Apps you set up this way are repaired silently after an update when Wireless debugging is on and the key is still authorised. Turning voice off for the last app deletes the key. **Forget this phone's key** on the Voice screen deletes it too.
 
 **With a computer**
 
@@ -155,6 +185,12 @@ This takes a computer with [adb](https://developer.android.com/tools/releases/pl
 
 If an app update resets the setting and you used the computer, Wristline notices on the next call and asks you to tap **Repair**, which shows the command again.
 
+### Phones that pull the voice back
+
+On some phones, Xiaomi and POCO phones with HyperOS among them, the calling app takes the voice back to the phone a second after you answer on the watch. Wristline notices this on the first call and shows a card on Home. Tap it and turn on the calling account **Wristline — voice on watch** (Android leaves new calling accounts off). From the next call on, Wristline relays the call as a phone call of its own, which the calling app can't take the voice from.
+
+If the card can't open the right screen, look in the phone's Settings for **Calling accounts** (or **Call settings**) and turn on "Wristline — voice on watch" there.
+
 ## How it works
 
 When an app rings, Wristline registers a matching call with Android's own calling system, and the watch's companion app shows that call on the watch as a real call. Tapping **Answer** on the watch presses the app's own Answer button. For voice through the watch, Wristline first activates its call, so Android connects the watch as the Bluetooth call headset, and only then answers the app. The app's audio then goes through the watch.
@@ -166,6 +202,7 @@ Voice through the watch needs one setting changed for each app that can see the 
 
 - During a call, the app won't notice a normal phone call coming in.
 - Wristline shows up as a calling account named "Wristline" in the phone's settings.
+- On [phones that pull the voice back](#phones-that-pull-the-voice-back), there's a second calling account, "Wristline — voice on watch", and the phone's dialer shows a Wristline call while a relayed call is on.
 
 ## Troubleshooting
 
@@ -175,7 +212,7 @@ The [guide](docs/HOW_TO.md#if-something-goes-wrong) has more. The most common pr
 |---|---|
 | Call drops right after answering on the watch | The app reset its setting. Wristline shows **Voice needs repair**: tap **Repair**. |
 | Watch doesn't ring at all | If the card says **Wristline isn't receiving notifications**, tap **Fix**. On Xiaomi also turn on Autostart for Wristline. Open Wristline: the card must say **Ready**, and the app's switch must be on. Then tap **Ring my watch**: if the test call rings, Wristline and the watch are fine and the calling app's notification is the problem. |
-| Voice stays on the phone | Turn the watch's **Call audio** Bluetooth setting off and on. |
+| Voice stays on the phone | Turn the watch's **Call audio** Bluetooth setting off and on. If Home shows a card about the voice, follow it: see [Phones that pull the voice back](#phones-that-pull-the-voice-back). |
 | No calls arrive at all, even on the phone | The app may have been force-stopped. Open it once. |
 | Phone silent for WhatsApp messages, watch shows them | That's the Pixel Watch app muting the phone while you wear the watch, not Wristline. |
 

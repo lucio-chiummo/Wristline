@@ -37,7 +37,7 @@ public class VoiceControlsTest {
     }
 
     private RelayConnection activeCall() {
-        RelayConnection connection = new RelayConnection(context);
+        RelayConnection connection = new RelayConnection(context, false);
         connection.setActive();
         RelayConnection.current = connection;
         VoiceControls.update(context);

@@ -11,10 +11,12 @@ import java.util.Locale;
 /**
  * What Wristline did recently (calls relayed, answered, dropped, setup results), for the
  * diagnostic report people can share when something doesn't work. Never holds caller names or
- * numbers: only event codes, app packages and short technical details.
+ * numbers: only event codes, app packages and short technical details. Details come from fixed
+ * vocabularies: Telecom states and audio routes (call_state, audio_route, audio_no_watch), the
+ * trigger of a call Wristline started ("watch", "call back"), and the like.
  */
 final class EventLog {
-    static final int MAX = 100;
+    static final int MAX = 600;
 
     // Event codes, as they appear in the report.
     static final String LISTENER_CONNECTED = "listener_connected";
@@ -35,8 +37,43 @@ final class EventLog {
     static final String CALL_CREATED = "call_created";
     /** Telecom accepted the request but then failed to make the ringing call. */
     static final String CALL_NOT_CREATED = "call_not_created";
+    /** Telecom moved Wristline's call to a new state (detail: ringing, dialing, active, disconnected...). */
+    static final String CALL_STATE = "call_state";
+    /**
+     * Something else Telecom sent Wristline's call: silence, hold, unhold, "event <name>", dtmf
+     * (never the digit), "extras <key names>". Shows what a companion makes of a tap on the watch.
+     */
+    static final String CALL_SIGNAL = "call_signal";
+    /**
+     * The phone's active recordings changed while Wristline's call was active (detail
+     * "source=<x> silenced=<bool>" each, or "none"): whether Android mutes the calling app's microphone.
+     */
+    static final String RECORDING = "recording";
+    /** The call's audio route changed (detail "route=<x> supported=<a,b>"). */
+    static final String AUDIO_ROUTE = "audio_route";
+    /** Wristline's call went active with no Bluetooth route to move the voice to: no watch connected for calls. */
+    static final String AUDIO_NO_WATCH = "audio_no_watch";
+    /** The voice kept falling back from the watch to the phone: Wristline stopped moving it. */
+    static final String AUDIO_GAVE_UP = "audio_gave_up";
+    /**
+     * The managed relay on a war phone, where Telecom owns the audio mode (detail: managed
+     * relay, refused). See docs/BETA8_HYPEROS_FIX.md.
+     */
+    static final String CARRIER = "carrier";
+    /** The phone's audio during a call: voice link up or down, audio mode, kind of device. */
+    static final String AUDIO_LINK = "audio_link";
+    /** Wristline pressed the calling app's Answer (detail: the Telecom route at that moment). */
+    static final String APP_ANSWERED = "app_answered";
+    /** A calling app shows a call in progress that Wristline neither relayed nor started. */
+    static final String UNTRACKED_CALL = "untracked_call";
     static final String OUTGOING = "outgoing";
     static final String OUTGOING_NOT_STARTED = "outgoing_not_started";
+    /** A call-out from the watch was refused because a relayed call is already on (detail: the trigger). */
+    static final String OUTGOING_REFUSED = "outgoing_refused";
+    /** Wristline started a calling app's call (detail: what asked for it, "watch" or "call back"). */
+    static final String APP_STARTED = "app_started";
+    /** A call from the watch started on the phone only: the notification listener wasn't bound. */
+    static final String OUTGOING_UNMIRRORED = "outgoing_unmirrored";
     static final String ANSWERED_ON_WATCH = "answered_on_watch";
     static final String DECLINED_ON_WATCH = "declined_on_watch";
     static final String HUNG_UP_ON_WATCH = "hung_up_on_watch";
@@ -49,6 +86,8 @@ final class EventLog {
     static final String REPAIR_SILENT = "repair_silent";
     static final String MISSED = "missed";
     static final String TEST_CALL = "test_call";
+    /** After a call: Android's own log about its audio was read over Wireless debugging, or couldn't be. */
+    static final String SYSTEM_LOG = "system_log";
 
     static final class Entry {
         final long time;
@@ -130,7 +169,7 @@ final class EventLog {
 
     /** "2026-11-02 14:03:07 incoming com.whatsapp full mode". */
     static String format(Entry e) {
-        SimpleDateFormat time = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ROOT);
+        SimpleDateFormat time = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.ROOT);
         StringBuilder line = new StringBuilder(time.format(new Date(e.time))).append(' ').append(e.code);
         if (!e.app.isEmpty()) {
             line.append(' ').append(e.app);

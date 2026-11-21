@@ -43,4 +43,9 @@ public class CallStateTest {
         assertEquals(-1, Protocol.CallState.parse("active;abc;off").connectedMs);
         assertEquals(0, Protocol.CallState.parse("active;-5;off").connectedMs);
     }
+
+    @Test
+    public void aRefusedCallOutReadsAsBusy() {
+        assertEquals(Protocol.STATE_BUSY, Protocol.CallState.parse("busy;;").kind);
+    }
 }

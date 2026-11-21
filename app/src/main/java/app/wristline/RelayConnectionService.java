@@ -4,6 +4,7 @@ import android.net.Uri;
 import android.telecom.Connection;
 import android.telecom.ConnectionRequest;
 import android.telecom.ConnectionService;
+import android.telecom.DisconnectCause;
 import android.telecom.PhoneAccount;
 import android.telecom.PhoneAccountHandle;
 import android.telecom.TelecomManager;
@@ -14,7 +15,8 @@ public class RelayConnectionService extends ConnectionService {
     @Override
     public Connection onCreateIncomingConnection(PhoneAccountHandle account, ConnectionRequest request) {
         String caller = request.getExtras().getString(RelayListener.EXTRA_CALLER, getString(R.string.phone_account_label));
-        RelayConnection connection = new RelayConnection(this);
+        boolean managed = RelayListener.isCarrier(account, this);
+        RelayConnection connection = new RelayConnection(this, managed);
         connection.setAddress(Uri.fromParts(PhoneAccount.SCHEME_SIP, caller, null), TelecomManager.PRESENTATION_ALLOWED);
         connection.setCallerDisplayName(caller, TelecomManager.PRESENTATION_ALLOWED);
         connection.setRinging();
@@ -23,6 +25,12 @@ public class RelayConnectionService extends ConnectionService {
             connection.markTestCall();
         }
         RelayConnection.current = connection;
+        if (managed) {
+            Diagnostics.record(this, EventLog.CARRIER, testCall ? null : RelayListener.currentApp, "managed relay");
+        }
+        if (request.getExtras().getBoolean(RelayListener.EXTRA_ANSWERED)) {
+            connection.startAnswered(false);
+        }
         Log.i(RelayListener.TAG, "mirrored call created");
         Diagnostics.record(this, EventLog.CALL_CREATED, testCall ? null : RelayListener.currentApp,
                 testCall ? "test call" : "");
@@ -31,16 +39,41 @@ public class RelayConnectionService extends ConnectionService {
 
     @Override
     public Connection onCreateOutgoingConnection(PhoneAccountHandle account, ConnectionRequest request) {
+        boolean managed = RelayListener.isCarrier(account, this);
         android.os.Bundle extras = request.getExtras();
+        if (managed && (extras == null || !extras.containsKey(RelayListener.EXTRA_CALLER))) {
+            // Only a call Wristline places (it names the caller) is relayed; the carrier account
+            // must not become a way to dial out from the phone.
+            Log.w(RelayListener.TAG, "refused a call on the carrier that Wristline didn't place");
+            Diagnostics.record(this, EventLog.CARRIER, RelayListener.currentApp, "refused");
+            CharSequence why = getText(R.string.carrier_refused);
+            return Connection.createFailedConnection(
+                    new DisconnectCause(DisconnectCause.ERROR, why, why, "not placed by Wristline"));
+        }
+        boolean answered = extras != null && extras.getBoolean(RelayListener.EXTRA_ANSWERED);
+        if (answered && !RelayListener.claimAnsweredPlace(extras.getLong(RelayListener.EXTRA_ANSWER_ID))) {
+            // Past the wait the app was answered on the phone: this call must not answer it again.
+            Log.w(RelayListener.TAG, "the answered call came after the wait; ending it");
+            Diagnostics.record(this, EventLog.CARRIER, RelayListener.currentApp, "telecom made the call too late");
+            return Connection.createCanceledConnection();
+        }
         String caller = extras == null ? null : extras.getString(RelayListener.EXTRA_CALLER);
         if (caller == null) {
             caller = getString(R.string.phone_account_label);
         }
-        RelayConnection connection = new RelayConnection(this);
+        RelayConnection connection = new RelayConnection(this, managed);
         connection.setAddress(request.getAddress(), TelecomManager.PRESENTATION_ALLOWED);
         connection.setCallerDisplayName(caller, TelecomManager.PRESENTATION_ALLOWED);
-        connection.startOutgoing(extras != null && extras.getBoolean(RelayListener.EXTRA_FULL_MODE));
         RelayConnection.current = connection;
+        if (answered) {
+            // Answered on the notification of a war phone: placed, not rung, so no call filtering.
+            connection.startAnswered(extras.getBoolean(RelayListener.EXTRA_APP_ANSWERED));
+        } else {
+            connection.startOutgoing(extras != null && extras.getBoolean(RelayListener.EXTRA_FULL_MODE));
+        }
+        if (managed) {
+            Diagnostics.record(this, EventLog.CARRIER, RelayListener.currentApp, "managed relay");
+        }
         Log.i(RelayListener.TAG, "outgoing mirror created");
         return connection;
     }
@@ -48,6 +81,19 @@ public class RelayConnectionService extends ConnectionService {
     @Override
     public void onCreateOutgoingConnectionFailed(PhoneAccountHandle account, ConnectionRequest request) {
         Log.w(RelayListener.TAG, "Telecom could not create the outgoing mirror; starting the call on the phone only");
+        if (RelayListener.isCarrier(account, this)) {
+            // HyperOS drops a managed call at once while any self-managed call is on.
+            Diagnostics.record(this, EventLog.CARRIER, RelayListener.currentApp, "telecom refused");
+        }
+        android.os.Bundle extras = request == null ? null : request.getExtras();
+        if (extras != null && extras.getBoolean(RelayListener.EXTRA_ANSWERED)) {
+            // An app answered before the call was placed keeps its voice on the phone.
+            if (RelayListener.claimAnsweredPlace(extras.getLong(RelayListener.EXTRA_ANSWER_ID))
+                    && !extras.getBoolean(RelayListener.EXTRA_APP_ANSWERED)) {
+                answerOnThePhone(this);
+            }
+            return;
+        }
         Runnable startApp = RelayConnection.pendingAppStart;
         RelayConnection.pendingAppStart = null;
         if (startApp != null) {
@@ -61,5 +107,14 @@ public class RelayConnectionService extends ConnectionService {
         boolean testCall = request != null && request.getExtras().getBoolean(TestCall.EXTRA);
         Diagnostics.record(this, EventLog.CALL_NOT_CREATED, testCall ? null : RelayListener.currentApp,
                 testCall ? "test call" : "");
+        if (request != null && request.getExtras().getBoolean(RelayListener.EXTRA_ANSWERED)) {
+            answerOnThePhone(this);
+        }
+    }
+
+    /** Already answered on the watch: don't lose the call, take it on the phone. */
+    static void answerOnThePhone(android.content.Context context) {
+        CallActions call = RelayListener.incomingCall;
+        RelayListener.send(context, call == null ? null : call.answer);
     }
 }

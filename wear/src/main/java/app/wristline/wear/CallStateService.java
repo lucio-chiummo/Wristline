@@ -15,6 +15,12 @@ import java.nio.charset.StandardCharsets;
  */
 public class CallStateService extends WearableListenerService {
     @Override
+    public void onCreate() {
+        super.onCreate();
+        RingBridging.exclude(this);
+    }
+
+    @Override
     public void onDataChanged(DataEventBuffer events) {
         for (DataEvent event : events) {
             String path = event.getDataItem().getUri().getPath();
@@ -49,8 +55,29 @@ public class CallStateService extends WearableListenerService {
         QuickCallComplicationService.refresh(context);
     }
 
+    /**
+     * The phone rings the watch by notification: buzz, and with a caller (newer phone apps) show the
+     * incoming call screen. Anything but a start ends both.
+     */
+    static void onRing(android.content.Context context, String payload) {
+        Protocol.Ring ring = Protocol.parseRing(payload);
+        if (ring == null) {
+            WatchBuzz.stop(context);
+            IncomingRing.stop(context);
+            return;
+        }
+        WatchBuzz.start(context, ring.maxMs);
+        if (ring.name != null) {
+            IncomingRing.start(context, ring);
+        }
+    }
+
     @Override
     public void onMessageReceived(MessageEvent event) {
+        if (Protocol.PATH_RING.equals(event.getPath())) {
+            onRing(this, new String(event.getData(), StandardCharsets.UTF_8));
+            return;
+        }
         if (!Protocol.PATH_CALL_STATE.equals(event.getPath())) {
             return;
         }

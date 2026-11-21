@@ -4,6 +4,10 @@
     <uses-feature android:name="android.hardware.type.watch" />
     <!-- The call indicator on the watch face is an ongoing notification. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Vibrates for a call the phone rings the watch for. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Opens the incoming call screen over everything while the phone rings. -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
     <application
         android:allowBackup="false"
@@ -11,6 +15,11 @@
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:theme="@android:style/Theme.DeviceDefault">
+
+        <!-- The Pixel Watch's double pinch and wrist turn (WatchGestures); other watches lack it. -->
+        <uses-library
+            android:name="wear-sdk"
+            android:required="false" />
 
         <!-- Needs the phone app: it reads contacts and starts the calls. -->
         <meta-data
@@ -53,6 +62,17 @@
             android:taskAffinity=""
             android:theme="@style/InCall" />
 
+        <!-- Over the lock screen, its own task, gone from the recents once the ring is over. -->
+        <activity
+            android:name=".IncomingActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:showWhenLocked="true"
+            android:taskAffinity=""
+            android:theme="@style/InCall"
+            android:turnScreenOn="true" />
+
         <service
             android:name=".CallStateService"
             android:exported="true">
@@ -61,6 +81,10 @@
                 <data
                     android:host="*"
                     android:pathPrefix="/wristline/callstate"
+                    android:scheme="wear" />
+                <data
+                    android:host="*"
+                    android:pathPrefix="/wristline/ring"
                     android:scheme="wear" />
             </intent-filter>
             <!-- New contacts / recent calls from the phone: refresh the tile. -->

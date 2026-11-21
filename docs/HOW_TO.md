@@ -35,11 +35,11 @@ Wristline makes WhatsApp, Telegram, Instagram and Signal calls ring on your Wear
 
 - An Android phone with Android 12 or newer.
 - WhatsApp, Telegram, Instagram or Signal on that phone.
-- A Wear OS watch connected to the phone through its companion app. Wristline has only been tested with a Pixel Watch and the Pixel Watch app, so other watches may not work.
+- A Wear OS watch connected to the phone through its companion app. Wristline has been tested with a Pixel Watch 5 (Pixel Watch app) and an OPPO watch (OHealth). Other watches may work, but haven't been tested. The README lists the [tested phones and watches](../README.md#where-it-works).
 
 ## 1. Install the app
 
-1. On your phone, open the [latest release](https://github.com/lucio-chiummo/Wristline/releases/latest) and download `wristline-phone-1.3.apk`.
+1. On your phone, open the [latest release](https://github.com/lucio-chiummo/Wristline/releases/latest) and download `wristline-phone-1.5.apk`.
 
    Only download Wristline from that page. Copies from anywhere else may have been changed.
 2. Open the downloaded file. If Android asks, allow your browser or file app to install apps.
@@ -106,7 +106,7 @@ You set this up once for each app. WhatsApp, Telegram and Signal need it. Instag
 
 Make a test call to check that you can hear through the watch.
 
-What Wristline does here: it pairs with your phone's own Wireless debugging, over the phone's own Wi-Fi address only. It keeps the key it paired with in the phone's Keystore. On phones where the Keystore can't hold it, it is kept in Wristline's private storage, protected by a Keystore key where possible. The only commands it runs are `appops set --uid <package> READ_PHONE_STATE ignore` (or `allow` to undo) and `am kill <package>`.
+What Wristline does here: it pairs with your phone's own Wireless debugging, over the phone's own Wi-Fi address only. It keeps the key it paired with in the phone's Keystore. On phones where the Keystore can't hold it, it is kept in Wristline's private storage, protected by a Keystore key where possible. The only commands it runs are `appops set --uid <package> READ_PHONE_STATE ignore` (or `allow` to undo) and `am kill <package>`. After a call, while Wireless debugging is on, it also runs three read-only ones for the diagnostic report: `logcat`, `dumpsys audio` and `dumpsys bluetooth_manager`, filtered to lines about call audio and the Bluetooth voice link (see [Diagnostic report: system log](#diagnostic-report-system-log)).
 
 **If an app update resets the setting,** Wristline repairs it silently the next time you're on Wi-Fi with Wireless debugging on. It only does this for apps you set up this way. If Wireless debugging is off, Wristline tells you to turn it on.
 
@@ -149,7 +149,7 @@ This lets you start WhatsApp, Telegram and Signal calls from the watch: search, 
 
 ### Install the watch app
 
-1. From the same release, download `wristline-watch-1.3.apk` to your computer.
+1. From the same release, download `wristline-watch-1.5.apk` to your computer.
 2. On the watch, go to Settings → System → About and tap **Build number** 7 times.
 3. In Developer options on the watch, turn on **ADB debugging** and **Wireless debugging**, then tap **Pair new device**.
 4. On the computer, using the addresses and the code the watch shows:
@@ -157,7 +157,7 @@ This lets you start WhatsApp, Telegram and Signal calls from the watch: search, 
    ```sh
    adb pair <ip>:<pairing-port> <code>
    adb connect <ip>:<port>
-   adb -s <ip>:<port> install wristline-watch-1.3.apk
+   adb -s <ip>:<port> install wristline-watch-1.5.apk
    ```
 
 5. Turn **Wireless debugging** off on the watch.
@@ -177,6 +177,7 @@ Telegram contacts only appear if **Sync contacts** is on in Telegram's settings.
 | What's happening | What to try |
 |---|---|
 | The watch doesn't ring at all | The card must say **Ready**, and the app's switch must be on. Then tap **Ring my watch**. If that rings, Wristline and the watch are fine, so the problem is with that app's notification. |
+| The watch rings, but Answer does nothing | Some watches' companion apps (seen with OPPO's OHealth) pass Decline on but lose Answer. In Wristline, open **When the watch rings** and turn on **Ring with a notification**. The watch then buzzes every few seconds with **Answer** and **Decline**. You talk on the watch when [voice through the watch](#optional-talk-through-the-watch) is set up and the watch carries call audio, otherwise on the phone. Wristline also offers this by itself when **Ring my watch** goes unanswered. |
 | The Notification access switch is greyed out | Settings → Apps → Wristline → ⋮ → **Allow restricted settings**. |
 | It stopped working after a while | If the card says **Wristline isn't receiving notifications**, tap **Fix**. On Xiaomi also turn on Autostart for Wristline. Check that the battery setting is still **Unrestricted**, then open Wristline once. Some phones have an extra battery setting, which Wristline points out on those phones. |
 | The call drops right after answering on the watch | The app reset its setting. Tap **Repair** and run the command again. |
@@ -186,7 +187,7 @@ Telegram contacts only appear if **Sync contacts** is on in Telegram's settings.
 | `adb` says no devices were found | Check the cable and that **USB debugging** is on, then look for the Allow prompt on the phone. |
 | No contacts show on the watch | Check that **Call from the watch** is on. For Telegram, turn on **Sync contacts** in Telegram. |
 
-**Still stuck?** [Open an issue](https://github.com/lucio-chiummo/Wristline/issues). It helps to attach a report from **Share diagnostic report** on the home screen. It has no caller names or numbers, but it does show when your recent calls happened, and issues are public, so read it first.
+**Still stuck?** [Open an issue](https://github.com/lucio-chiummo/Wristline/issues). It helps to attach a report from **Share diagnostic report** on the home screen. It names your phone and watch models and the apps on your phone that pass calls to a watch. It has no caller names or numbers, but it does show when your recent calls happened, and issues are public, so read it first.
 
 Found a security problem? Please don't post it publicly. See the [security policy](../SECURITY.md).
 
@@ -205,4 +206,14 @@ Found a security problem? Please don't post it publicly. See the [security polic
 
 ## Your privacy
 
-Wristline has no servers, accounts, analytics or ads. It never listens to or records calls. It asks for the internet permission only to talk to your phone's own Wireless debugging, over the phone's own Wi-Fi address. Nothing leaves the phone. The key it pairs with lives in the phone's Keystore. On phones where the Keystore can't hold it, it is kept in Wristline's private storage, protected by a Keystore key where possible: delete it with **Forget this phone's key** on the Voice screen, or revoke it in Developer options → Wireless debugging → Paired devices (`wristline@<model>`). The only commands it runs are the app-op ones above and `am kill`. Wristline doesn't check the certificate of the Wireless debugging it connects to, so another app on the phone could pretend to be it and fake its replies; that app would gain nothing, because Android trusts Wristline only through the pairing code and Wristline sends only those fixed commands. You can switch Wireless debugging off right after setup. Your watch gets its data through Google's Wear OS connection. The [privacy policy](../PRIVACY.md) has the details.
+Wristline has no servers, accounts, analytics or ads. It never listens to or records calls. It asks for the internet permission only to talk to your phone's own Wireless debugging, over the phone's own Wi-Fi address. Nothing leaves the phone. The key it pairs with lives in the phone's Keystore. On phones where the Keystore can't hold it, it is kept in Wristline's private storage, protected by a Keystore key where possible: delete it with **Forget this phone's key** on the Voice screen, or revoke it in Developer options → Wireless debugging → Paired devices (`wristline@<model>`). The only commands it runs are the app-op ones above, `am kill`, and the read-only system-log ones for the diagnostic report. Wristline doesn't check the certificate of the Wireless debugging it connects to, so another app on the phone could pretend to be it and fake its replies; that app would gain nothing, because Android trusts Wristline only through the pairing code and Wristline sends only those fixed commands. You can switch Wireless debugging off right after setup. Your watch gets its data through Google's Wear OS connection. The [privacy policy](../PRIVACY.md) has the details.
+
+## Diagnostic report: system log
+
+Why a call's voice left the watch is written only in Android's own log, which an app cannot read. If you set up voice on the phone (so Wristline is paired with Wireless debugging), Wristline can read it for the report:
+
+1. Turn **Wireless debugging** on (Developer options) and stay on Wi-Fi.
+2. Make or take the call that goes wrong, and end it.
+3. **Share diagnostic report**. The header says `System log: included at the end`.
+
+Right after the call Wristline runs `logcat -d`, `dumpsys audio` and `dumpsys bluetooth_manager`, each filtered on the phone to lines about call audio, the Bluetooth voice link and call routing. It keeps the last capture in its private storage and adds it to the report. Bluetooth addresses and long numbers are masked. These are Android's own lines, so they can name the apps in the call and your watch's Bluetooth name: read the report before posting it publicly. Nothing is captured while Wireless debugging is off, and **Forget this phone's key** deletes the capture.

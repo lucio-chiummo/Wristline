@@ -92,7 +92,7 @@ public class MainActivity extends Activity {
         View rowReport = findViewById(R.id.row_report);
         bindRow(rowReport, R.drawable.ic_help, R.string.row_report);
         ((TextView) rowReport.findViewById(R.id.row_sub)).setText(R.string.report_sub);
-        rowReport.setOnClickListener(v -> startActivity(Diagnostics.shareIntent(this)));
+        rowReport.setOnClickListener(v -> shareReport());
         View rowLicence = findViewById(R.id.row_licence);
         bindRow(rowLicence, R.drawable.ic_info, R.string.row_licence);
         ((TextView) rowLicence.findViewById(R.id.row_sub)).setText(R.string.licence_sub);
@@ -111,7 +111,7 @@ public class MainActivity extends Activity {
         super.onResume();
         ListenerRebind.ifNeeded(this, ListenerRebind.HOME, null);
         ListenerCheckJob.sync(this);
-        TestCall.onResult = this::refresh;
+        TestCall.onResult = this::onTestResult;
         ListenerRebind.onChange = this::refresh;
         Relaying.onChange = this::refresh;
         refresh();
@@ -205,7 +205,8 @@ public class MainActivity extends Activity {
         boolean reachedWatch = Prefs.testCallResult(this) == TestCall.Result.REACHED
                 || !Prefs.callHistory(this).isEmpty();
         SetupStatus.Kind kind = SetupStatus.decide(
-                relayOn, missing.size(), ListenerRebind.unbound(this), broken.size(), reachedWatch);
+                relayOn, missing.size(), ListenerRebind.unbound(this), broken.size(), reachedWatch,
+                Prefs.ownerWar(this), RelayListener.carrierEnabled(this));
         if (kind != SetupStatus.Kind.NOT_RECEIVING) {
             fixTried = false;
         }
@@ -275,14 +276,29 @@ public class MainActivity extends Activity {
                 showAttention(null, null, getString(R.string.repair),
                         v -> startActivity(new Intent(this, VoiceActivity.class)));
                 break;
+            case CARRIER_OFF:
+                paintStatus(R.color.amber_card, R.color.amber, R.color.on_amber, R.drawable.ic_warning);
+                statusTitle.setText(R.string.status_carrier_title);
+                statusSub.setText(R.string.status_carrier_sub);
+                showAttention(getString(R.string.carrier_title), getString(R.string.carrier_desc),
+                        getString(R.string.carrier_open), v -> openCallingAccounts());
+                break;
             case TRY_IT:
                 paintStatus(R.color.ready_card, R.color.green, R.color.ground, R.drawable.ic_watch);
                 statusTitle.setText(R.string.status_try_title);
                 statusSub.setText(R.string.status_try_sub);
                 boolean missed = Prefs.testCallResult(this) == TestCall.Result.MISSED;
+                boolean byNotification = Prefs.ringByNotification(this);
                 showAttention(getString(missed ? R.string.try_missed_title : R.string.try_title),
-                        getString(missed ? R.string.try_missed_desc : R.string.try_desc),
-                        getString(R.string.row_test_call), v -> ringWatch());
+                        getString(!missed ? R.string.try_desc
+                                : byNotification ? R.string.try_missed_notification_desc : R.string.try_missed_desc),
+                        getString(R.string.row_test_call), v -> {
+                            if (missed && !byNotification) {
+                                ringQuestion();
+                            } else {
+                                ringWatch();
+                            }
+                        });
                 break;
             default:
                 paintStatus(R.color.ready_card, R.color.green, R.color.ground, R.drawable.ic_watch);
@@ -290,6 +306,44 @@ public class MainActivity extends Activity {
                 statusSub.setText(R.string.status_ready_sub);
                 break;
         }
+    }
+
+    /**
+     * Calling accounts is where the carrier is enabled. Skins hide or move that screen, so try
+     * Telecom's enable screen, then the two public ways in and, if none opens, say where to look
+     * instead of leaving a dead button.
+     */
+    void openCallingAccounts() {
+        // The public action lands on the SIM-only screen on some skins (vivo, Android 17), which
+        // lists no third-party account at all. Telecom's own enable screen is the one that shows
+        // the carrier switch, under known component names: HyperOS ships it in its own TelecomUi
+        // package, vivo inside Telecom.
+        String[][] components = {
+                {"com.android.server.telecomui", "com.android.server.telecomui.settings.EnableAccountPreferenceActivity"},
+                {"com.android.server.telecom", "com.android.server.telecomui.settings.EnableAccountPreferenceActivity"},
+                {"com.android.server.telecom", "com.android.server.telecom.settings.EnableAccountPreferenceActivity"},
+        };
+        for (String[] component : components) {
+            try {
+                startActivity(new Intent().setClassName(component[0], component[1]));
+                return;
+            } catch (RuntimeException ignored) {
+                // Not on this skin, or not exported or guarded by a permission: try the next way in.
+            }
+        }
+        String[] actions = {
+                android.telecom.TelecomManager.ACTION_CHANGE_PHONE_ACCOUNTS,
+                android.telecom.TelecomManager.ACTION_SHOW_CALL_SETTINGS,
+        };
+        for (String action : actions) {
+            try {
+                startActivity(new Intent(action));
+                return;
+            } catch (RuntimeException ignored) {
+                // Not on this skin, or refused: try the next screen.
+            }
+        }
+        Toast.makeText(this, R.string.carrier_manual, Toast.LENGTH_LONG).show();
     }
 
     private void fix() {
@@ -424,16 +478,47 @@ public class MainActivity extends Activity {
                 .show();
     }
 
-    /** "When the watch rings": follow Do Not Disturb, and not while the phone is in use. */
+    /** A test call's result is in: show it, and if nobody answered, ask why. */
+    private void onTestResult() {
+        refresh();
+        if (Prefs.testCallResult(this) == TestCall.Result.MISSED && !Prefs.ringByNotification(this)) {
+            ringQuestion();
+        }
+    }
+
+    /**
+     * The test call went unanswered. On some watches it rings but Answer does nothing (the watch's
+     * companion app loses it): offer to ring with a notification instead.
+     */
+    void ringQuestion() {
+        if (isFinishing() || isDestroyed()) {
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.ring_question_title)
+                .setMessage(R.string.ring_question_text)
+                .setPositiveButton(R.string.ring_question_switch, (d, w) -> {
+                    Prefs.setRingByNotification(this, true);
+                    refresh();
+                    ringWatch();
+                })
+                .setNeutralButton(R.string.ring_question_again, (d, w) -> ringWatch())
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    /** "When the watch rings": follow Do Not Disturb, not while the phone is in use, ring by notification. */
     private void dndDialog() {
-        boolean[] checked = {Prefs.followDnd(this), Prefs.notWhileInUse(this)};
+        boolean[] checked = {Prefs.followDnd(this), Prefs.notWhileInUse(this), Prefs.ringByNotification(this)};
         new AlertDialog.Builder(this)
                 .setTitle(R.string.row_dnd)
-                .setMultiChoiceItems(new CharSequence[] {getString(R.string.dnd_follow), getString(R.string.in_use_rule)},
+                .setMultiChoiceItems(new CharSequence[] {getString(R.string.dnd_follow), getString(R.string.in_use_rule),
+                                getString(R.string.ring_by_notification)},
                         checked, (d, which, isChecked) -> checked[which] = isChecked)
                 .setPositiveButton(android.R.string.ok, (d, w) -> {
                     Prefs.setFollowDnd(this, checked[0]);
                     Prefs.setNotWhileInUse(this, checked[1]);
+                    Prefs.setRingByNotification(this, checked[2]);
                     refresh();
                 })
                 .setNeutralButton(R.string.rules_explain, (d, w) -> new AlertDialog.Builder(this)
@@ -447,10 +532,12 @@ public class MainActivity extends Activity {
 
     private void ringWatch() {
         int result;
-        if (RelayConnection.current != null || RelayListener.currentApp != null) {
+        if (RelayConnection.current != null || RelayListener.currentApp != null || TestCall.notificationRinging) {
             result = R.string.test_call_busy;
+        } else if (!RelayListener.startTestCall(this)) {
+            result = R.string.test_call_failed;
         } else {
-            result = RelayListener.startTestCall(this) ? R.string.test_call_started : R.string.test_call_failed;
+            result = Prefs.ringByNotification(this) ? R.string.test_call_started_notification : R.string.test_call_started;
         }
         Toast.makeText(this, result, Toast.LENGTH_LONG).show();
     }
@@ -458,5 +545,30 @@ public class MainActivity extends Activity {
     private static void bindRow(View row, int icon, int title) {
         ((ImageView) row.findViewById(R.id.row_icon)).setImageResource(icon);
         ((TextView) row.findViewById(R.id.row_title)).setText(title);
+    }
+
+    /** The report being built, if any (tests wait on it). */
+    Thread reportThread;
+
+    /**
+     * The report asks the watch over the Data Layer (seconds): it's built off the main thread, says
+     * so at once, and a second tap meanwhile does nothing.
+     */
+    private void shareReport() {
+        if (reportThread != null) {
+            return;
+        }
+        android.widget.Toast.makeText(this, R.string.report_preparing, android.widget.Toast.LENGTH_SHORT).show();
+        android.content.Context app = getApplicationContext();
+        reportThread = new Thread(() -> {
+            android.content.Intent share = Diagnostics.shareIntent(app);
+            runOnUiThread(() -> {
+                reportThread = null;
+                if (!isFinishing() && !isDestroyed()) {
+                    startActivity(share);
+                }
+            });
+        }, "diagnostic-report");
+        reportThread.start();
     }
 }
