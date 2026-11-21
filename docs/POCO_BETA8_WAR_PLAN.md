@@ -474,3 +474,35 @@ Round script for the POCO tester (replaces §11 and §13's):
    dialer showing the call, and the phone ringing too, are expected.
 5. **Call C:** call out from the watch on WhatsApp, talk 20 s both ways.
 6. Send the report.
+
+## 17. Answer-first relay and the watch's incoming screen (2026-11-21, vivo + Pixel Watch 5)
+
+Rehearsed with `Prefs.ownerWar` and ring by notification forced on a throwaway branch
+(`rehearsal-beta9`, never merged), release builds:
+
+- Answering on the watch now answers WhatsApp first and places the managed call 1500 ms later
+  (`RelayListener.MANAGED_PLACE_DELAY_MS`). Before, WhatsApp started its ringtone once a managed
+  call existed while it rang: the watch rang on through the call and the phone after hang-up.
+  Owner: voice both ways, no ringtone, buzz stops.
+- Wristline's watch app shows a full-screen incoming call (`IncomingActivity`, CATEGORY_CALL
+  notification with a full-screen intent) and keeps the phone's ring notification off watches on
+  Google's bridge (bridge tag `wristline_ring`). Answer / Decline buttons; on Pixel watches double
+  pinch answers or hangs up and a wrist turn declines (Wear SDK `wear-sdk`, by reflection).
+- OPPO / OHealth: the full screen comes from Wristline's own watch app, so it should show; the
+  bridge tag is ignored there, so the phone's ring notification may show too (either one answers
+  once — the phone ignores a second answer); no gestures.
+
+Round script for the POCO tester (replaces §16's):
+
+1. Remove any earlier Wristline test build from phone and watch; install beta 9 on both, open
+   Wristline, all setup green. Ring by notification on.
+2. **Call A:** a WhatsApp call to the POCO, answer on the watch's full screen. On HyperOS the war is
+   expected: the voice comes to the phone. That arms the managed relay. Finish the call.
+3. Open Wristline: a card asks to turn on "Wristline — voice on watch". Tap it, flip the switch,
+   come back until the card clears. If it never clears, stop and send the report.
+4. **Call B:** a WhatsApp call to the POCO, answer on the watch's full screen, talk 20 s both ways,
+   hang up on the watch. The phone's dialer showing the call is expected. If the phone shows a
+   "confirm call" / "end the other call?" dialog, tap **Cancel** and say so.
+5. **Call C:** call out from the watch on WhatsApp, talk 20 s both ways.
+6. Send the report. Say: did the full screen open by itself; did the ringing stop at answer; voice
+   both ways on B and C.
