@@ -14,7 +14,7 @@ public class WatchCallService extends WearableListenerService {
     public void onMessageReceived(MessageEvent event) {
         ListenerRebind.ifNeeded(this, ListenerRebind.WATCH, null);
         if (WatchProtocol.PATH_HANGUP.equals(event.getPath())) {
-            RelayListener.hangUpFromWatch();
+            RelayListener.hangUpFromWatch(getApplicationContext());
             return;
         }
         if (WatchProtocol.PATH_ANSWER.equals(event.getPath()) || WatchProtocol.PATH_DECLINE.equals(event.getPath())) {
