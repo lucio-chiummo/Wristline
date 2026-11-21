@@ -33,6 +33,8 @@ public class CallDiagnosticsTest {
     @Before
     public void setUp() {
         context = RuntimeEnvironment.getApplication();
+        // Each test is a new call: not answered or declined yet (startCall's reset).
+        org.robolectric.util.ReflectionHelpers.setStaticField(RelayListener.class, "incomingHandled", false);
     }
 
     @After

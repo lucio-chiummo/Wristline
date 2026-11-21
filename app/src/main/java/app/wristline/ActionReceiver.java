@@ -41,6 +41,11 @@ public class ActionReceiver extends BroadcastReceiver {
             // The watch can still show the buttons of a call that is over.
             return;
         }
+        if (RelayListener.isIncomingHandled()) {
+            // Once only: this call was answered or declined already, here, on the watch or on the
+            // phone. A second surface's late Decline must not reach the app's stale ring action.
+            return;
+        }
         // Answered or declined here: not a missed call.
         RelayListener.incomingHandledOnWatch();
         if (answer) {

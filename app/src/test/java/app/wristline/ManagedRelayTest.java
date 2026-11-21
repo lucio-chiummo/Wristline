@@ -175,6 +175,20 @@ public class ManagedRelayTest {
     }
 
     @Test
+    public void aSecondAnswerOnAWarPhoneAnswersAndPlacesOnce() {
+        RelayListener.incomingCall = ringingCall();
+        RelayListener.useFullModeForCall = true;
+        org.robolectric.util.ReflectionHelpers.setStaticField(RelayListener.class, "incomingHandled", false);
+
+        ActionReceiver.handleRingAnswer(context, true);
+        ActionReceiver.handleRingAnswer(context, true);
+        idle(RelayListener.MANAGED_PLACE_DELAY_MS);
+
+        assertEquals("the app was answered twice", 1, appAnswers());
+        assertEquals("a second managed call was placed", 1, shadowOf(telecom).getAllOutgoingCalls().size());
+    }
+
+    @Test
     public void theManagedCallIsNotPlacedWhenTheCallEndedMeanwhile() {
         assertTrue(answerOnTheNotification());
         RelayListener.incomingCall = null;
