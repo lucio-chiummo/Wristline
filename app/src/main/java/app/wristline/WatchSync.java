@@ -8,15 +8,77 @@ import com.google.android.gms.wearable.CapabilityClient;
 import com.google.android.gms.wearable.CapabilityInfo;
 import com.google.android.gms.wearable.DataMap;
 import com.google.android.gms.wearable.PutDataMapRequest;
+import com.google.android.gms.wearable.Node;
 import com.google.android.gms.wearable.Wearable;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 /** Publishes the callable contacts to the watch app (names and apps only, never numbers). */
 final class WatchSync {
+    /** Sends a message to every connected watch; replaced in tests. */
+    interface Sender {
+        void send(Context context, String path, byte[] payload);
+    }
+
+    /** The real sender: blocking (Play services); {@link #ring} and {@link #stopRing} run it off the main thread. */
+    static final Sender WATCH_SENDER = (context, path, payload) -> {
+        try {
+            for (Node node : Tasks.await(Wearable.getNodeClient(context).getConnectedNodes(),
+                    5, TimeUnit.SECONDS)) {
+                Wearable.getMessageClient(context).sendMessage(node.getId(), path, payload);
+            }
+        } catch (Exception e) {
+            Log.w(RelayListener.TAG, "could not send " + path + " to the watch", e);
+        }
+    };
+
+    static volatile Sender sender = WATCH_SENDER;
+
+    /** Ring messages go through one thread, so a quick start then stop reach the watch in that order. */
+    private static volatile ExecutorService ringQueue = newRingQueue();
+
+    private static ExecutorService newRingQueue() {
+        return Executors.newSingleThreadExecutor(r -> {
+            Thread thread = new Thread(r, "watch-ring");
+            thread.setDaemon(true);
+            return thread;
+        });
+    }
+
     private WatchSync() {
+    }
+
+    /**
+     * Tells the watch app to vibrate like a ringing call, for at most {@code maxMs}, and who is
+     * calling with which app (null when unknown) for its incoming screen. Fire and forget.
+     */
+    static void ring(Context context, long maxMs, String appPackage, String name) {
+        queue(context, WatchProtocol.ringStartPayload(maxMs, appPackage, name));
+    }
+
+    /** Tells the watch app to stop vibrating. Fire and forget. */
+    static void stopRing(Context context) {
+        queue(context, WatchProtocol.RING_STOP.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static void queue(Context context, byte[] payload) {
+        ringQueue.execute(() -> sender.send(context, WatchProtocol.PATH_RING, payload));
+    }
+
+    /** Waits until every ring message queued so far has been handed to the sender (tests). */
+    static void flushRing() throws Exception {
+        ringQueue.submit(() -> { }).get(5, TimeUnit.SECONDS);
+    }
+
+    /** A fresh queue: drops anything stuck on an earlier test's real send (tests). */
+    static void resetRingQueue() {
+        ringQueue.shutdownNow();
+        ringQueue = newRingQueue();
     }
 
     /** Off the main thread. Tells the watch whether relaying is on (for its tile's Pause/Resume). */
@@ -81,18 +143,30 @@ final class WatchSync {
 
     /** As above, with how long ago the call connected (ms, -1 unknown) and the mute state. */
     static void callState(Context context, String kind, long connectedMs, String mute, SupportedApp app, String name) {
+        byte[] payload = WatchProtocol.callStatePayload(WatchProtocol.callState(kind, connectedMs, mute),
+                app.packageName, name);
+        new Thread(() -> sender.send(context, WatchProtocol.PATH_CALL_STATE, payload), "watch-call-state").start();
+    }
+
+    /**
+     * Several call states in order, on one thread: a refusal sends "busy" then "ended", and two
+     * threads could deliver them the wrong way round. Off the main thread; fire and forget.
+     */
+    static void callStates(Context context, SupportedApp app, String name, String... states) {
         new Thread(() -> {
             try {
-                byte[] payload = WatchProtocol.callStatePayload(WatchProtocol.callState(kind, connectedMs, mute),
-                        app.packageName, name);
                 for (com.google.android.gms.wearable.Node node : com.google.android.gms.tasks.Tasks.await(
                         Wearable.getNodeClient(context).getConnectedNodes())) {
-                    Wearable.getMessageClient(context).sendMessage(node.getId(), WatchProtocol.PATH_CALL_STATE, payload);
+                    for (String state : states) {
+                        byte[] payload = WatchProtocol.callStatePayload(
+                                WatchProtocol.callState(state, -1, WatchProtocol.MUTE_NONE), app.packageName, name);
+                        Wearable.getMessageClient(context).sendMessage(node.getId(), WatchProtocol.PATH_CALL_STATE, payload);
+                    }
                 }
             } catch (Exception e) {
                 Log.w(RelayListener.TAG, "could not tell the watch about the call", e);
             }
-        }, "watch-call-state").start();
+        }, "watch-call-states").start();
     }
 
     /** Records a relayed call for the watch's "Recent" list and republishes. Off the main thread. */
@@ -127,6 +201,55 @@ final class WatchSync {
             Log.w(RelayListener.TAG, "could not check the watch", e);
         }
         return WatchStatus.of(connected, withApp);
+    }
+
+    /** The diagnostic report waits this long for the watch, no longer. */
+    static final int REPORT_TIMEOUT_S = 3;
+
+    /** What the watch app published about its watch (Build facts only). */
+    static final class WatchFacts {
+        final String manufacturer;
+        final String model;
+        final int sdk;
+        final String version;
+
+        WatchFacts(String manufacturer, String model, int sdk, String version) {
+            this.manufacturer = manufacturer;
+            this.model = model;
+            this.sdk = sdk;
+            this.version = version;
+        }
+    }
+
+    /** Blocking (Play services, up to {@link #REPORT_TIMEOUT_S} s): the watch app's facts, or null when it hasn't published any. */
+    static WatchFacts watchFacts(Context context) {
+        try {
+            android.net.Uri uri = new android.net.Uri.Builder().scheme("wear").path(WatchProtocol.PATH_WATCH_INFO).build();
+            com.google.android.gms.wearable.DataItemBuffer items = Tasks.await(
+                    Wearable.getDataClient(context).getDataItems(uri), REPORT_TIMEOUT_S, TimeUnit.SECONDS);
+            try {
+                for (com.google.android.gms.wearable.DataItem item : items) {
+                    DataMap map = com.google.android.gms.wearable.DataMapItem.fromDataItem(item).getDataMap();
+                    return new WatchFacts(map.getString(WatchProtocol.KEY_MANUFACTURER, "?"),
+                            map.getString(WatchProtocol.KEY_MODEL, "?"), map.getInt(WatchProtocol.KEY_SDK),
+                            map.getString(WatchProtocol.KEY_VERSION, "?"));
+                }
+            } finally {
+                items.release();
+            }
+        } catch (Exception e) {
+            Log.w(RelayListener.TAG, "could not read the watch's facts", e);
+        }
+        return null;
+    }
+
+    /** Blocking (up to {@link #REPORT_TIMEOUT_S} s): how many Wear devices are connected; never their names. Null when it can't be told. */
+    static Integer connectedNodeCount(Context context) {
+        try {
+            return Tasks.await(Wearable.getNodeClient(context).getConnectedNodes(), REPORT_TIMEOUT_S, TimeUnit.SECONDS).size();
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     static int count(Context context) {

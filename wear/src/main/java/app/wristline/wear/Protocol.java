@@ -23,10 +23,20 @@ final class Protocol {
      * {@code <state>} is "<kind>;<ms since connected>;<mute>" ({@link CallState#parse}).
      */
     static final String PATH_CALL_STATE = "/wristline/callstate";
+    /**
+     * Message from the phone: "start|<most ms to vibrate>|<app package>|<name>" or "stop"
+     * ({@link #parseRing}). Older phone apps send "start|<ms>" only.
+     */
+    static final String PATH_RING = "/wristline/ring";
+    /** Message the watch sends to answer the call ringing by notification (empty payload). */
+    static final String PATH_ANSWER = "/wristline/answer";
+    /** Message the watch sends to decline the call ringing by notification (empty payload). */
+    static final String PATH_DECLINE = "/wristline/decline";
     static final String STATE_CALLING = "calling";
     static final String STATE_RINGING = "ringing";
     static final String STATE_ACTIVE = "active";
     static final String STATE_ENDED = "ended";
+    static final String STATE_BUSY = "busy";
     static final String KEY_HISTORY = "history";
     static final String KEY_TIME = "time";
     static final String KEY_OUTGOING = "outgoing";
@@ -42,10 +52,19 @@ final class Protocol {
     static final String KEY_ID = "id";
     static final String KEY_NAME = "name";
     static final String KEY_APPS = "apps";
+    /** Data item the watch publishes about itself, for the phone's diagnostic report: Build facts only. */
+    static final String PATH_WATCH_INFO = "/wristline/watchinfo";
+    static final String KEY_MANUFACTURER = "manufacturer";
+    static final String KEY_MODEL = "model";
+    static final String KEY_SDK = "sdk";
+    static final String KEY_VERSION = "version";
 
     static final String WHATSAPP = "com.whatsapp";
     static final String TELEGRAM = "org.telegram.messenger";
     static final String SIGNAL = "org.thoughtcrime.securesms";
+
+    /** Bridge tag on the phone's ring notification, excluded from bridging here. Keep in sync with the phone. */
+    static final String RING_BRIDGE_TAG = "wristline_ring";
 
     static final String MUTE_OFF = "off";
     static final String MUTE_ON = "on";
@@ -83,12 +102,56 @@ final class Protocol {
         }
     }
 
+    /** A ring start: how long to vibrate at most, and who's calling on which app. */
+    static final class Ring {
+        final long maxMs;
+        /** The app's package; null from an older phone app. */
+        final String app;
+        /** The caller; null from an older phone app (the watch then only buzzes). */
+        final String name;
+
+        Ring(long maxMs, String app, String name) {
+            this.maxMs = maxMs;
+            this.app = app;
+            this.name = name;
+        }
+    }
+
     private Protocol() {
     }
 
     /** "<contact id>|<app package>" */
     static byte[] callPayload(long contactId, String app) {
         return (contactId + "|" + app).getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    }
+
+    /** The most ms to vibrate for a "start|<ms>…" ring message; -1 for "stop" and anything else. */
+    static long ringMaxMs(String payload) {
+        Ring ring = parseRing(payload);
+        return ring == null ? -1 : ring.maxMs;
+    }
+
+    /**
+     * A "start|<ms>[|<app>|<name>]" ring message; null for "stop" and anything else. The name is
+     * last and may hold "|".
+     */
+    static Ring parseRing(String payload) {
+        if (payload == null || !payload.startsWith("start|")) {
+            return null;
+        }
+        String[] parts = payload.split("\\|", 4);
+        long ms;
+        try {
+            ms = Long.parseLong(parts[1]);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+        if (ms <= 0) {
+            return null;
+        }
+        String app = parts.length > 2 && !parts[2].isEmpty() ? parts[2] : null;
+        String name = parts.length > 3 && !parts[3].isEmpty() ? parts[3] : null;
+        return new Ring(ms, app, name);
     }
 
     static String label(String app) {

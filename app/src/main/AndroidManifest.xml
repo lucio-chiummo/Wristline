@@ -12,6 +12,8 @@
     <!-- Lets Wristline fire WhatsApp's own Answer action, which opens WhatsApp's call screen. -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <!-- Self-managed Telecom call that the Pixel Watch app shows on the watch. -->
+    <!-- Android 17: holding the voice of a call on the watch (VoiceHold). Granted at install. -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.MANAGE_OWN_CALLS" />
     <!-- Calling from the watch: names of contacts with WhatsApp/Telegram/Signal "Voice call" entries. -->
     <uses-permission android:name="android.permission.READ_CONTACTS" />
@@ -27,6 +29,18 @@
         <package android:name="org.telegram.messenger" />
         <package android:name="com.instagram.android" />
         <package android:name="org.thoughtcrime.securesms" />
+        <!-- Diagnostic report: which apps bridge calls to a watch, and which companion apps are installed. -->
+        <intent>
+            <action android:name="android.telecom.InCallService" />
+        </intent>
+        <package android:name="com.google.android.apps.wear.companion" />
+        <package android:name="com.google.android.wearable.app" />
+        <package android:name="com.heytap.health.international" />
+        <package android:name="com.heytap.health" />
+        <package android:name="com.samsung.android.app.watchmanager" />
+        <package android:name="com.xiaomi.wearable" />
+        <package android:name="com.huawei.health" />
+        <package android:name="com.mobvoi.companion.aw" />
     </queries>
 
     <application

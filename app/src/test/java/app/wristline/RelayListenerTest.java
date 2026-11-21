@@ -16,6 +16,8 @@ import android.os.Process;
 import android.service.notification.StatusBarNotification;
 import android.telecom.TelecomManager;
 
+import java.util.List;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -47,6 +49,10 @@ public class RelayListenerTest {
     public void tearDown() {
         RelayListener.clearCall(context);
         RelayConnection.current = null;
+        Prefs.setRingByNotification(context, false);
+        TestCall.endNotificationTest(context);
+        WatchRing.stop(context);
+        listener.onListenerDisconnected();
     }
 
     private PendingIntent intent(int requestCode) {
@@ -336,5 +342,215 @@ public class RelayListenerTest {
         ShadowLooper.idleMainLooper(CallTracker.GRACE_MS + 1, java.util.concurrent.TimeUnit.MILLISECONDS);
 
         assertNull(missedNotification());
+    }
+
+    private List<EventLog.Entry> withCode(String code) {
+        List<EventLog.Entry> out = new java.util.ArrayList<>();
+        for (EventLog.Entry e : Prefs.events(context)) {
+            if (e.code.equals(code)) {
+                out.add(e);
+            }
+        }
+        return out;
+    }
+
+    @Test
+    public void inCallNotificationWithNoTrackedCallIsRecordedOnce() {
+        listener.onNotificationPosted(ongoing("com.whatsapp", "k9"));
+        listener.onNotificationPosted(ongoing("com.whatsapp", "k9"));   // the call timer refreshes it constantly
+
+        List<EventLog.Entry> untracked = withCode(EventLog.UNTRACKED_CALL);
+        assertEquals(1, untracked.size());
+        assertEquals("com.whatsapp", untracked.get(0).app);
+        assertEquals("", untracked.get(0).detail);
+    }
+
+    @Test
+    public void relayedCallIsNotUntracked() {
+        listener.onNotificationPosted(ringing("com.whatsapp", "k1", "Corvan"));
+        listener.onNotificationPosted(ongoing("com.whatsapp", "k1"));
+
+        assertEquals(0, withCode(EventLog.UNTRACKED_CALL).size());
+    }
+
+    @Test
+    public void aSecondUntrackedCallIsRecordedAfterTheFirstEnds() {
+        listener.onNotificationPosted(ongoing("com.whatsapp", "k9"));
+        listener.onNotificationRemoved(ongoing("com.whatsapp", "k9"));
+        listener.onNotificationPosted(ongoing("com.whatsapp", "k9"));
+
+        assertEquals(2, withCode(EventLog.UNTRACKED_CALL).size());
+    }
+
+    @Test
+    public void anotherAppsCallDuringARelayedOneIsNotUntracked() {
+        // Busy with WhatsApp: Telegram's call is a different story, already logged as busy when it rang.
+        listener.onNotificationPosted(ringing("com.whatsapp", "k1", "Corvan"));
+        listener.onNotificationPosted(ongoing("org.telegram.messenger", "t1"));
+
+        assertEquals(0, withCode(EventLog.UNTRACKED_CALL).size());
+    }
+
+    private Notification ring() {
+        android.app.NotificationManager nm = context.getSystemService(android.app.NotificationManager.class);
+        return shadowOf(nm).getNotification(StatusNotifications.ID_INCOMING_FALLBACK);
+    }
+
+    @Test
+    public void answerOnTheNotificationOpensAnAnsweredWatchCall() {
+        Prefs.setRingByNotification(context, true);
+        listener.onNotificationPosted(ringing("com.whatsapp", "k1", "Corvan"));
+
+        new ActionReceiver().onReceive(context, new Intent(ActionReceiver.ANSWER));
+
+        assertEquals(1, telecom.getAllIncomingCalls().size());
+        assertTrue(telecom.getAllIncomingCalls().get(0).extras.getBoolean(RelayListener.EXTRA_ANSWERED));
+        assertEquals("notification, voice on watch", withCode(EventLog.ANSWERED_ON_WATCH).get(0).detail);
+        assertFalse(WatchRing.ringing());
+        assertTrue(RelayListener.isIncomingHandled());
+    }
+
+    @Test
+    public void aCallRungByNotificationReportsThePhonesAudio() {
+        Prefs.setRingByNotification(context, true);
+        listener.onNotificationPosted(ringing("com.whatsapp", "k1", "Corvan"));
+
+        assertTrue("no audio facts for a call with no Telecom call",
+                withCode(EventLog.AUDIO_LINK).stream().anyMatch(e -> e.detail.startsWith("mode=")));
+    }
+
+    @Test
+    public void theAudioReportStopsWhenTheCallEnds() {
+        Prefs.setRingByNotification(context, true);
+        listener.onNotificationPosted(ringing("com.whatsapp", "k1", "Corvan"));
+        listener.onNotificationRemoved(ringing("com.whatsapp", "k1", "Corvan"));
+        org.robolectric.shadows.ShadowLooper.idleMainLooper(CallTracker.GRACE_MS + 1000, java.util.concurrent.TimeUnit.MILLISECONDS);
+        int before = withCode(EventLog.AUDIO_LINK).size();
+
+        context.getSystemService(android.media.AudioManager.class).setMode(android.media.AudioManager.MODE_IN_COMMUNICATION);
+        org.robolectric.shadows.ShadowLooper.idleMainLooper();
+
+        assertEquals(before, withCode(EventLog.AUDIO_LINK).size());
+    }
+
+    @Test
+    public void aCallFromTheWatchEndsTheNotificationTest() {
+        Prefs.setRingByNotification(context, true);
+        listener.onListenerConnected();
+        TestCall.startNotificationTest(context);
+        ShadowLooper.idleMainLooper();
+
+        RelayListener.startOutgoing(context, SupportedApp.WHATSAPP, "Corvan", () -> { });
+
+        assertFalse(TestCall.notificationRinging);
+        assertFalse(WatchRing.ringing());
+    }
+
+    @Test
+    public void declineOnTheNotificationNeverOpensAWatchCall() {
+        Prefs.setRingByNotification(context, true);
+        listener.onNotificationPosted(ringing("com.whatsapp", "k1", "Corvan"));
+
+        new ActionReceiver().onReceive(context, new Intent(ActionReceiver.DECLINE));
+
+        assertEquals(0, telecom.getAllIncomingCalls().size());
+    }
+
+    @Test
+    public void notificationModeMakesNoTelecomCall() {
+        Prefs.setRingByNotification(context, true);
+
+        listener.onNotificationPosted(ringing("com.whatsapp", "k1", "Corvan"));
+
+        assertEquals(0, telecom.getAllIncomingCalls().size());
+        assertNotNull("watch not rung", ring());
+        assertEquals("Corvan", ring().extras.getCharSequence(Notification.EXTRA_TITLE).toString());
+        assertEquals("Incoming WhatsApp call", ring().extras.getCharSequence(Notification.EXTRA_TEXT).toString());
+        EventLog.Entry incoming = withCode(EventLog.INCOMING).get(0);
+        assertEquals("notification", incoming.detail);
+    }
+
+    @Test
+    public void notificationModeKeepsRinging() {
+        Prefs.setRingByNotification(context, true);
+        listener.onNotificationPosted(ringing("com.whatsapp", "k1", "Corvan"));
+        Notification first = ring();
+
+        ShadowLooper.idleMainLooper(WatchRing.REPEAT_MS, java.util.concurrent.TimeUnit.MILLISECONDS);
+
+        assertTrue(ring() != null && ring() != first);
+    }
+
+    @Test
+    public void callEndingStopsTheRing() {
+        Prefs.setRingByNotification(context, true);
+        listener.onNotificationPosted(ringing("com.whatsapp", "k1", "Corvan"));
+
+        listener.onNotificationRemoved(ringing("com.whatsapp", "k1", "Corvan"));
+
+        assertNull(ring());
+        assertFalse(WatchRing.ringing());
+    }
+
+    @Test
+    public void answeringOnThePhoneStopsTheRing() {
+        Prefs.setRingByNotification(context, true);
+        listener.onNotificationPosted(ringing("com.whatsapp", "k1", "Corvan"));
+
+        listener.onNotificationPosted(ongoing("com.whatsapp", "k1"));
+
+        assertFalse(WatchRing.ringing());
+        assertNull(ring());
+    }
+
+    @Test
+    public void secondCallDoesNotRestartTheRing() {
+        Prefs.setRingByNotification(context, true);
+        listener.onNotificationPosted(ringing("com.whatsapp", "k1", "Corvan"));
+        Notification first = ring();
+
+        listener.onNotificationPosted(ringing("com.whatsapp", "k2", "Annaly"));
+
+        assertTrue(ring() == first);
+    }
+
+    @Test
+    public void turningTheSettingOffMidRingKeepsThatCallRinging() {
+        Prefs.setRingByNotification(context, true);
+        listener.onNotificationPosted(ringing("com.whatsapp", "k1", "Corvan"));
+
+        Prefs.setRingByNotification(context, false);
+        ShadowLooper.idleMainLooper(WatchRing.REPEAT_MS, java.util.concurrent.TimeUnit.MILLISECONDS);
+        assertTrue(WatchRing.ringing());
+        new ActionReceiver().onReceive(context, new Intent(ActionReceiver.ANSWER));
+
+        assertEquals("notification, voice on watch", withCode(EventLog.ANSWERED_ON_WATCH).get(0).detail);
+        assertFalse(WatchRing.ringing());
+    }
+
+    @Test
+    public void decliningFromTheWatchStopsTheRingAndIsNotMissed() {
+        Prefs.setRingByNotification(context, true);
+        listener.onNotificationPosted(ringing("com.whatsapp", "k1", "Corvan"));
+
+        new ActionReceiver().onReceive(context, new Intent(ActionReceiver.DECLINE));
+
+        assertFalse(WatchRing.ringing());
+        assertEquals("notification", withCode(EventLog.DECLINED_ON_WATCH).get(0).detail);
+        assertTrue(RelayListener.isIncomingHandled());
+    }
+
+    @Test
+    public void aRealCallReplacesTheNotificationTest() {
+        Prefs.setRingByNotification(context, true);
+        Prefs.setTestCallResult(context, TestCall.Result.NONE);
+        RelayListener.startTestCall(context);
+
+        listener.onNotificationPosted(ringing("com.whatsapp", "k1", "Corvan"));
+        ShadowLooper.idleMainLooper(TestCall.RING_MS + 1, java.util.concurrent.TimeUnit.MILLISECONDS);
+
+        assertFalse(TestCall.notificationRinging);
+        assertEquals("the test was cut short: no verdict", TestCall.Result.NONE, Prefs.testCallResult(context));
+        assertEquals("Corvan", ring().extras.getCharSequence(Notification.EXTRA_TITLE).toString());
     }
 }

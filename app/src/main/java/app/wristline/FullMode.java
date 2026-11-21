@@ -42,6 +42,7 @@ final class FullMode {
         @Override
         public void forgetKey(Context context) {
             AdbShell.forgetKey(context);
+            SystemLogCapture.forget(context);
         }
     };
 

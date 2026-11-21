@@ -27,11 +27,20 @@ final class WatchProtocol {
      * {@code <state>} is {@link #callState}'s "<kind>;<ms since connected>;<mute>".
      */
     static final String PATH_CALL_STATE = "/wristline/callstate";
+    /** Message the phone sends so the watch app vibrates for a ringing call: {@link #ringStartPayload} or {@link #RING_STOP}. */
+    static final String PATH_RING = "/wristline/ring";
+    static final String RING_STOP = "stop";
+    /** Message the watch sends when Answer is tapped on its incoming screen (empty payload). */
+    static final String PATH_ANSWER = "/wristline/answer";
+    /** Message the watch sends when Decline is tapped on its incoming screen (empty payload). */
+    static final String PATH_DECLINE = "/wristline/decline";
     static final String STATE_CALLING = "calling";
     /** The app shows its in-call notification but the other side hasn't answered yet. */
     static final String STATE_RINGING = "ringing";
     static final String STATE_ACTIVE = "active";
     static final String STATE_ENDED = "ended";
+    /** A call-out was refused: a relayed call is already on. The watch shows why and closes. */
+    static final String STATE_BUSY = "busy";
     static final String KEY_HISTORY = "history";
     static final String KEY_TIME = "time";
     static final String KEY_OUTGOING = "outgoing";
@@ -46,10 +55,19 @@ final class WatchProtocol {
     static final String KEY_ID = "id";
     static final String KEY_NAME = "name";
     static final String KEY_APPS = "apps";
+    /** Data item the watch publishes about itself, for the phone's diagnostic report: Build facts only. */
+    static final String PATH_WATCH_INFO = "/wristline/watchinfo";
+    static final String KEY_MANUFACTURER = "manufacturer";
+    static final String KEY_MODEL = "model";
+    static final String KEY_SDK = "sdk";
+    static final String KEY_VERSION = "version";
     static final int RECENT_MAX = 5;
 
     /** No mute action on the app's in-call notification. */
     static final String MUTE_NONE = "";
+    /** Bridge tag on the phone's ring notification; the watch app excludes it from bridging. Keep in sync with the watch. */
+    static final String RING_BRIDGE_TAG = "wristline_ring";
+
     static final String MUTE_OFF = "off";
     static final String MUTE_ON = "on";
 
@@ -65,6 +83,15 @@ final class WatchProtocol {
     /** The full call-state message payload. */
     static byte[] callStatePayload(String state, String app, String name) {
         return (state + "|" + app + "|" + name).getBytes(StandardCharsets.UTF_8);
+    }
+
+    /**
+     * "start|<most ms the watch may vibrate>|<app package>|<caller>": the watch also stops by itself
+     * after that long. Empty for an unknown app or caller; the caller is last, as it may hold "|".
+     */
+    static byte[] ringStartPayload(long maxMs, String appPackage, String name) {
+        return ("start|" + maxMs + "|" + (appPackage == null ? "" : appPackage) + "|" + (name == null ? "" : name))
+                .getBytes(StandardCharsets.UTF_8);
     }
 
     /** A call the watch asked for. */

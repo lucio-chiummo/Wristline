@@ -1,11 +1,16 @@
 package app.wristline.wear;
 
+import android.animation.ObjectAnimator;
+import android.animation.PropertyValuesHolder;
+import android.animation.ValueAnimator;
+import android.app.Activity;
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.content.res.TypedArray;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.style.ForegroundColorSpan;
+import android.view.View;
 import android.widget.TextView;
 
 import java.util.List;
@@ -45,6 +50,33 @@ final class Ui {
                 : Protocol.TELEGRAM.equals(app) ? R.color.telegram
                 : Protocol.SIGNAL.equals(app) ? R.color.signal
                 : "com.instagram.android".equals(app) ? R.color.instagram : R.color.muted);
+    }
+
+    /**
+     * Fills the call screens' top ({@code layout/call_header}): avatar, name, app and its coloured
+     * dot, and starts the ring pulsing in the app's colour. Returns the pulse, to stop it.
+     */
+    static ObjectAnimator callHeader(Activity activity, String name, String app) {
+        ((TextView) activity.findViewById(R.id.name)).setText(name);
+        ((TextView) activity.findViewById(R.id.app)).setText(Protocol.label(app));
+        avatar(activity.findViewById(R.id.avatar), name);
+        ColorStateList color = ColorStateList.valueOf(appColor(activity, app));
+        activity.findViewById(R.id.app_dot).setBackgroundTintList(color);
+        View ring = activity.findViewById(R.id.ring);
+        ring.setBackgroundTintList(color);
+        return pulse(ring);
+    }
+
+    /** The ring breathes out and fades while the call is connecting. */
+    private static ObjectAnimator pulse(View ring) {
+        ObjectAnimator animator = ObjectAnimator.ofPropertyValuesHolder(ring,
+                PropertyValuesHolder.ofFloat(View.SCALE_X, 0.82f, 1f),
+                PropertyValuesHolder.ofFloat(View.SCALE_Y, 0.82f, 1f),
+                PropertyValuesHolder.ofFloat(View.ALPHA, 1f, 0.15f));
+        animator.setDuration(1100);
+        animator.setRepeatCount(ValueAnimator.INFINITE);
+        animator.start();
+        return animator;
     }
 
     /** "● WhatsApp ● Telegram", each dot in the app's colour. */

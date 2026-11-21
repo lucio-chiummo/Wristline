@@ -65,6 +65,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        RingBridging.exclude(this);
         setContentView(R.layout.activity_main);
         list = findViewById(R.id.contacts);
         message = findViewById(R.id.message);
@@ -73,6 +74,7 @@ public class MainActivity extends Activity {
         list.requestFocus(); // rotary crown scrolls the list
         askForNotificationsOnce();
         load(false);
+        WatchInfo.publish(this);
     }
 
     /** For the call indicator on the watch face; asked once, the app works without it. */
