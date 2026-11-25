@@ -241,7 +241,13 @@ keyPassword=...
 
 The phone and watch apps share one version, set in `gradle.properties` (`wristline.versionCode`, `wristline.versionName`); the watch's versionCode is that plus 1000, so the two APKs of the same package never share a code. Both apps must be signed with the same key, or the watch and phone can't talk to each other.
 
-Neither the keystore nor that file is in the repository; keep your own copies safe. Privacy policy: [PRIVACY.md](PRIVACY.md). Reporting a vulnerability: [SECURITY.md](SECURITY.md).
+Neither the keystore nor that file is in the repository; keep your own copies safe.
+
+### Releasing
+
+Releases are built, signed and published by the **Release** workflow (`.github/workflows/release.yml`), started by hand from `main` (Actions → Release → Run workflow). It releases the version in `gradle.properties` with the notes in `docs/releases/<version>.md`, adds the APKs' SHA-256 hashes to the notes, and marks versions with a `-` (like `1.6-beta1`) as pre-releases. It stops if the tag already exists, and won't publish an APK that isn't signed with the certificate above.
+
+The signing key is kept only in the repository's protected `release` environment, as four secrets: `WRISTLINE_KEYSTORE_BASE64` (the keystore file, base64-encoded), `WRISTLINE_STORE_PASSWORD`, `WRISTLINE_KEY_ALIAS` and `WRISTLINE_KEY_PASSWORD`. No other workflow can read them. To release: raise the version in `gradle.properties`, add the notes file, merge to `main`, then run the workflow. Privacy policy: [PRIVACY.md](PRIVACY.md). Reporting a vulnerability: [SECURITY.md](SECURITY.md).
 
 Gradle checks every dependency against the hashes in `gradle/verification-metadata.xml`. After changing a dependency or the Android Gradle plugin, update them and review the diff. Start from an empty Gradle home: with a filled cache Gradle misses parent POMs, and CI's clean build then fails.
 
