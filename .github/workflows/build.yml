@@ -22,7 +22,8 @@ jobs:
       - uses: gradle/actions/wrapper-validation@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
       # The runner image ships an Android SDK with licences accepted; AGP downloads platform 37 itself.
       - uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
-      # Debug builds only: release signing keys are never available to CI.
+      # Debug builds only: this workflow never gets the release signing key. Only release.yml,
+      # started by hand in the protected "release" environment, does.
       - run: ./gradlew testDebugUnitTest :wear:testDebugUnitTest assembleDebug :wear:assembleDebug :app:assembleShrunk
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
