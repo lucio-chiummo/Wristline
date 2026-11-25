@@ -1,6 +1,16 @@
-# Wristline
+<p align="center"><img src="docs/brand/wristline-icon-512.png" alt="Wristline icon" width="96"></p>
 
-Take WhatsApp, Telegram, Instagram and Signal calls on your Wear OS watch: ring, answer, decline, hang up, and optionally talk through the watch.
+<h1 align="center">Wristline</h1>
+
+<p align="center">Take WhatsApp, Telegram, Instagram and Signal calls on your Wear OS watch: ring, answer, decline, hang up, and optionally talk through the watch.</p>
+
+<p align="center">
+  <a href="https://github.com/lucio-chiummo/Wristline/actions/workflows/build.yml"><img src="https://github.com/lucio-chiummo/Wristline/actions/workflows/build.yml/badge.svg?branch=main" alt="Build"></a>
+  <a href="https://github.com/lucio-chiummo/Wristline/releases/latest"><img src="https://img.shields.io/github/v/release/lucio-chiummo/Wristline" alt="Latest release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-PolyForm%20Noncommercial-blue" alt="License: PolyForm Noncommercial 1.0.0"></a>
+  <img src="https://img.shields.io/badge/Android-12%2B-3DDC84" alt="Android 12+">
+  <img src="https://img.shields.io/badge/Wear%20OS-supported-4285F4" alt="Wear OS">
+</p>
 
 Wristline is a small Android app for the **phone**, with an optional app for the watch. It exists because these apps don't ring on the watch on their own. WhatsApp's watch app even stops the phone from forwarding call notifications while its servers never send the calls to the watch, and the Pixel Watch app drops Instagram's call notifications. So calls ring nowhere on the watch.
 
@@ -14,6 +24,8 @@ Two Android apps, built together and released together:
 Also here: the step-by-step guide and design notes (`docs/`), and a script that records how a calling app behaves during a call, used when adding a new app (`tools/`). Everything runs on your phone and watch. There's no server and no account.
 
 **New here? Follow the [step-by-step guide](docs/HOW_TO.md).** It covers installing, setup, everyday use and what to do if something goes wrong.
+
+**Contents:** [What it can do](#what-it-can-do) · [Where it works](#where-it-works) · [Install](#install) · [Setup](#setup) · [How it works](#how-it-works) · [Under the hood](#under-the-hood) · [Troubleshooting](#troubleshooting) · [Build](#build) · [License](#license)
 
 ## What it can do
 
@@ -76,7 +88,7 @@ Also:
   sheet only. It shows when recent calls happened, so check it before posting it
   in a public issue.
 
-### Calling from the watch (1.2)
+### Calling from the watch
 
 Wristline also has a **watch app**. Turn on **Call from the watch** on the phone (asks for Contacts and Phone), then open Wristline on the watch:
 
@@ -117,7 +129,7 @@ Download the APKs from the [latest release](https://github.com/lucio-chiummo/Wri
 
 Android blocks Notification access for apps installed from a file. If the switch is greyed out: App info → ⋮ (top right) → **Allow restricted settings**, then try again.
 
-**Watch (optional).** Needed for the full-screen incoming call and for [calling from the watch](#calling-from-the-watch-12). Wear OS has no file installer, so this takes a computer with [adb](https://developer.android.com/tools/releases/platform-tools):
+**Watch (optional).** Needed for the full-screen incoming call and for [calling from the watch](#calling-from-the-watch). Wear OS has no file installer, so this takes a computer with [adb](https://developer.android.com/tools/releases/platform-tools):
 
 1. On the watch: Settings → System → About, then tap **Build number** 7 times.
 2. In Developer options, turn on **ADB debugging** and **Wireless debugging**, then tap **Pair new device**.
@@ -196,6 +208,32 @@ If the card can't open the right screen, look in the phone's Settings for **Call
 When an app rings, Wristline registers a matching call with Android's own calling system, and the watch's companion app shows that call on the watch as a real call. Tapping **Answer** on the watch presses the app's own Answer button. For voice through the watch, Wristline first activates its call, so Android connects the watch as the Bluetooth call headset, and only then answers the app. The app's audio then goes through the watch.
 
 Voice through the watch needs one setting changed for each app that can see the phone's call state (WhatsApp, Telegram, Signal), because otherwise the app sees "another call" and hangs up. Wristline sets that app's `READ_PHONE_STATE` app-op to `ignore`. The app keeps its Phone permission and works normally otherwise.
+
+## Under the hood
+
+Two Java apps, about 13,000 lines, with about 12,000 lines of unit tests. No servers. The phone app's only library is Google Play services for Wear OS; the watch app adds AndroidX Wear libraries.
+
+| Part | Built on |
+|---|---|
+| Noticing calls | A `NotificationListenerService` that reads each calling app's call notification and its Answer, Decline and Hang up actions |
+| Ringing the watch | Android's Telecom framework: a `ConnectionService` places a matching call, which the watch's companion app shows as a real phone call |
+| Voice on the watch | Telecom call audio and Bluetooth headset routing. On phones that pull the voice back, the call is relayed as a managed call on Wristline's own calling account |
+| Phone ↔ watch | The Wear OS Data Layer, carrying ring, answer and hang-up messages, contacts and call state |
+| Setup without a computer | A built-in client for Android's Wireless debugging: mDNS discovery, pairing with SPAKE2 over TLS (with its own Ed25519 arithmetic), and the adb protocol, limited to a fixed set of commands |
+| Watch app | Full-screen incoming call, call screen, contacts, a tile and a watch-face complication; Pixel watch gestures |
+
+Some of the harder problems:
+
+- **Android 17 moved the voice off the watch.** Reading Android's own audio and Telecom source showed how it picks who controls call audio ([write-up](docs/ANDROID17_VOICE_ROUTE.md)). The fix is the managed relay above.
+- **Debugging phones I don't own.** HyperOS behaved differently from the phones I had. The diagnostic report records the call's audio route, Bluetooth link and Telecom events, with names and numbers left out, so each beta round with a tester came back with the evidence for the next fix.
+- **Vendor quirks.** Xiaomi stops the notification listener without telling the app, so Wristline notices and rebinds it. OPPO's companion app loses Answer, so the watch can ring by notification instead.
+
+Quality and safety:
+
+- Unit tests for both apps with Robolectric, run in CI on every push.
+- Every Gradle dependency is checked against a pinned SHA-256 hash, and CI actions are pinned to exact commits.
+- Releases are signed in a separate, hand-started workflow, and the APKs' certificate and hashes are published so anyone can check a download.
+- Design specs, plans and test write-ups are in [`docs/`](docs/).
 
 
 ## Side effects of voice through the watch
