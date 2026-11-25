@@ -1,0 +1,128 @@
+name: Release
+
+# Builds, signs and publishes the version in gradle.properties as a GitHub release.
+# Started by hand only (Actions -> Release -> Run workflow), and only from main.
+# The signing key lives in the protected "release" environment, which only this job uses.
+# Nothing here prints a secret, and the key is deleted when the job ends.
+on:
+  workflow_dispatch:
+
+# Actions are pinned to full commit SHAs, so a moved tag can't change what runs here.
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write # create the tag and the release
+    env:
+      # The release certificate's SHA-256 digest, as published in the README. A build signed
+      # with any other key, or not signed, is never published.
+      CERT_SHA256: 290f69c60854208f97f093ee80aaa8e1bd73fea6c01be69dde8ec9e02dcb2ef4
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/wrapper-validation@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
+      # No cache: a release builds from a clean Gradle home, so nothing a cache holds can reach the key.
+      - uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
+        with:
+          cache-disabled: true
+
+      - name: Read the version and check the release is new
+        id: version
+        run: |
+          name=$(sed -n 's/^wristline\.versionName=//p' gradle.properties)
+          test -n "$name" || { echo "::error::No wristline.versionName in gradle.properties"; exit 1; }
+          tag="v$name"
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" >/dev/null 2>&1; then
+            echo "::error::Tag $tag already exists. Raise the version in gradle.properties first."
+            exit 1
+          fi
+          notes="docs/releases/$name.md"
+          test -f "$notes" || { echo "::error::Missing release notes: $notes"; exit 1; }
+          case "$name" in *-*) pre=true ;; *) pre=false ;; esac
+          { echo "name=$name"; echo "tag=$tag"; echo "notes=$notes"; echo "prerelease=$pre"; } >> "$GITHUB_OUTPUT"
+
+      # Tests run before the key is on the machine.
+      - run: ./gradlew testDebugUnitTest :wear:testDebugUnitTest
+
+      - name: Write the signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.WRISTLINE_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.WRISTLINE_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.WRISTLINE_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.WRISTLINE_KEY_PASSWORD }}
+        run: |
+          for v in KEYSTORE_BASE64 STORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            test -n "${!v}" || { echo "::error::Secret WRISTLINE_$v is not set in the release environment"; exit 1; }
+          done
+          umask 077
+          dir="$RUNNER_TEMP/signing"
+          mkdir -p "$dir"
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$dir/release.keystore"
+          # Java properties treat a backslash as an escape, so double any in the values.
+          esc() { printf '%s' "$1" | sed 's/\\/\\\\/g'; }
+          {
+            echo "storeFile=$dir/release.keystore"
+            echo "storePassword=$(esc "$STORE_PASSWORD")"
+            echo "keyAlias=$(esc "$KEY_ALIAS")"
+            echo "keyPassword=$(esc "$KEY_PASSWORD")"
+          } > "$dir/keystore.properties"
+          echo "WRISTLINE_KEYSTORE_PROPERTIES=$dir/keystore.properties" >> "$GITHUB_ENV"
+
+      - run: ./gradlew assembleRelease :wear:assembleRelease
+
+      - name: Check both APKs carry the release certificate
+        env:
+          NAME: ${{ steps.version.outputs.name }}
+        run: |
+          apksigner="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner"
+          mkdir dist
+          cp app/build/outputs/apk/release/app-release.apk "dist/wristline-phone-$NAME.apk"
+          cp wear/build/outputs/apk/release/wear-release.apk "dist/wristline-watch-$NAME.apk"
+          for apk in dist/*.apk; do
+            "$apksigner" verify --print-certs "$apk" | grep -q "certificate SHA-256 digest: $CERT_SHA256" \
+              || { echo "::error::$apk is not signed with the release certificate"; exit 1; }
+          done
+
+      - name: Publish the release
+        env:
+          NAME: ${{ steps.version.outputs.name }}
+          TAG: ${{ steps.version.outputs.tag }}
+          NOTES: ${{ steps.version.outputs.notes }}
+          PRERELEASE: ${{ steps.version.outputs.prerelease }}
+        run: |
+          notes="$RUNNER_TEMP/notes.md"
+          {
+            cat "$NOTES"
+            echo
+            echo "SHA-256:"
+            (cd dist && sha256sum *.apk) | while read -r hash file; do echo "- \`$file\`: \`$hash\`"; done
+          } > "$notes"
+          flags=()
+          if [ "$PRERELEASE" = true ]; then flags+=(--prerelease); fi
+          gh release create "$TAG" dist/*.apk \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "$NAME" \
+            --notes-file "$notes" \
+            "${flags[@]}"
+
+      - name: Delete the signing key
+        if: always()
+        run: |
+          ./gradlew --stop || true
+          rm -rf "$RUNNER_TEMP/signing"
