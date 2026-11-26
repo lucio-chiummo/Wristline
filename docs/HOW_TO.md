@@ -39,7 +39,7 @@ Wristline makes WhatsApp, Telegram, Instagram and Signal calls ring on your Wear
 
 ## 1. Install the app
 
-1. On your phone, open the [latest release](https://github.com/lucio-chiummo/Wristline/releases/latest) and download `wristline-phone-1.5.apk`.
+1. On your phone, open the [latest release](https://github.com/lucio-chiummo/Wristline/releases/latest) and download `wristline-phone-1.5.1.apk`.
 
    Only download Wristline from that page. Copies from anywhere else may have been changed.
 2. Open the downloaded file. If Android asks, allow your browser or file app to install apps.
@@ -149,7 +149,7 @@ This lets you start WhatsApp, Telegram and Signal calls from the watch: search, 
 
 ### Install the watch app
 
-1. From the same release, download `wristline-watch-1.5.apk` to your computer.
+1. From the same release, download `wristline-watch-1.5.1.apk` to your computer.
 2. On the watch, go to Settings → System → About and tap **Build number** 7 times.
 3. In Developer options on the watch, turn on **ADB debugging** and **Wireless debugging**, then tap **Pair new device**.
 4. On the computer, using the addresses and the code the watch shows:
@@ -157,7 +157,7 @@ This lets you start WhatsApp, Telegram and Signal calls from the watch: search, 
    ```sh
    adb pair <ip>:<pairing-port> <code>
    adb connect <ip>:<port>
-   adb -s <ip>:<port> install wristline-watch-1.5.apk
+   adb -s <ip>:<port> install wristline-watch-1.5.1.apk
    ```
 
 5. Turn **Wireless debugging** off on the watch.

@@ -127,7 +127,7 @@ If you try another phone or watch, please open an issue and say what worked, wit
 
 Download the APKs from the [latest release](https://github.com/lucio-chiummo/Wristline/releases/latest). Wristline isn't on Google Play yet.
 
-**Phone (required).** Open `wristline-phone-1.5.apk` on your phone and allow installing from that source when Android asks. Play Protect may warn that it doesn't know the developer. Then follow [Setup](#setup). This is all you need for calls to ring on the watch, and to answer them there.
+**Phone (required).** Open `wristline-phone-1.5.1.apk` on your phone and allow installing from that source when Android asks. Play Protect may warn that it doesn't know the developer. Then follow [Setup](#setup). This is all you need for calls to ring on the watch, and to answer them there.
 
 Android blocks Notification access for apps installed from a file. If the switch is greyed out: App info → ⋮ (top right) → **Allow restricted settings**, then try again.
 
@@ -140,7 +140,7 @@ Android blocks Notification access for apps installed from a file. If the switch
    ```sh
    adb pair <ip>:<pairing-port> <code>
    adb connect <ip>:<port>
-   adb -s <ip>:<port> install wristline-watch-1.5.apk
+   adb -s <ip>:<port> install wristline-watch-1.5.1.apk
    ```
 
 4. Turn Wireless debugging off again.
@@ -151,7 +151,7 @@ Install both APKs from the same release. They only talk to each other when signe
 
 Wristline asks for sensitive access, including your call notifications, so only install APKs from this repository's releases. Copies from anywhere else may have been changed.
 
-Each release lists the SHA-256 hash of its APKs. To check a file, compare the hash from `shasum -a 256 wristline-phone-1.5.apk` with that list. To check who signed it, run `apksigner verify --print-certs wristline-phone-1.5.apk` (`apksigner` is in the Android SDK build-tools). The certificate's SHA-256 digest must be:
+Each release lists the SHA-256 hash of its APKs. To check a file, compare the hash from `shasum -a 256 wristline-phone-1.5.1.apk` with that list. To check who signed it, run `apksigner verify --print-certs wristline-phone-1.5.1.apk` (`apksigner` is in the Android SDK build-tools). The certificate's SHA-256 digest must be:
 
 ```text
 290f69c60854208f97f093ee80aaa8e1bd73fea6c01be69dde8ec9e02dcb2ef4
