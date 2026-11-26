@@ -22,7 +22,7 @@ final class CallActions {
             "refuser", "weigeren", "afwijzen", "odrzuć", "odrzuc", "отклонить", "reddet",
             "رفض", "अस्वीकार", "拒绝", "拒絕", "拒否", "거절"};
     private static final String[] HANG_UP_WORDS = {
-            "hang up", "end call", "end", "cancel call", "annulla chiamata", "termina", "riaggancia", "chiudi", "colgar", "finalizar",
+            "hang up", "end call", "end", "cancel call", "cancel", "annulla chiamata", "annulla", "termina", "riaggancia", "chiudi", "colgar", "finalizar",
             "encerrar", "desligar", "auflegen", "beenden", "raccrocher", "terminer", "ophangen",
             "beëindigen", "rozłącz", "rozlacz", "завершить", "kapat", "إنهاء", "समाप्त", "挂断",
             "掛斷", "終了", "종료"};
@@ -79,6 +79,10 @@ final class CallActions {
 
         for (Notification.Action action : actions) {
             String title = action.title == null ? "" : action.title.toString().toLowerCase(Locale.ROOT);
+            if (RedialAction.is(title)) {
+                // "Call again" after the other side hung up: pressing it starts a new call.
+                continue;
+            }
             MuteAction.Kind muteKind = MuteAction.classify(title);
             if (muteKind != MuteAction.Kind.NONE) {
                 if (mute == null) {
@@ -113,7 +117,8 @@ final class CallActions {
             decline = actions[0].actionIntent;
             answer = actions[1].actionIntent;
         }
-        if (!incoming && hangUp == null && actions.length > 0 && actions[0].actionIntent != mute) {
+        if (!incoming && hangUp == null && actions.length > 0 && actions[0].actionIntent != mute
+                && !RedialAction.is(actions[0].title)) {
             hangUp = actions[0].actionIntent;
         }
 
