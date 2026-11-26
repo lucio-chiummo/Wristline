@@ -12,6 +12,8 @@
   <img src="https://img.shields.io/badge/Wear%20OS-supported-4285F4" alt="Wear OS">
 </p>
 
+<p align="center"><a href="docs/brand/wristline-launch.mp4"><img src="docs/brand/wristline-launch.jpg" alt="Wristline: calls on your Wear OS wrist. Watch the 20-second video." width="720"></a></p>
+
 Wristline is a small Android app for the **phone**, with an optional app for the watch. It exists because these apps don't ring on the watch on their own. WhatsApp's watch app even stops the phone from forwarding call notifications while its servers never send the calls to the watch, and the Pixel Watch app drops Instagram's call notifications. So calls ring nowhere on the watch.
 
 ## What's in this repository
